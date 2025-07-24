@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Notifications;
+
+use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Notification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\DatabaseMessage;
+use App\Models\Product;
+use App\Models\User;
+
+class ProductApprovalNotification extends Notification
+{
+    use Queueable;
+
+    protected $product;
+    protected $clerk;
+    protected $changes;
+    protected $action;
+
+    /**
+     * Create a new notification instance.
+     *
+     * @param Product $product
+     * @param User $clerk
+     * @param array|null $changes
+     * @param string $action
+     */
+    public function __construct(Product $product, User $clerk, $action = 'added', $changes = null)
+    {
+        $this->product = $product;
+        $this->clerk = $clerk;
+        $this->action = $action;
+        $this->changes = $changes;
+    }
+
+    public function via($notifiable)
+    {
+        return ['database'];
+    }
+
+    public function toDatabase($notifiable)
+    {
+        return [
+            'type' => 'product_' . $this->action,
+            'product_id' => $this->product->id,
+            'clerk_id' => $this->clerk->id,
+            'clerk_name' => $this->clerk->name,
+            'action' => $this->action,
+            'product_name' => $this->product->name,
+            'product_details' => $this->product->toArray(),
+            'changes' => $this->changes,
+            'message' => $this->action === 'added'
+                ? "Clerk {$this->clerk->name} submitted a new product for approval: {$this->product->name}."
+                : "Clerk {$this->clerk->name} edited product {$this->product->name}. Changes: " . json_encode($this->changes),
+        ];
+    }
+} 
