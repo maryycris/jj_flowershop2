@@ -1,4 +1,3 @@
-
 <?php $__env->startSection('styles'); ?>
 <link rel="stylesheet" href="<?php echo e(asset('css/loginstyle.css')); ?>">
 <?php $__env->stopSection(); ?>

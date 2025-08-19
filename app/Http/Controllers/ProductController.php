@@ -94,6 +94,11 @@ class ProductController extends Controller
         return Redirect::route('admin.products.index')->with('success', 'Product added successfully.');
     }
 
+    public function edit(Product $product)
+    {
+        return view('admin.products.edit', compact('product'));
+    }
+
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([

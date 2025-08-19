@@ -15,6 +15,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Notifications\OrderPaymentValidatedNotification;
 use App\Models\OrderStatusHistory;
 use Illuminate\Support\Facades\Storage;
+use App\Notifications\OrderApprovedNotification;
+use App\Notifications\NewChatMessageNotification;
 
 class OrderController extends Controller
 {
@@ -158,11 +160,11 @@ class OrderController extends Controller
             // Generate PDF invoice
             $order->load(['user', 'products', 'delivery']);
             $pdf = Pdf::loadView('orders.invoice', compact('order'));
-            
+
             // Save invoice to storage
             $invoicePath = 'invoices/invoice-' . $order->id . '-' . date('Y-m-d') . '.pdf';
             Storage::disk('public')->put($invoicePath, $pdf->output());
-            
+
             // Store invoice path in order (you might want to add an invoice_path column to orders table)
             // $order->update(['invoice_path' => $invoicePath]);
         }
@@ -268,6 +270,13 @@ class OrderController extends Controller
         $oldStatus = $order->status;
         $order->status = 'approved';
         $order->save();
+
+        // Notify customer
+        $customer = $order->user; // FIX: use user relationship
+        if ($customer) {
+            $customer->notify(new OrderApprovedNotification($order));
+        }
+
         if ($oldStatus !== $order->status) {
             OrderStatusHistory::create([
                 'order_id' => $order->id,
@@ -284,20 +293,20 @@ class OrderController extends Controller
     public function validateOrder(Order $order)
     {
         $oldStatus = $order->status;
-        
+
         // Use OrderStatusService to handle payment completion
         \App\Services\OrderStatusService::handlePaymentCompleted($order);
-        
+
         // Update payment proof status
         $latestProof = $order->paymentProofs()->latest()->first();
         if ($latestProof) {
             $latestProof->status = 'approved';
             $latestProof->save();
         }
-        
+
         // Send notification to customer
         $order->user->notify(new OrderPaymentValidatedNotification($order));
-        
+
         return back()->with('success', 'Order validated successfully. Payment marked as paid and customer will be notified. Status updated to "To Ship".');
     }
 
@@ -321,9 +330,9 @@ class OrderController extends Controller
     public function downloadInvoice(Order $order)
     {
         $order->load(['user', 'products', 'delivery']);
-        
+
         $pdf = Pdf::loadView('orders.invoice', compact('order'));
-        
+
         return $pdf->download('invoice-' . $order->id . '.pdf');
     }
 
@@ -333,9 +342,9 @@ class OrderController extends Controller
     public function viewInvoice(Order $order)
     {
         $order->load(['user', 'products', 'delivery']);
-        
+
         $pdf = Pdf::loadView('orders.invoice', compact('order'));
-        
+
         return $pdf->stream('invoice-' . $order->id . '.pdf');
     }
 
@@ -510,4 +519,15 @@ class OrderController extends Controller
 
         return redirect()->back()->with('success', 'Recipient details validated successfully!');
     }
-} 
+
+    public function send(Request $request)
+    {
+        // ...existing code to save chat...
+
+        // Notify recipient
+        $recipient = User::find($request->recipient_id);
+        $recipient->notify(new NewChatMessageNotification($request->message));
+
+        // ...existing code...
+    }
+}

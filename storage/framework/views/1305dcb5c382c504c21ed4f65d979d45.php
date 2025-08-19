@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('content'); ?>
 <div class="container-fluid py-4" style="background: #f4faf4; min-height: 100vh;">
     <!-- Promoted Products Carousel -->

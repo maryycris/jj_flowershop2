@@ -133,7 +133,6 @@ Route::post('/deliveries/{delivery}/delivered', [\App\Http\Controllers\DeliveryC
 Route::middleware(['web', 'auth', \App\Http\Middleware\CustomerMiddleware::class])->prefix('customer')->name('customer.')->group(function () {
     // Main customer dashboard route with both names
     Route::get('/dashboard', [CustomerController::class, 'dashboard'])->name('dashboard');
-    Route::get('/dashboard', [CustomerController::class, 'dashboard'])->name('customer.dashboard');
     Route::post('/save-location', [CustomerController::class, 'saveLocation'])->name('saveLocation');
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
@@ -159,6 +158,10 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\CustomerMiddleware::class
     Route::get('/notifications', [CustomerNotificationController::class, 'index'])->name('notifications');
     Route::get('/notifications/index', [CustomerNotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/mark-as-read', [CustomerNotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+    Route::post('/customer/notifications/mark-all-as-read', [App\Http\Controllers\Customer\CustomerNotificationController::class, 'markAllAsRead'])->name('customer.notifications.markAllAsRead');
+    Route::delete('/customer/notifications/delete-all', [Customer\CustomerNotificationController::class, 'destroyAll'])->name('customer.notifications.destroyAll');
+    Route::post('/customer/notifications/{id}/read', [Customer\CustomerNotificationController::class, 'markAsRead'])->name('customer.notifications.markAsRead');
+    Route::delete('/customer/notifications/{id}', [Customer\CustomerNotificationController::class, 'destroy'])->name('customer.notifications.destroy');
     Route::post('/notifications/{id}/read', [\App\Http\Controllers\Customer\CustomerNotificationController::class, 'markAsRead'])->name('customer.notifications.markAsRead');
     Route::post('/notifications/{id}/unread', [\App\Http\Controllers\Customer\CustomerNotificationController::class, 'markAsUnread'])->name('customer.notifications.markAsUnread');
     Route::delete('/notifications/{id}', [\App\Http\Controllers\Customer\CustomerNotificationController::class, 'destroy'])->name('customer.notifications.destroy');
@@ -167,13 +170,13 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\CustomerMiddleware::class
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::get('/checkout/payment-method', [CheckoutController::class, 'paymentMethod'])->name('checkout.payment_method');
     Route::post('/checkout/process', [CheckoutController::class, 'processOrder'])->name('checkout.process');
-    
+
     // Payment Gateway Routes
     Route::get('/payment/gcash/{order}', [PaymentController::class, 'gcashPayment'])->name('payment.gcash');
     Route::get('/payment/paymaya/{order}', [PaymentController::class, 'paymayaPayment'])->name('payment.paymaya');
     Route::post('/payment/processing/{order}', [PaymentController::class, 'showProcessing'])->name('payment.processing');
     Route::post('/payment/process/{order}', [PaymentController::class, 'processPayment'])->name('payment.process');
-    
+
     // Chat routes
     Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
     Route::post('/chat/send', [ChatController::class, 'send'])->name('chat.send');
@@ -202,23 +205,23 @@ Route::prefix('customer')->middleware(['auth', 'customer'])->group(function () {
 // Driver Routes
 Route::middleware(['web', 'auth', \App\Http\Middleware\DriverMiddleware::class])->prefix('driver')->name('driver.')->group(function () {
     Route::get('/dashboard', [DriverController::class, 'dashboard'])->name('dashboard');
-    
+
     // Orders
     Route::get('/orders', [DriverController::class, 'orders'])->name('orders.index');
     Route::get('/orders/{delivery}', [DriverController::class, 'showOrder'])->name('orders.show');
-    
+
     // History
     Route::get('/history', [DriverController::class, 'history'])->name('history.index');
     Route::get('/history/{delivery}', [DriverController::class, 'showHistory'])->name('history.show');
-    
+
     // Profile
     Route::get('/profile', [DriverController::class, 'profile'])->name('profile');
     Route::put('/profile', [DriverController::class, 'updateProfile'])->name('profile.update');
     Route::put('/profile/password', [DriverController::class, 'updatePassword'])->name('profile.password');
-    
+
     // Delivery Status Updates
     Route::post('/deliveries/{delivery}/status', [DriverController::class, 'updateDeliveryStatus'])->name('deliveries.updateStatus');
-    
+
     // Legacy routes (keep for compatibility)
     Route::get('/deliveries', [DeliveryController::class, 'index'])->name('deliveries');
     Route::get('/deliveries/{delivery}', [DeliveryController::class, 'show'])->name('deliveries.show');

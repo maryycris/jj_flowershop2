@@ -4,57 +4,38 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class CustomerNotificationController extends Controller
 {
     public function index()
     {
-        $notifications = Auth::user()->notifications()->latest()->paginate(10);
+        $notifications = auth()->user()->notifications()->latest()->paginate(10);
         return view('customer.notifications.index', compact('notifications'));
-    }
-
-    public function markAsRead($id)
-    {
-        $notification = Auth::user()->notifications()->where('id', $id)->first();
-        if ($notification) {
-            $notification->markAsRead();
-            return response()->json(['success' => true]);
-        }
-        return response()->json(['success' => false], 404);
-    }
-
-    public function destroy($id)
-    {
-        $notification = Auth::user()->notifications()->where('id', $id)->first();
-        if ($notification) {
-            $notification->delete();
-            return response()->json(['success' => true]);
-        }
-        return response()->json(['success' => false], 404);
     }
 
     public function markAllAsRead()
     {
-        $user = Auth::user();
-        $user->unreadNotifications->markAsRead();
-        return response()->json(['success' => true]);
+        auth()->user()->unreadNotifications->markAsRead();
+        return back()->with('success', 'All notifications marked as read.');
     }
 
     public function destroyAll()
     {
-        $user = Auth::user();
-        $user->notifications()->delete();
-        return response()->json(['success' => true]);
+        auth()->user()->notifications()->delete();
+        return back()->with('success', 'All notifications deleted.');
     }
 
-    public function markAsUnread($id)
+    public function markAsRead($id)
     {
-        $notification = Auth::user()->notifications()->where('id', $id)->first();
-        if ($notification && $notification->read_at) {
-            $notification->update(['read_at' => null]);
-            return response()->json(['success' => true]);
-        }
-        return response()->json(['success' => false], 404);
+        $notification = auth()->user()->notifications()->findOrFail($id);
+        $notification->markAsRead();
+        return back()->with('success', 'Notification marked as read.');
+    }
+
+    public function destroy($id)
+    {
+        $notification = auth()->user()->notifications()->findOrFail($id);
+        $notification->delete();
+        return back()->with('success', 'Notification deleted.');
     }
 }

@@ -1,66 +1,65 @@
-@extends('layouts.customer_app')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid" style="background: #f4faf4; min-height: 100vh;">
     <div class="row" style="min-height: 100vh;">
         <!-- Sidebar -->
         <div class="col-md-3 px-0">
-            @include('customer.sidebar')
+            <?php echo $__env->make('customer.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     </div>
         <!-- Main Content -->
         <div class="col-md-9 d-flex flex-column align-items-start justify-content-start py-5">
             <h4 class="mb-4" style="font-weight: 500; color: #222;">My Notifications</h4>
-            @if($notifications->count())
+            <?php if($notifications->count()): ?>
             <div class="mb-3 d-flex gap-2">
                 <!-- Mark All as Read -->
-                <form method="POST" action="{{ route('customer.notifications.markAllAsRead') }}">
-                    @csrf
+                <form method="POST" action="<?php echo e(route('customer.notifications.markAllAsRead')); ?>">
+                    <?php echo csrf_field(); ?>
                     <button type="submit" class="btn btn-primary btn-sm">Mark All as Read</button>
                 </form>
+
                 <!-- Delete All -->
-                <form method="POST" action="{{ route('customer.notifications.destroyAll') }}">
-                    @csrf
-                    @method('DELETE')
+                <form method="POST" action="<?php echo e(route('customer.notifications.destroyAll')); ?>">
+                    <?php echo csrf_field(); ?>
+                    <?php echo method_field('DELETE'); ?>
                     <button type="submit" class="btn btn-danger btn-sm">Delete All</button>
                 </form>
             </div>
-            @endif
+            <?php endif; ?>
             <div class="w-100" style="max-width: 520px;">
-                @forelse($notifications as $notification)
-                @php
+                <?php $__empty_1 = true; $__currentLoopData = $notifications; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $notification): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                <?php
                     $data = is_array($notification->data) ? $notification->data : json_decode($notification->data, true);
                     $type = $data['type'] ?? ($notification->type ?? 'Notification');
                     $message = $data['message'] ?? (is_string($data) ? $data : 'No details available.');
                     $date = $notification->created_at->format('M d, Y');
                     $isRead = $notification->read();
                     $bgColor = $isRead ? '#fff' : '#e3f0ff'; // blue for unread, white for read
-                @endphp
+                ?>
                     <div class="d-flex align-items-center mb-3 notification-card-custom notification-item"
-                        style="border-radius: 8px; background: {{ $bgColor }}; padding: 18px 24px; min-height: 80px; box-shadow: none; border: 1px solid #e0e0e0; cursor:pointer; position:relative;"
-                        data-id="{{ $notification->id }}"
-                        data-type="{{ $type }}"
-                        data-message="{{ $message }}"
-                        data-date="{{ $date }}"
-                        data-is-read="{{ $isRead ? '1' : '0' }}">
+                        style="border-radius: 8px; background: <?php echo e($bgColor); ?>; padding: 18px 24px; min-height: 80px; box-shadow: none; border: 1px solid #e0e0e0; cursor:pointer; position:relative;"
+                        data-id="<?php echo e($notification->id); ?>"
+                        data-type="<?php echo e($type); ?>"
+                        data-message="<?php echo e($message); ?>"
+                        data-date="<?php echo e($date); ?>"
+                        data-is-read="<?php echo e($isRead ? '1' : '0'); ?>">
                         <div class="flex-grow-1">
-                            <div style="font-size: 0.95rem; color: #888; margin-bottom: 4px;">{{ $date }}</div>
-                            <div style="font-size: 1.08rem; color: #333;">{{ \Illuminate\Support\Str::limit($message, 80) }}</div>
+                            <div style="font-size: 0.95rem; color: #888; margin-bottom: 4px;"><?php echo e($date); ?></div>
+                            <div style="font-size: 1.08rem; color: #333;"><?php echo e(\Illuminate\Support\Str::limit($message, 80)); ?></div>
                         </div>
                         <div class="dropdown" style="position:absolute; top:10px; right:10px; z-index:2;">
-                            <button class="btn btn-sm btn-light p-1 px-2 border-0" type="button" id="dropdownMenuButton{{ $notification->id }}" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius:50%;">
+                            <button class="btn btn-sm btn-light p-1 px-2 border-0" type="button" id="dropdownMenuButton<?php echo e($notification->id); ?>" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius:50%;">
                                 <span style="font-size:1.3rem; line-height:1;">&#8942;</span>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ $notification->id }}">
-                                @if(!$isRead)
-                                <li><a class="dropdown-item mark-read-action" href="#" data-id="{{ $notification->id }}">Mark as Read</a></li>
-                                @else
-                                <li><a class="dropdown-item mark-unread-action" href="#" data-id="{{ $notification->id }}">Mark as Unread</a></li>
-                                @endif
-                                <li><a class="dropdown-item text-danger delete-notification-action" href="#" data-id="{{ $notification->id }}">Delete</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton<?php echo e($notification->id); ?>">
+                                <?php if(!$isRead): ?>
+                                <li><a class="dropdown-item mark-read-action" href="#" data-id="<?php echo e($notification->id); ?>">Mark as Read</a></li>
+                                <?php else: ?>
+                                <li><a class="dropdown-item mark-unread-action" href="#" data-id="<?php echo e($notification->id); ?>">Mark as Unread</a></li>
+                                <?php endif; ?>
+                                <li><a class="dropdown-item text-danger delete-notification-action" href="#" data-id="<?php echo e($notification->id); ?>">Delete</a></li>
                             </ul>
                         </div>
                 </div>
-                @empty
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                     <div class="d-flex align-items-center mb-3 notification-card-custom" style="border-radius: 8px; background: #fff; padding: 18px 24px; min-height: 80px; box-shadow: none; border: 1px solid #e0e0e0;">
                         <div class="flex-grow-1">
                             <div style="font-size: 0.95rem; color: #888; margin-bottom: 4px;">No notifications</div>
@@ -68,9 +67,10 @@
                         </div>
                         <div class="ms-3" style="width: 48px; height: 48px; background: #f4f4f4; border-radius: 6px; border: 1px solid #d2d2d2; display: flex; align-items: center; justify-content: center;"></div>
                 </div>
-                @endforelse
+                <?php endif; ?>
             <div class="d-flex justify-content-center mt-4">
-                {{ $notifications->links('pagination::bootstrap-5') }}
+                <?php echo e($notifications->links('pagination::bootstrap-5')); ?>
+
                 </div>
             </div>
         </div>
@@ -93,9 +93,9 @@
     </div>
   </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Prevent dropdown click from triggering modal
@@ -249,9 +249,9 @@
         }
     });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
     body {
         background: #f4faf4 !important;
@@ -292,4 +292,6 @@
     border-radius: 50%;
 }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.customer_app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\JJ_Flowershop_Capstone\resources\views/customer/notifications/index.blade.php ENDPATH**/ ?>
