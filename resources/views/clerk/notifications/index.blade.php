@@ -15,6 +15,11 @@
     <div class="flex-grow-1 p-4">
         <!-- Existing notification content -->
         @yield('clerk_notification_content')
+        <form action="{{ route('customer.notifications.deleteAll') }}" method="POST" style="display:inline;">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="btn btn-danger">Delete All</button>
+        </form>
     </div>
 </div>
 @push('styles')
@@ -23,4 +28,4 @@
 .clerk-sidebar-link.active, .clerk-sidebar-link:hover { background: #e6f2e6; color: #4CAF50 !important;}
 </style>
 @endpush
-@endsection 
+@endsection

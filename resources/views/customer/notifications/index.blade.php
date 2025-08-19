@@ -56,7 +56,13 @@
                                 @else
                                 <li><a class="dropdown-item mark-unread-action" href="#" data-id="{{ $notification->id }}">Mark as Unread</a></li>
                                 @endif
-                                <li><a class="dropdown-item text-danger delete-notification-action" href="#" data-id="{{ $notification->id }}">Delete</a></li>
+                                <li>
+                                    <form action="{{ route('customer.notifications.delete', $notification->id) }}" method="POST" style="display:inline;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="dropdown-item text-danger">Delete</button>
+                                    </form>
+                                </li>
                             </ul>
                         </div>
                 </div>

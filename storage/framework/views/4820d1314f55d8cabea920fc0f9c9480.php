@@ -15,7 +15,6 @@
                     <?php echo csrf_field(); ?>
                     <button type="submit" class="btn btn-primary btn-sm">Mark All as Read</button>
                 </form>
-
                 <!-- Delete All -->
                 <form method="POST" action="<?php echo e(route('customer.notifications.destroyAll')); ?>">
                     <?php echo csrf_field(); ?>
@@ -55,7 +54,13 @@
                                 <?php else: ?>
                                 <li><a class="dropdown-item mark-unread-action" href="#" data-id="<?php echo e($notification->id); ?>">Mark as Unread</a></li>
                                 <?php endif; ?>
-                                <li><a class="dropdown-item text-danger delete-notification-action" href="#" data-id="<?php echo e($notification->id); ?>">Delete</a></li>
+                                <li>
+                                    <form action="<?php echo e(route('customer.notifications.delete', $notification->id)); ?>" method="POST" style="display:inline;">
+                                        <?php echo csrf_field(); ?>
+                                        <?php echo method_field('DELETE'); ?>
+                                        <button type="submit" class="dropdown-item text-danger">Delete</button>
+                                    </form>
+                                </li>
                             </ul>
                         </div>
                 </div>

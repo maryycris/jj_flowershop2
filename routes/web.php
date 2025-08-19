@@ -89,7 +89,7 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\ClerkMiddleware::class])-
     Route::get('/dashboard', [ClerkController::class, 'dashboard'])->name('dashboard');
     // FIX: Use ClerkController for product_catalog
     Route::get('/product_catalog', [ClerkController::class, 'productCatalog'])->name('product_catalog.index');
-    Route::post('/product_catalog', [ClerkController::class, 'storeProductCatalog'])->name('product_catalog.store');
+    Route::post('/product_catalog', action: [ClerkController::class, 'storeProductCatalog'])->name('product_catalog.store');
     Route::resource('products', ProductController::class);
     Route::post('products/{product}/images/update', [ProductController::class, 'updateImages'])->name('products.updateImages');
     Route::delete('products/{product}/images/delete', [ProductController::class, 'deleteImage'])->name('products.deleteImage');
@@ -155,18 +155,16 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\CustomerMiddleware::class
     Route::resource('address_book', AddressController::class)->parameters(['address_book' => 'address']);
     Route::get('/address-book', [AddressController::class, 'index'])->name('address_book');
     Route::post('address_book/{address}/set-default', [AddressController::class, 'setDefault'])->name('address_book.set-default');
+
+    // Notifications (FIXED)
     Route::get('/notifications', [CustomerNotificationController::class, 'index'])->name('notifications');
     Route::get('/notifications/index', [CustomerNotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/{notification}/mark-as-read', [CustomerNotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
-    Route::post('/customer/notifications/mark-all-as-read', [App\Http\Controllers\Customer\CustomerNotificationController::class, 'markAllAsRead'])->name('customer.notifications.markAllAsRead');
-    Route::delete('/customer/notifications/delete-all', [Customer\CustomerNotificationController::class, 'destroyAll'])->name('customer.notifications.destroyAll');
-    Route::post('/customer/notifications/{id}/read', [Customer\CustomerNotificationController::class, 'markAsRead'])->name('customer.notifications.markAsRead');
-    Route::delete('/customer/notifications/{id}', [Customer\CustomerNotificationController::class, 'destroy'])->name('customer.notifications.destroy');
-    Route::post('/notifications/{id}/read', [\App\Http\Controllers\Customer\CustomerNotificationController::class, 'markAsRead'])->name('customer.notifications.markAsRead');
-    Route::post('/notifications/{id}/unread', [\App\Http\Controllers\Customer\CustomerNotificationController::class, 'markAsUnread'])->name('customer.notifications.markAsUnread');
-    Route::delete('/notifications/{id}', [\App\Http\Controllers\Customer\CustomerNotificationController::class, 'destroy'])->name('customer.notifications.destroy');
-    Route::post('/notifications/mark-all-as-read', [\App\Http\Controllers\Customer\CustomerNotificationController::class, 'markAllAsRead'])->name('customer.notifications.markAllAsRead');
-    Route::delete('/notifications/delete-all', [\App\Http\Controllers\Customer\CustomerNotificationController::class, 'destroyAll'])->name('customer.notifications.destroyAll');
+    Route::post('/notifications/mark-all-as-read', [CustomerNotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
+    Route::delete('/notifications/delete-all', [CustomerNotificationController::class, 'destroyAll'])->name('notifications.deleteAll');
+    Route::delete('/notifications/{id}', [CustomerNotificationController::class, 'destroy'])->name('customer.notifications.delete');
+    Route::post('/notifications/{id}/read', [CustomerNotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+    Route::post('/notifications/{id}/unread', [CustomerNotificationController::class, 'markAsUnread'])->name('notifications.markAsUnread');
+
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::get('/checkout/payment-method', [CheckoutController::class, 'paymentMethod'])->name('checkout.payment_method');
     Route::post('/checkout/process', [CheckoutController::class, 'processOrder'])->name('checkout.process');
