@@ -25,25 +25,70 @@
         </div>
     </div>
 
-    <!-- Category Tabs -->
+    <!-- Filter Section -->
     <div class="mx-auto mb-3" style="max-width: 900px;">
-        <ul class="nav nav-tabs border-0 justify-content-center" id="productTabs" role="tablist" style="background: #fff; border-radius: 12px 12px 0 0;">
-            @php
-                $categories = ['all' => 'All', 'bouquets' => 'Bouquets', 'packages' => 'Packages', 'gifts' => 'Gifts'];
-                $currentCategory = $categories[request('category', 'all')] ?? 'All';
-            @endphp
-            @foreach($categories as $key => $label)
-            <li class="nav-item" role="presentation">
-                <a class="nav-link @if(request('category', 'all') === $key) active @endif" href="?category={{ $key }}" style="font-weight: 500; color: #8ACB88; border: none; border-bottom: 3px solid transparent; @if(request('category', 'all') === $key) border-bottom: 3px solid #8ACB88; color: #385E42; background: #fff; @endif">{{ $label }}</a>
-            </li>
-        @endforeach
-    </ul>
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" action="{{ route('clerk.product_catalog.index') }}" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="category" class="form-label">Category</label>
+                        <select name="category" id="category" class="form-select">
+                            <option value="">All Categories</option>
+                            <option value="Fresh Flowers" {{ request('category') == 'Fresh Flowers' ? 'selected' : '' }}>Fresh Flowers</option>
+                            <option value="Dried Flowers" {{ request('category') == 'Dried Flowers' ? 'selected' : '' }}>Dried Flowers</option>
+                            <option value="Artificial Flowers" {{ request('category') == 'Artificial Flowers' ? 'selected' : '' }}>Artificial Flowers</option>
+                            <option value="Floral Supplies" {{ request('category') == 'Floral Supplies' ? 'selected' : '' }}>Floral Supplies</option>
+                            <option value="Packaging Materials" {{ request('category') == 'Packaging Materials' ? 'selected' : '' }}>Packaging Materials</option>
+                            <option value="Materials, Tools, and Equipment" {{ request('category') == 'Materials, Tools, and Equipment' ? 'selected' : '' }}>Materials, Tools, and Equipment</option>
+                            <option value="Office Supplies" {{ request('category') == 'Office Supplies' ? 'selected' : '' }}>Office Supplies</option>
+                            <option value="Other Offers" {{ request('category') == 'Other Offers' ? 'selected' : '' }}>Other Offers</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="price_min" class="form-label">Min Price</label>
+                        <input type="number" name="price_min" id="price_min" class="form-control" value="{{ request('price_min') }}" placeholder="0.00" step="0.01">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="price_max" class="form-label">Max Price</label>
+                        <input type="number" name="price_max" id="price_max" class="form-control" value="{{ request('price_max') }}" placeholder="9999.99" step="0.01">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="sort" class="form-label">Sort By</label>
+                        <select name="sort" id="sort" class="form-select">
+                            <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>Name A-Z</option>
+                            <option value="name_desc" {{ request('sort') == 'name_desc' ? 'selected' : '' }}>Name Z-A</option>
+                            <option value="price_asc" {{ request('sort') == 'price_asc' ? 'selected' : '' }}>Price Low-High</option>
+                            <option value="price_desc" {{ request('sort') == 'price_desc' ? 'selected' : '' }}>Price High-Low</option>
+                            <option value="newest" {{ request('sort') == 'newest' ? 'selected' : '' }}>Newest First</option>
+                            <option value="oldest" {{ request('sort') == 'oldest' ? 'selected' : '' }}>Oldest First</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel"></i> Apply Filters
+                        </button>
+                        <a href="{{ route('clerk.product_catalog.index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Clear Filters
+                        </a>
+                        <span class="ms-3 text-muted">
+                            Showing {{ $products->count() }} product(s)
+                        </span>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Product Grid Card -->
     <div class="mx-auto" style="max-width: 900px;">
         <div class="bg-white rounded-4 shadow-sm p-4">
-            <div class="mb-3 fw-bold fs-5">{{ $currentCategory }}</div>
+            <div class="mb-3 fw-bold fs-5">
+                @if(request('category'))
+                    {{ request('category') }} Products
+                @else
+                    All Products
+                @endif
+            </div>
             <div class="row g-3 product-grid">
                 <!-- Add New Product Card -->
                 <div class="col-6 col-md-4 col-lg-3">
@@ -51,13 +96,7 @@
                         <i class="fas fa-plus fa-3x text-muted"></i>
                     </div>
                 </div>
-                @php
-                    $filteredProducts = $products;
-                    if(request('category', 'all') !== 'all') {
-                        $filteredProducts = $products->where('category', ucfirst(request('category')));
-                    }
-                @endphp
-                @forelse($filteredProducts as $product)
+                @forelse($products as $product)
                 <div class="col-6 col-md-4 col-lg-3">
                     <div class="card product-card h-100">
                         <img src="{{ $product->image ? asset('storage/' . $product->image) : '/images/logo.png' }}" class="card-img-top product-image" alt="{{ $product->name }}">
@@ -65,12 +104,13 @@
                             <h6 class="card-title mb-1">{{ $product->name }}</h6>
                             <p class="card-text product-price">₱{{ number_format($product->price, 2) }}</p>
                             <div class="d-flex justify-content-center gap-2 mt-2">
-                                <button class="btn btn-sm btn-info edit-product-btn" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product='{{ json_encode($product) }}'>Edit</button>
-                                <button class="btn btn-sm btn-warning manage-images-btn" data-bs-toggle="modal" data-bs-target="#manageImagesModal" data-product='{{ json_encode($product) }}'>Images</button>
-                                <form action="#" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this product and its images?');">
+                                <button class="btn btn-light btn-icon edit-product-btn" title="Edit" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product='{{ json_encode($product) }}'><i class="bi bi-pencil-square"></i></button>
+                                <button class="btn btn-light btn-icon manage-images-btn" title="Images" data-bs-toggle="modal" data-bs-target="#manageImagesModal" data-product='{{ json_encode($product) }}'><i class="bi bi-images"></i></button>
+                                <form action="/clerk/product_catalog/{{ $product->id }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this product and its images?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    <input type="hidden" name="id" value="{{ $product->id }}">
+                                    <button type="submit" class="btn btn-light btn-icon text-danger" title="Delete"><i class="bi bi-trash3"></i></button>
                                 </form>
                             </div>
                         </div>
@@ -115,9 +155,14 @@
                             <label for="product_category" class="form-label">Category</label>
                             <select class="form-select" id="product_category" name="category" required>
                                 <option value="">Select Category</option>
-                                <option value="Bouquets">Bouquets</option>
-                                <option value="Packages">Packages</option>
-                                <option value="Gifts">Gifts</option>
+                                <option value="Fresh Flowers">Fresh Flowers</option>
+                                <option value="Dried Flowers">Dried Flowers</option>
+                                <option value="Artificial Flowers">Artificial Flowers</option>
+                                <option value="Floral Supplies">Floral Supplies</option>
+                                <option value="Packaging Materials">Packaging Materials</option>
+                                <option value="Materials, Tools, and Equipment">Materials, Tools, and Equipment</option>
+                                <option value="Office Supplies">Office Supplies</option>
+                                <option value="Other Offers">Other Offers</option>
                             </select>
                         </div>
                     </div>
@@ -138,10 +183,17 @@
                     <h5 class="modal-title" id="editProductModalLabel">Edit Product</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="editProductForm" method="POST">
+                <form id="editProductForm" method="POST" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
                     <div class="modal-body">
+                        <div class="mb-3 text-center">
+                            <label for="edit_product_image" class="btn btn-outline-secondary">
+                                <i class="fas fa-upload me-2"></i>Upload Image
+                                <input type="file" id="edit_product_image" name="image" style="display:none;" accept="image/*">
+                            </label>
+                            <img id="edit_current_image" src="" alt="Current Image" class="img-thumbnail mt-2" style="display:none; max-width: 150px; max-height: 150px;">
+                        </div>
                         <div class="mb-3">
                             <label for="edit_product_name" class="form-label">Product name</label>
                             <input type="text" class="form-control" id="edit_product_name" name="name" required>
@@ -153,9 +205,14 @@
                         <div class="mb-3">
                             <label for="edit_product_category" class="form-label">Category</label>
                             <select class="form-select" id="edit_product_category" name="category" required>
-                                <option value="Bouquets">Bouquets</option>
-                                <option value="Packages">Packages</option>
-                                <option value="Gifts">Gifts</option>
+                                <option value="Fresh Flowers">Fresh Flowers</option>
+                                <option value="Dried Flowers">Dried Flowers</option>
+                                <option value="Artificial Flowers">Artificial Flowers</option>
+                                <option value="Floral Supplies">Floral Supplies</option>
+                                <option value="Packaging Materials">Packaging Materials</option>
+                                <option value="Materials, Tools, and Equipment">Materials, Tools, and Equipment</option>
+                                <option value="Office Supplies">Office Supplies</option>
+                                <option value="Other Offers">Other Offers</option>
                             </select>
                         </div>
                     </div>
@@ -178,6 +235,8 @@
                 </div>
                 <form id="manageImagesForm" method="POST" enctype="multipart/form-data">
                     @csrf
+                    @method('PUT')
+                    <input type="hidden" name="delete_image" id="delete_image_flag" value="0">
                     <div class="modal-body">
                         <div class="text-center mb-3">
                             <label for="manage_product_image" class="btn btn-outline-secondary">
@@ -221,12 +280,35 @@
     }
     .product-image {
         height: 150px;
-        object-fit: cover;
+        width: 100%;
+        display: block;
+        /* Reverted: show whole image and keep centered */
+        object-fit: contain;
+        object-position: center;
+        background-color: #ffffff;
+        padding: 0;
+        margin: 0;
+        border-radius: 10px 10px 0 0;
     }
+    .product-card .card-img-top {
+        margin: 0; /* ensure bootstrap doesn't add margins */
+    }
+    /* reverted overlay styles */
     .product-price {
         color: #8ACB88;
         font-weight: 600;
     }
+    .btn-icon {
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: none;
+    }
+    .btn-icon i { font-size: 1rem; }
     .nav-tabs .nav-link.active {
         border-bottom: 3px solid #8ACB88 !important;
         color: #385E42 !important;
@@ -276,11 +358,21 @@
             var product = JSON.parse(button.getAttribute('data-product'));
 
             var form = editProductModal.querySelector('#editProductForm');
-            form.action = '#'; // Set the form action dynamically
+            form.action = '/clerk/product_catalog/' + product.id;
 
             editProductModal.querySelector('#edit_product_name').value = product.name;
             editProductModal.querySelector('#edit_product_price').value = product.price;
             editProductModal.querySelector('#edit_product_category').value = product.category;
+
+            // show current image if any
+            var currentImg = document.getElementById('edit_current_image');
+            if (product.image) {
+                currentImg.src = '{{ asset('storage') }}' + '/' + product.image;
+                currentImg.style.display = 'block';
+            } else {
+                currentImg.src = '';
+                currentImg.style.display = 'none';
+            }
         });
 
         // Manage Images Modal population and functionality
@@ -302,14 +394,14 @@
             }
 
             var form = manageImagesModal.querySelector('#manageImagesForm');
-            form.action = '#'; // Set update form action
+            form.action = '/clerk/product_catalog/' + product.id; // Set update form action
 
             // Set delete image button action
             var deleteImageBtn = document.getElementById('deleteImageBtn');
             deleteImageBtn.onclick = function() {
                 if (confirm('Are you sure you want to delete the current product image?')) {
-                    // Implement AJAX delete if needed
-                    window.location.reload(); // Reload to reflect changes
+                    document.getElementById('delete_image_flag').value = '1';
+                    form.submit();
                 }
             };
 
