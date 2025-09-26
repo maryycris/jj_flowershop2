@@ -7,8 +7,8 @@
         border-radius: 10px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         padding: 32px 32px 24px 32px;
-        max-width: 600px;
-        margin: 40px auto 0 auto;
+        max-width: 700px;
+        margin: 20px auto 0 auto;
         position: relative;
     }
     .profile-title {
@@ -73,20 +73,20 @@
     }
 </style>
 <div class="container-fluid">
-    <div class="row">
+    <div class="row justify-content-center">
         <!-- Sidebar -->
-        <div class="col-md-3">
+        <div class="col-md-3 col-lg-3">
             @include('customer.sidebar')
         </div>
         <!-- Main Content -->
-        <div class="col-md-9">
+        <div class="col-md-9 col-lg-7">
             <div class="py-4 px-3 d-flex flex-column align-items-center justify-content-start">
                 @if(session('reminder'))
-                    <div class="alert alert-warning" style="max-width:600px;margin:20px auto 0 auto;">
+                    <div class="alert alert-warning" style="max-width:700px;margin:20px auto 0 auto;">
                         {{ session('reminder') }}
                     </div>
                 @endif
-                <div class="profile-card d-flex align-items-start" style="background: #fff; border-radius: 10px; box-shadow: none; padding: 36px 36px 28px 36px; max-width: 600px; width: 100%; margin: 0 auto;">
+                <div class="profile-card d-flex align-items-start" style="background: #fff; border-radius: 10px; box-shadow: none; padding: 36px 36px 28px 36px; max-width: 700px; width: 100%; margin: 0 auto;">
                     <!-- Removed profile picture from right side -->
                     <div class="flex-grow-1">
                         <div class="profile-title mb-2" style="font-size: 1.4rem; font-weight: 600; color: #444;">My Personal Info</div>
@@ -139,11 +139,11 @@
                     <div class="row mb-3">
                         <div class="col">
                             <label class="form-label">First Name *</label>
-                            <input type="text" class="form-control" name="first_name" value="{{ Auth::user()->first_name ?? '' }}" required>
+                            <input type="text" class="form-control" name="first_name" value="{{ Auth::user()->first_name ?? '' }}" required style="text-transform: capitalize;">
                         </div>
                         <div class="col">
                             <label class="form-label">Last Name *</label>
-                            <input type="text" class="form-control" name="last_name" value="{{ Auth::user()->last_name ?? '' }}" required>
+                            <input type="text" class="form-control" name="last_name" value="{{ Auth::user()->last_name ?? '' }}" required style="text-transform: capitalize;">
                         </div>
                     </div>
                     <div class="mb-3">
@@ -152,20 +152,20 @@
                     </div>
                 <div class="mb-3">
                         <label class="form-label">Street Address *</label>
-                        <input type="text" class="form-control" name="street_address" value="{{ Auth::user()->street_address ?? '' }}" required>
+                        <input type="text" class="form-control" name="street_address" value="{{ Auth::user()->street_address ?? '' }}" required style="text-transform: capitalize;">
                 </div>
                 <div class="mb-3">
                         <label class="form-label">Barangay *</label>
-                        <input type="text" class="form-control" name="barangay" value="{{ Auth::user()->barangay ?? '' }}" required>
+                        <input type="text" class="form-control" name="barangay" value="{{ Auth::user()->barangay ?? '' }}" required style="text-transform: capitalize;">
                     </div>
                     <div class="row mb-3">
                         <div class="col">
                             <label class="form-label">Municipality *</label>
-                            <input type="text" class="form-control" name="municipality" value="{{ Auth::user()->municipality ?? '' }}" required>
+                            <input type="text" class="form-control" name="municipality" value="{{ Auth::user()->municipality ?? '' }}" required style="text-transform: capitalize;">
                         </div>
                         <div class="col">
                             <label class="form-label">City *</label>
-                            <input type="text" class="form-control" name="city" value="{{ Auth::user()->city ?? '' }}" required>
+                            <input type="text" class="form-control" name="city" value="{{ Auth::user()->city ?? '' }}" required style="text-transform: capitalize;">
                         </div>
                 </div>
                 <div class="mb-3">
@@ -265,4 +265,28 @@
         box-shadow: none !important;
     }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Prevent leading spaces and ensure proper case
+    function preventLeadingSpaces(input) {
+        input.addEventListener('input', function(e) {
+            if (e.target.value.startsWith(' ')) {
+                e.target.value = e.target.value.trim();
+            }
+        });
+        
+        input.addEventListener('keydown', function(e) {
+            if (e.key === ' ' && e.target.selectionStart === 0) {
+                e.preventDefault();
+            }
+        });
+    }
+    
+    // Apply to all text inputs and textareas
+    document.querySelectorAll('input[type="text"], textarea').forEach(preventLeadingSpaces);
+});
+</script>
 @endpush

@@ -221,10 +221,16 @@
                     <a href="{{ route('admin.dashboard') }}" class="sidebar-link @if(request()->routeIs('admin.dashboard')) active @endif">Dashboard</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
+                    <a href="{{ route('admin.analytics') }}" class="sidebar-link @if(request()->routeIs('admin.analytics')) active @endif">Analytics</a>
+                </li>
+                <li class="nav-item w-100 mb-1">
+                    <a href="{{ route('admin.events.index') }}" class="sidebar-link @if(request()->routeIs('admin.events.index')) active @endif">Events</a>
+                </li>
+                <li class="nav-item w-100 mb-1">
                     <a href="{{ route('admin.users.index') }}" class="sidebar-link @if(request()->routeIs('admin.users.*')) active @endif">Manage Accounts</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.reports.inventory') }}" class="sidebar-link @if(request()->routeIs('admin.reports.inventory')) active @endif">Inventory Reports</a>
+                    <a href="{{ route('admin.inventory.index') }}" class="sidebar-link @if(request()->routeIs('admin.inventory.*')) active @endif">Inventory Reports</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
                     <a href="{{ route('admin.reports.sales') }}" class="sidebar-link @if(request()->routeIs('admin.reports.sales')) active @endif">Sales Report</a>
@@ -279,23 +285,15 @@
 <!-- SweetAlert2 CDN -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // Global SweetAlert function with checkbox and auto-dismiss
-    function showSweetAlertWithCheckbox(title, message, icon = 'success', timer = 5000) {
+    // Global SweetAlert function with OK button and auto-dismiss
+    function showSweetAlertWithCheckbox(title, message, icon = 'success', timer = 3000) {
         return Swal.fire({
             title: title,
-            html: `
-                <div class="text-start">
-                    <p>${message}</p>
-                    <div class="form-check mt-3">
-                        <input class="form-check-input" type="checkbox" id="dontShowAgain">
-                        <label class="form-check-label" for="dontShowAgain">
-                            Don't show this message again
-                        </label>
-                    </div>
-                </div>
-            `,
+            text: message,
             icon: icon,
-            showConfirmButton: false,
+            showConfirmButton: true,
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#4CAF50',
             timer: timer,
             timerProgressBar: true,
             allowOutsideClick: true,
@@ -311,7 +309,7 @@
     // Show success message on page load if exists
     document.addEventListener('DOMContentLoaded', function() {
         @if(session('success'))
-            showSweetAlertWithCheckbox('Success!', '{{ session('success') }}', 'success', 5000);
+            showSweetAlertWithCheckbox('Success!', '{{ session('success') }}', 'success', 3000);
         @endif
     });
 

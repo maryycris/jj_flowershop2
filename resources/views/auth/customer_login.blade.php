@@ -67,8 +67,37 @@
             icon: 'success',
             title: 'Success!',
             text: "{{ session('success') }}",
-            confirmButtonColor: '#198754'
+            confirmButtonColor: '#4CAF50',
+            confirmButtonText: 'OK',
+            timer: 3000,
+            timerProgressBar: true
         });
+    </script>
+@endif
+@if($errors->any())
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        @if($errors->has('login_field'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Login Failed!',
+                text: "{{ $errors->first('login_field') }}",
+                confirmButtonColor: '#4CAF50',
+                confirmButtonText: 'Try Again',
+                timer: 3000,
+                timerProgressBar: true
+            });
+        @elseif($errors->has('password'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Incorrect Password!',
+                text: "{{ $errors->first('password') }}",
+                confirmButtonColor: '#4CAF50',
+                confirmButtonText: 'Try Again',
+                timer: 3000,
+                timerProgressBar: true
+            });
+        @endif
     </script>
 @endif
 <div class="login-main-wrapper">

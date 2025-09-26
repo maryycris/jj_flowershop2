@@ -7,8 +7,8 @@
         border-radius: 10px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         padding: 32px 32px 24px 32px;
-        max-width: 500px;
-        margin: 40px auto 0 auto;
+        max-width: 700px;
+        margin: 24px auto 0 auto;
     }
     .change-password-title {
         font-size: 1.5rem;
@@ -49,11 +49,11 @@
     }
 </style>
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-md-3">
+    <div class="row justify-content-center">
+        <div class="col-md-3 col-lg-3">
             @include('customer.sidebar')
         </div>
-        <div class="col-md-9">
+        <div class="col-md-9 col-lg-7">
             <div class="py-4 px-3 d-flex flex-column align-items-center justify-content-start">
                 <div class="change-password-card">
                     <div class="change-password-title">Reset Password</div>

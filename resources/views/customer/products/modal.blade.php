@@ -34,8 +34,16 @@
           </div>
           <div class="d-flex gap-3 mt-4">
             <button class="btn btn-outline-success flex-fill" id="modalAddToCartBtn" type="button" style="border-radius: 25px; font-weight: 500;">Add to cart</button>
+            <button class="btn btn-outline-danger" id="modalAddToFavoritesBtn" type="button" title="Add to Favorites" style="border-radius: 25px; font-weight: 500; padding: 0 14px;"><i class="bi bi-heart"></i></button>
             <button class="btn btn-success flex-fill" id="modalBuyNowBtn" type="button" style="border-radius: 25px; font-weight: 500;">Buy now</button>
           </div>
+          @if(request()->has('event_id'))
+          <div class="d-flex gap-3 mt-3">
+            <button class="btn btn-warning flex-fill" id="modalAddToEventBtn" type="button" style="border-radius: 25px; font-weight: 500;">
+              <i class="fas fa-calendar-plus me-2"></i>Add to Event
+            </button>
+          </div>
+          @endif
         </div>
       </div>
       <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -53,6 +61,7 @@
   // This script expects you to set product data and show the modal via JS
   let modalProduct = null;
   function openProductModal(product) {
+    console.log('Product data:', product); // Debug: see what data is being passed
     modalProduct = product;
     document.getElementById('modalProductImage').src = product.image;
     document.getElementById('modalProductName').textContent = product.name;
@@ -114,6 +123,74 @@
       const url = `{{ url('/customer/checkout') }}?product_id=${modalProduct.id}&quantity=${qty}`;
       window.location.href = url;
     };
+    // Add to Favorites (placeholder: navigates to favorites page)
+    const favBtn = document.getElementById('modalAddToFavoritesBtn');
+    if (favBtn) {
+      favBtn.onclick = function() {
+        if (!modalProduct) return;
+        try {
+          const item = {
+            id: modalProduct.id,
+            name: modalProduct.name,
+            price: modalProduct.price,
+            image: modalProduct.image
+          };
+          const key = 'jj_favorites';
+          const existing = JSON.parse(sessionStorage.getItem(key) || '[]');
+          // prevent duplicates by id
+          const next = existing.filter(p => String(p.id) !== String(item.id));
+          next.push(item);
+          sessionStorage.setItem(key, JSON.stringify(next));
+        } catch (e) { /* ignore storage issues */ }
+        // Visual feedback: fill heart and disable briefly
+        favBtn.innerHTML = '<i class="bi bi-heart-fill"></i>';
+        favBtn.classList.add('btn-danger');
+        favBtn.title = 'Added to Favorites';
+      };
+    }
+    
+    // Add to Event functionality
+    const addToEventBtn = document.getElementById('modalAddToEventBtn');
+    if (addToEventBtn) {
+      addToEventBtn.onclick = function() {
+        if (!modalProduct) return;
+        const qty = parseInt(document.getElementById('modalProductQty').value);
+        const eventId = new URLSearchParams(window.location.search).get('event_id');
+        
+        if (!eventId) {
+          alert('No event selected. Please go back to your event order summary.');
+          return;
+        }
+        
+        fetch(`{{ url('/customer/events') }}/${eventId}/add-product`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']').getAttribute('content')
+          },
+          body: JSON.stringify({ 
+            product_id: modalProduct.id, 
+            quantity: qty 
+          })
+        })
+        .then(response => {
+          if (response.ok) {
+            alert('Product added to event successfully!');
+            // Close modal and redirect back to order summary
+            const modal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
+            modal.hide();
+            window.location.href = `{{ url('/customer/events') }}/${eventId}/order-summary`;
+          } else {
+            return response.json().then(errorData => {
+              alert('Failed to add product to event: ' + (errorData.message || 'Unknown error'));
+            });
+          }
+        })
+        .catch(error => {
+          alert('An error occurred while adding product to event.');
+        });
+      };
+    }
     function updateModalTotal() {
       if (!modalProduct) return;
       const qty = parseInt(document.getElementById('modalProductQty').value);

@@ -295,13 +295,24 @@
     <footer>
         <div class="container">
             <div class="footer-content">
-                <div class="copyright">
+                <div class="copyright text-center">
                     &copy; {{ date('Y') }} JJ Flowershop. All rights reserved.
                 </div>
-                <div class="social-links">
-                    <a href="#"><i class="fab fa-facebook"></i></a>
-                    <a href="#"><i class="fab fa-instagram"></i></a>
-                    <a href="#"><i class="fab fa-twitter"></i></a>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12 text-center">
+                    <div class="social-links" style="font-size:1.3rem;">
+                        <a href="https://www.facebook.com/profile.php?id=100089623153779" target="_blank" style="color:#1877F3;"><i class="fab fa-facebook"></i></a>
+                        <a href="https://www.instagram.com/jjflowershop_" target="_blank" style="color:#E1306C;"><i class="fab fa-instagram"></i></a>
+                        <a href="https://wa.me/639674184857" target="_blank" style="color:#25D366;"><i class="fab fa-whatsapp"></i></a>
+                        <a href="https://mail.google.com/mail/?view=cm&to=jjflowershopph@gmail.com" target="_blank" style="color:#EA4335;"><i class="fab fa-google"></i></a>
+                        <a href="https://www.google.com/maps?q=Bang-bang+Cordova,+Cebu+Valeriano+Inoc+Street,+Arles+Building+(B-4)" target="_blank" style="color:#dc3545;" title="View Location"><i class="fas fa-map-marker-alt"></i></a>
+                        <a href="tel:09674184857" style="color:#198754;" title="Call 09674184857"><i class="fas fa-phone"></i></a>
+                    </div>
+                    <style>
+                    .social-links > a { margin-right: 18px; }
+                    .social-links > a:last-child { margin-right: 0; }
+                    </style>
                 </div>
             </div>
         </div>

@@ -49,6 +49,10 @@
                             <label class="form-label fw-bold">Recipient Phone</label>
                             <input type="text" class="form-control" name="recipient_phone" value="{{ $order->delivery->recipient_phone ?? '' }}" required>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Relationship to Recipient</label>
+                            <input type="text" class="form-control" value="{{ ucfirst($order->delivery->recipient_relationship ?? 'Not specified') }}" readonly>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
@@ -61,6 +65,30 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Enhanced Recipient Information Display -->
+                @if($order->delivery->delivery_message || $order->delivery->recipient_relationship)
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <h6 class="fw-bold mb-2">
+                                <i class="fas fa-info-circle me-2"></i>Additional Recipient Information
+                            </h6>
+                            @if($order->delivery->delivery_message)
+                                <div class="mb-2">
+                                    <strong>Delivery Message:</strong>
+                                    <p class="mb-0 mt-1">{{ $order->delivery->delivery_message }}</p>
+                                </div>
+                            @endif
+                            @if($order->delivery->recipient_relationship)
+                                <div>
+                                    <strong>Relationship:</strong> {{ ucfirst($order->delivery->recipient_relationship) }}
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                @endif
                 
                 <div class="row">
                     <div class="col-12">
@@ -94,20 +122,58 @@
         </div>
     </div>
     
-    <!-- Invoice Buttons -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Invoice Options</h5>
+    <!-- Payment Receipt / Order Slip / Invoice Options -->
+    @php
+        $isCOD = strtoupper($order->payment_method) === 'COD';
+        $isOnDelivery = $order->order_status === 'on_delivery' || $order->order_status === 'completed';
+    @endphp
+    
+    @if($isOnDelivery)
+        <!-- Invoice Options - Only show when order is on delivery or completed -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">Invoice Options</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ route('clerk.orders.invoice.view', $order->id) }}" class="btn btn-primary me-2" target="_blank">
+                    <i class="fas fa-eye"></i> View Invoice
+                </a>
+                <a href="{{ route('clerk.orders.invoice.download', $order->id) }}" class="btn btn-success">
+                    <i class="fas fa-download"></i> Download PDF
+                </a>
+            </div>
         </div>
-        <div class="card-body">
-            <a href="{{ route('clerk.orders.invoice.view', $order->id) }}" class="btn btn-primary me-2" target="_blank">
-                <i class="fas fa-eye"></i> View Invoice
-            </a>
-            <a href="{{ route('clerk.orders.invoice.download', $order->id) }}" class="btn btn-success">
-                <i class="fas fa-download"></i> Download PDF
-            </a>
+    @elseif($isCOD)
+        <!-- Order Slip - Show when COD payment method -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Order Slip</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ route('clerk.orders.invoice.view', $order->id) }}" class="btn btn-primary me-2" target="_blank">
+                    <i class="fas fa-eye"></i> View Order Slip
+                </a>
+                <a href="{{ route('clerk.orders.invoice.download', $order->id) }}" class="btn btn-success">
+                    <i class="fas fa-download"></i> Download Order Slip
+                </a>
+            </div>
         </div>
-    </div>
+    @else
+        <!-- Payment Receipt - Show for other payment methods -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Payment Receipt</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ route('clerk.orders.invoice.view', $order->id) }}" class="btn btn-primary me-2" target="_blank">
+                    <i class="fas fa-eye"></i> View Receipt
+                </a>
+                <a href="{{ route('clerk.orders.invoice.download', $order->id) }}" class="btn btn-success">
+                    <i class="fas fa-download"></i> Download Receipt
+                </a>
+            </div>
+        </div>
+    @endif
     
     <!-- Payment Proof Section -->
     @php
@@ -131,6 +197,70 @@
             <div class="mb-3">
                 <strong>Screenshot/Receipt:</strong><br>
                 <img src="{{ asset('storage/' . $latestProof->image_path) }}" alt="Payment Proof" class="img-fluid rounded" style="max-width: 300px; max-height: 300px;">
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Register Payment Button for COD Orders -->
+    @if(strtolower($order->payment_method) === 'cod' && $order->invoice_status === 'ready')
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="fas fa-credit-card me-2"></i>
+                Payment Registration Required
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="mb-3">This COD order requires payment registration. Click the button below to register the payment received.</p>
+            <a href="{{ route('clerk.payment.form', $order->id) }}" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>Register Payment
+            </a>
+        </div>
+    </div>
+    @endif
+
+    <!-- Payment Tracking Section -->
+    @if($order->paymentTracking->count() > 0)
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-history me-2"></i>
+                Payment History
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Method</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Recorded By</th>
+                            <th>Memo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($order->paymentTracking as $payment)
+                        <tr>
+                            <td>{{ $payment->payment_date->format('M d, Y') }}</td>
+                            <td>
+                                <span class="badge bg-primary">{{ strtoupper($payment->payment_method) }}</span>
+                            </td>
+                            <td>₱{{ number_format($payment->amount, 2) }}</td>
+                            <td>
+                                <span class="badge bg-{{ $payment->status === 'completed' ? 'success' : 'warning' }}">
+                                    {{ ucfirst($payment->status) }}
+                                </span>
+                            </td>
+                            <td>{{ $payment->recordedBy->name ?? 'System' }}</td>
+                            <td>{{ $payment->memo ?? '-' }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -168,8 +298,30 @@
                 @endforeach
             </ul>
         </div>
-        <div class="card-footer text-end">
-            <h4>Total: ₱{{ number_format($order->total_price, 2) }}</h4>
+        <div class="card-footer">
+            @php
+                $subtotal = $order->products->sum(function($product) {
+                    return $product->pivot->quantity * $product->price;
+                });
+                $shippingFee = $order->delivery->shipping_fee ?? 0;
+                if ($shippingFee == 0 && $order->total_price > $subtotal) {
+                    $shippingFee = $order->total_price - $subtotal;
+                }
+                $total = $subtotal + $shippingFee;
+            @endphp
+            <div class="row">
+                <div class="col-6 text-start">
+                    <div class="mb-2">
+                        <strong>Subtotal:</strong> ₱{{ number_format($subtotal, 2) }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Shipping Fee:</strong> ₱{{ number_format($shippingFee, 2) }}
+                    </div>
+                </div>
+                <div class="col-6 text-end">
+                    <h4 class="mb-0">Total: ₱{{ number_format($total, 2) }}</h4>
+                </div>
+            </div>
         </div>
     </div>
 </div>

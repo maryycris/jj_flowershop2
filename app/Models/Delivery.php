@@ -15,6 +15,11 @@ class Delivery extends Model
         'recipient_name',
         'recipient_phone',
         'delivery_address',
+        'shipping_fee',
+        'special_instructions',
+        'delivery_notes',
+        'delivery_message',
+        'recipient_relationship',
         'status',
     ];
 

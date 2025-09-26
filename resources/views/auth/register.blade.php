@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="{{ asset('css/loginstyle.css') }}">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Font Awesome CDN for Google icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
         body { background: #f6fbf2; font-family: 'Montserrat', Arial, sans-serif; }
         .logo { width: 50px; height: 50px; margin-right: 12px; }
@@ -54,22 +56,70 @@
         </div>
     </div>
 </nav>
+@if(session('error'))
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        @if(str_contains(session('error'), 'already have an account'))
+            Swal.fire({
+                icon: 'warning',
+                title: 'Account Already Exists!',
+                text: "{{ session('error') }}",
+                confirmButtonColor: '#4CAF50',
+                confirmButtonText: 'Go to Login',
+                timer: 3000,
+                timerProgressBar: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "{{ route('customer.login') }}";
+                }
+            });
+        @else
+            Swal.fire({
+                icon: 'info',
+                title: 'Registration Required!',
+                text: "{{ session('error') }}",
+                confirmButtonColor: '#4CAF50',
+                confirmButtonText: 'Register Now',
+                timer: 3000,
+                timerProgressBar: true
+            });
+        @endif
+    </script>
+@endif
+@if(session('success'))
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: "{{ session('success') }}",
+            confirmButtonColor: '#4CAF50',
+            confirmButtonText: 'OK',
+            timer: 3000,
+            timerProgressBar: true
+        });
+    </script>
+@endif
 <div class="register-main-wrapper">
     <div class="register-card">
         <h2 class="text-center text-success mb-2" style="font-weight: 700;">JJ Flowershop</h2>
         <p class="text-center text-muted mb-2">Register to create an account</p>
+        <div class="alert alert-info text-center mb-3" style="font-size: 0.9rem;">
+            <strong>Choose your registration method:</strong><br>
+            Fill out the form below OR use social login for faster registration
+        </div>
         <form method="POST" action="{{ url('/register') }}">
             @csrf
             <div class="mb-2">
                 <label for="first_name" class="form-label visually-hidden">First Name</label>
-                <input type="text" name="first_name" id="first_name" class="form-control form-control-sm" placeholder="First Name" value="{{ old('first_name') }}" required autofocus oninput="this.value = this.value.replace(/^\s+/, '')">
+                <input type="text" name="first_name" id="first_name" class="form-control form-control-sm" placeholder="First Name" value="{{ old('first_name') }}" required autofocus style="text-transform: capitalize;">
                 @error('first_name')
                     <span class="text-danger" role="alert">{{ $message }}</span>
                 @enderror
             </div>
             <div class="mb-2">
                 <label for="last_name" class="form-label visually-hidden">Last Name</label>
-                <input type="text" name="last_name" id="last_name" class="form-control form-control-sm" placeholder="Last Name" value="{{ old('last_name') }}" required oninput="this.value = this.value.replace(/^\s+/, '')">
+                <input type="text" name="last_name" id="last_name" class="form-control form-control-sm" placeholder="Last Name" value="{{ old('last_name') }}" required style="text-transform: capitalize;">
                 @error('last_name')
                     <span class="text-danger" role="alert">{{ $message }}</span>
                 @enderror
@@ -81,33 +131,22 @@
                     <span class="text-danger" role="alert">{{ $message }}</span>
                 @enderror
             </div>
-            <div class="mb-2">
-                <label for="contact_number" class="form-label visually-hidden">Phone Number</label>
-                <input type="text" name="contact_number" id="contact_number" class="form-control form-control-sm"
-                       placeholder="Phone Number" value="{{ old('contact_number') }}"
-                       maxlength="11" pattern="\d{11}" title="Phone number must be exactly 11 digits">
-                @error('contact_number')
-                    <span class="text-danger" role="alert">{{ $message }}</span>
-                @enderror
+            <!-- Divider -->
+            <div class="text-center mb-3">
+                <hr>
+                <span class="text-muted" style="background: white; padding: 0 15px; font-size: 0.9rem;">OR</span>
             </div>
-            <div id="verification-channel-group" class="mb-2" style="display:none;">
-                <label class="form-label">Where do you want to receive your verification code?</label>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="verification_channel" id="channel_email" value="email" {{ old('verification_channel') == 'email' ? 'checked' : '' }}>
-                    <label class="form-check-label" for="channel_email">Gmail</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="verification_channel" id="channel_phone" value="phone" {{ old('verification_channel') == 'phone' ? 'checked' : '' }}>
-                    <label class="form-check-label" for="channel_phone">Phone Number</label>
-                </div>
-                @if($errors->has('verification_channel'))
-                    <span class="text-danger" role="alert">{{ $errors->first('verification_channel') }}</span>
-                @endif
+            
+            <!-- Social Login Buttons -->
+            <div class="mb-3">
+                <a href="{{ url('auth/facebook') }}" class="btn btn-primary btn-sm w-100 mb-2" style="background-color: #1877F3; border-color: #1877F3;">
+                    <i class="bi bi-facebook"></i> Register with Facebook
+                </a>
+                <a href="{{ url('auth/google') }}" class="btn btn-danger btn-sm w-100" style="background-color: #EA4335; border-color: #EA4335;">
+                    <i class="fab fa-google"></i> Register with Google
+                </a>
             </div>
-            <div id="at-least-one-error" class="text-danger mb-2" style="display:none; font-size:0.95rem;"></div>
-            @if($errors->has('at_least_one'))
-                <div class="text-danger mb-2" style="font-size:0.95rem;">{{ $errors->first('at_least_one') }}</div>
-            @endif
+            <!-- Verification channel selection removed since we only have email now -->
             <div class="mb-2">
                 <label for="password" class="form-label visually-hidden">Password</label>
                 <input type="password" name="password" id="password" class="form-control form-control-sm" placeholder="Password" required>
@@ -144,33 +183,27 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+// JavaScript for form validation and social login
 window.addEventListener('DOMContentLoaded', function() {
-    var emailField = document.getElementById('email');
-    var phoneField = document.getElementById('contact_number');
-    var group = document.getElementById('verification-channel-group');
-    var channelEmail = document.getElementById('channel_email');
-    var channelPhone = document.getElementById('channel_phone');
-    function toggleVerificationChannel() {
-        var email = emailField ? emailField.value.trim() : '';
-        var phone = phoneField ? phoneField.value.trim() : '';
-        if(group) {
-            if(email && phone) {
-                group.style.display = '';
-            } else {
-                group.style.display = 'none';
-                if(channelEmail) channelEmail.checked = false;
-                if(channelPhone) channelPhone.checked = false;
+    // Prevent leading spaces and ensure proper case
+    function preventLeadingSpaces(input) {
+        input.addEventListener('input', function(e) {
+            if (e.target.value.startsWith(' ')) {
+                e.target.value = e.target.value.trim();
             }
-        }
+        });
+        
+        input.addEventListener('keydown', function(e) {
+            if (e.key === ' ' && e.target.selectionStart === 0) {
+                e.preventDefault();
+            }
+        });
     }
-    if(emailField) emailField.addEventListener('input', toggleVerificationChannel);
-    if(phoneField) phoneField.addEventListener('input', toggleVerificationChannel);
-    toggleVerificationChannel();
-    var email = emailField ? emailField.value.trim() : '';
-    var phone = phoneField ? phoneField.value.trim() : '';
-    if(group && email && phone) {
-        group.style.display = '';
-    }
+    
+    // Apply to all text inputs
+    document.querySelectorAll('input[type="text"]').forEach(preventLeadingSpaces);
+    
+    console.log('Registration form loaded successfully');
 });
 </script>
 <style>

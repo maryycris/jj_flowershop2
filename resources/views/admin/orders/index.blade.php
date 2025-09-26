@@ -42,7 +42,7 @@
                     <tbody>
                         @if($type == 'online')
                             @forelse($onlineOrders as $order)
-                                <tr>
+                                <tr class="cursor-pointer" onclick="window.location='{{ route('admin.orders.online.invoice', $order) }}'">
                                     <td>{{ $order->user->name ?? 'N/A' }}</td>
                                     <td>{{ $order->id }}</td>
                                     <td>{{ $order->created_at->format('m/d/Y') }}</td>
@@ -65,12 +65,24 @@
                             @endforelse
                         @else
                             @forelse($walkInOrders as $order)
-                                <tr>
+                                <tr class="cursor-pointer" onclick="window.location='{{ route('admin.orders.walkin.quotation', $order) }}'">
                                     <td>{{ $order->user->name ?? 'Walk-in Customer' }}</td>
                                     <td>{{ $order->id }}</td>
                                     <td>{{ $order->created_at->format('m/d/Y') }}</td>
                                     <td>₱{{ number_format($order->total_price, 2) }}</td>
-                                    <td><span class="badge bg-secondary">{{ ucfirst($order->status) }}</span></td>
+                                    <td>
+                                        @if($order->status === 'quotation')
+                                            <span class="badge bg-warning text-dark">Quotation</span>
+                                        @elseif($order->status === 'validated')
+                                            <span class="badge bg-info">Validated</span>
+                                        @elseif($order->status === 'done')
+                                            <span class="badge bg-success">Done</span>
+                                        @elseif($order->status === 'approved')
+                                            <span class="badge bg-primary">Approved</span>
+                                        @else
+                                            <span class="badge bg-secondary">{{ ucfirst($order->status) }}</span>
+                                        @endif
+                                    </td>
                                     <td>
                                         @if($order->status === 'approved')
                                             <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignDeliveryModal{{ $order->id }}">Assign for Delivery</button>
@@ -214,6 +226,9 @@
     .tab-content {
         border-top: none;
         padding-top: 1rem;
+    }
+    .cursor-pointer {
+        cursor: pointer;
     }
 </style>
 @endpush

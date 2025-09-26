@@ -1,7 +1,7 @@
 @extends('layouts.clerk_app')
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Inventory (Clerk)</h2>
+    <h2>Inventory (Clerk) <span id="pendingIcon" class="badge bg-warning ms-2" style="display: none; background-color: #ff8c00 !important;"><i class="fas fa-clock"></i> Pending</span></h2>
     <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProductModal">+ Add New Product</button>
 </div>
 
@@ -29,8 +29,13 @@
             <select class="form-select" id="category" name="category" required>
               <option value="">Select Category</option>
               <option value="Fresh Flowers">Fresh Flowers</option>
-              <option value="Gifts">Gifts</option>
+              <option value="Dried Flowers">Dried Flowers</option>
               <option value="Artificial Flowers">Artificial Flowers</option>
+              <option value="Floral Supplies">Floral Supplies</option>
+              <option value="Packaging Materials">Packaging Materials</option>
+              <option value="Materials, Tools, and Equipment">Materials, Tools, and Equipment</option>
+              <option value="Office Supplies">Office Supplies</option>
+              <option value="Other Offers">Other Offers</option>
             </select>
           </div>
           <div class="mb-3">
@@ -75,9 +80,9 @@
   </div>
 </div>
 
-<!-- Submit Button -->
+<!-- Update Button -->
 <div class="d-flex justify-content-end mt-3">
-    <button class="btn btn-success" id="submitInventoryBtn">Submit</button>
+    <button class="btn btn-success" id="submitInventoryBtn">Update</button>
 </div>
 
 <!-- Inventory Submitted Modal -->
@@ -86,11 +91,11 @@
     <div class="modal-content text-center p-4">
       <div class="modal-body">
         <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="mb-3">
-          <circle cx="12" cy="12" r="12" fill="#e6f4ea"/>
-          <path d="M7 13l3 3 7-7" stroke="#4caf50" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="12" cy="12" r="12" fill="#fff3cd"/>
+          <path d="M7 13l3 3 7-7" stroke="#ff8c00" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <h5 class="mb-3">YOUR REPORT HAS BEEN SUBMITTED</h5>
-        <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
+        <h5 class="mb-3">Your request for updating the inventory has been send to the Admin. Please wait for the Admin's approval.</h5>
+        <button type="button" class="btn btn-warning" data-bs-dismiss="modal" style="background-color: #ff8c00; border-color: #ff8c00; color: white;">OK</button>
       </div>
     </div>
   </div>
@@ -99,7 +104,7 @@
 @if($products->count())
     <!-- Bootstrap Nav Tabs -->
     <ul class="nav nav-tabs mb-3" id="inventoryTabs" role="tablist">
-        @foreach(['Fresh Flowers', 'Gifts', 'Artificial Flowers'] as $category)
+        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Materials, Tools, and Equipment', 'Office Supplies', 'Other Offers'] as $category)
             <li class="nav-item" role="presentation">
                 <button class="nav-link @if($loop->first) active @endif" id="tab-{{ Str::slug($category) }}" data-bs-toggle="tab" data-bs-target="#{{ Str::slug($category) }}" type="button" role="tab" aria-controls="{{ Str::slug($category) }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}">
                     {{ $category }}
@@ -108,7 +113,7 @@
         @endforeach
     </ul>
     <div class="tab-content" id="inventoryTabsContent">
-        @foreach(['Fresh Flowers', 'Gifts', 'Artificial Flowers'] as $category)
+        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Materials, Tools, and Equipment', 'Office Supplies', 'Other Offers'] as $category)
             <div class="tab-pane fade @if($loop->first) show active @endif" id="{{ Str::slug($category) }}" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table table-bordered table-striped align-middle">
@@ -138,7 +143,7 @@
                                     $stock = $product->stock ?? 0;
                                     $qtyToPurchase = ($stock < $max) ? ($max - $stock) : 0;
                                 @endphp
-                                    <tr>
+                                    <tr id="product-row-{{ $product->id }}" data-product-id="{{ $product->id }}">
                                     <td>{{ $product->code ?? $product->id }}</td>
                                     <td>{{ $product->name }}</td>
                                     <td>{{ $product->category }}</td>
@@ -154,13 +159,9 @@
                                     <td>{{ $product->created_at ? $product->created_at->format('Y-m-d') : '-' }}</td>
                                     <td>
                                             <!-- Edit Button -->
-                                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editProductModal{{ $product->id }}">Edit</button>
-                                            <!-- Delete Form -->
-                                            <form action="{{ route('clerk.products.destroy', $product->id) }}" method="POST" style="display:inline;">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this product?')">Delete</button>
-                                            </form>
+                                        <button class="btn btn-sm btn-primary edit-product-btn" data-bs-toggle="modal" data-bs-target="#editProductModal{{ $product->id }}" data-product-id="{{ $product->id }}">Edit</button>
+                                            <!-- Delete Button -->
+                                            <button class="btn btn-sm btn-danger delete-product-btn" data-product-id="{{ $product->id }}">Delete</button>
                                             <!-- Edit Modal -->
                                 <div class="modal fade" id="editProductModal{{ $product->id }}" tabindex="-1" aria-labelledby="editProductModalLabel{{ $product->id }}" aria-hidden="true">
                                   <div class="modal-dialog">
@@ -169,7 +170,7 @@
                                                     <h5 class="modal-title" id="editProductModalLabel{{ $product->id }}">Edit Product</h5>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                       </div>
-                                      <form action="{{ route('clerk.inventory.update', $product->id) }}" method="POST">
+                                      <form action="{{ route('clerk.inventory.update', $product->id) }}" method="POST" data-product-id="{{ $product->id }}">
                                         @csrf
                                         @method('PUT')
                                         <div class="modal-body">
@@ -181,8 +182,13 @@
                                                         <label for="category{{ $product->id }}" class="form-label">Category</label>
                                                         <select class="form-select" id="category{{ $product->id }}" name="category" required>
                                                           <option value="Fresh Flowers" @if($product->category == 'Fresh Flowers') selected @endif>Fresh Flowers</option>
-                                                          <option value="Gifts" @if($product->category == 'Gifts') selected @endif>Gifts</option>
+                                                          <option value="Dried Flowers" @if($product->category == 'Dried Flowers') selected @endif>Dried Flowers</option>
                                                           <option value="Artificial Flowers" @if($product->category == 'Artificial Flowers') selected @endif>Artificial Flowers</option>
+                                                          <option value="Floral Supplies" @if($product->category == 'Floral Supplies') selected @endif>Floral Supplies</option>
+                                                          <option value="Packaging Materials" @if($product->category == 'Packaging Materials') selected @endif>Packaging Materials</option>
+                                                          <option value="Materials, Tools, and Equipment" @if($product->category == 'Materials, Tools, and Equipment') selected @endif>Materials, Tools, and Equipment</option>
+                                                          <option value="Office Supplies" @if($product->category == 'Office Supplies') selected @endif>Office Supplies</option>
+                                                          <option value="Other Offers" @if($product->category == 'Other Offers') selected @endif>Other Offers</option>
                                                         </select>
                                                       </div>
                                                       <div class="mb-3">
@@ -220,7 +226,7 @@
                                         </div>
                                         <div class="modal-footer">
                                           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-                                                      <button type="submit" class="btn btn-primary">Update</button>
+                                                      <button type="submit" class="btn btn-primary">Edit</button>
                                         </div>
                                       </form>
                                     </div>
@@ -239,4 +245,398 @@
 @else
     <p>No products found.</p>
 @endif
+
+<style>
+.product-row-edited {
+    background-color: rgba(135, 206, 235, 0.7) !important; /* 70% transparent sky-blue - more visible */
+    transition: background-color 0.3s ease;
+    border: 2px solid #87CEEB !important; /* Add border to make it more visible */
+}
+
+.product-row-deleted {
+    background-color: rgba(255, 99, 99, 0.7) !important; /* 70% transparent red - more visible */
+    transition: background-color 0.3s ease;
+    border: 2px solid #FF6363 !important; /* Add border to make it more visible */
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Inventory highlighting script loaded');
+    
+    // Track edited and deleted products
+    let editedProducts = new Set();
+    let deletedProducts = new Set();
+    
+    // Load highlighted products from session storage
+    const savedEdited = sessionStorage.getItem('editedProducts');
+    const savedDeleted = sessionStorage.getItem('deletedProducts');
+    
+    if (savedEdited) {
+        editedProducts = new Set(JSON.parse(savedEdited));
+        console.log('Loaded edited products from session:', Array.from(editedProducts));
+    }
+    
+    if (savedDeleted) {
+        deletedProducts = new Set(JSON.parse(savedDeleted));
+        console.log('Loaded deleted products from session:', Array.from(deletedProducts));
+    }
+    
+    // Apply highlighting to loaded products
+    editedProducts.forEach(productId => {
+        const row = document.getElementById('product-row-' + productId);
+        if (row) {
+            row.classList.add('product-row-edited');
+            row.style.backgroundColor = 'rgba(135, 206, 235, 0.7)';
+            row.style.border = '2px solid #87CEEB';
+            console.log('Applied blue highlight to product:', productId);
+        }
+    });
+    
+    deletedProducts.forEach(productId => {
+        const row = document.getElementById('product-row-' + productId);
+        if (row) {
+            row.classList.add('product-row-deleted');
+            row.style.backgroundColor = 'rgba(255, 99, 99, 0.7)';
+            row.style.border = '2px solid #FF6363';
+            console.log('Applied red highlight to product:', productId);
+        }
+    });
+
+    // Clear any existing staged data to ensure fresh start
+    sessionStorage.removeItem('stagedEdits');
+    sessionStorage.removeItem('editedProducts');
+    sessionStorage.removeItem('deletedProducts');
+    
+    // Function to hide pending icon (for future admin approval)
+    window.hidePendingIcon = function() {
+        const pendingIcon = document.getElementById('pendingIcon');
+        if (pendingIcon) {
+            pendingIcon.style.display = 'none';
+            console.log('Pending icon hidden');
+        }
+    };
+    
+    // Apply staged edits to table on load so they persist across refreshes
+    try {
+        const stagedEdits = JSON.parse(sessionStorage.getItem('stagedEdits') || '{}');
+        Object.keys(stagedEdits).forEach(pid => {
+            const row = document.getElementById('product-row-' + pid);
+            const v = stagedEdits[pid];
+            if (row && v) {
+                if (row.cells[1]) row.cells[1].textContent = v.name || row.cells[1].textContent;
+                if (row.cells[2]) row.cells[2].textContent = v.category || row.cells[2].textContent;
+                if (row.cells[3]) row.cells[3].textContent = parseFloat(v.price || row.cells[3].textContent || 0).toFixed(2);
+                if (row.cells[4]) row.cells[4].textContent = parseFloat(v.cost_price || row.cells[4].textContent || 0).toFixed(2);
+                if (row.cells[5]) row.cells[5].textContent = v.reorder_min || row.cells[5].textContent;
+                if (row.cells[6]) row.cells[6].textContent = v.reorder_max || row.cells[6].textContent;
+                if (row.cells[7]) row.cells[7].textContent = v.stock || row.cells[7].textContent;
+                if (row.cells[8]) row.cells[8].textContent = v.qty_consumed || row.cells[8].textContent;
+                if (row.cells[9]) row.cells[9].textContent = v.qty_damaged || row.cells[9].textContent;
+                if (row.cells[10]) row.cells[10].textContent = v.qty_sold || row.cells[10].textContent;
+                const qtyToPurchase = (parseInt(v.reorder_max || 0) - parseInt(v.stock || 0));
+                if (row.cells[11]) row.cells[11].textContent = Math.max(0, qtyToPurchase);
+                row.classList.add('product-row-edited');
+                row.style.backgroundColor = 'rgba(135, 206, 235, 0.7)';
+                row.style.border = '2px solid #87CEEB';
+                console.log('Applied staged values for product:', pid);
+            }
+        });
+    } catch (e) {
+        console.warn('Failed to apply staged edits from session', e);
+    }
+    
+    // Function to handle Edit button clicks (table row Edit button)
+    function handleEditClick(event) {
+        event.preventDefault();
+        const productId = this.getAttribute('data-product-id');
+        const row = document.getElementById('product-row-' + productId);
+        
+        console.log('Edit clicked for product:', productId);
+        console.log('Table Edit button clicked - no highlighting yet');
+        
+        // Don't highlight the row yet - only when Edit button in modal is clicked
+        // Just open the modal
+    }
+    
+    // Function to handle modal form submission (Edit button in modal)
+    function handleModalUpdate(event) {
+        // This function is no longer used - forms submit normally now
+        console.log('handleModalUpdate called but not used');
+    }
+    
+    // Function to handle Delete button clicks
+    function handleDeleteClick(event) {
+        event.preventDefault();
+        const productId = this.getAttribute('data-product-id');
+        const row = document.getElementById('product-row-' + productId);
+        
+        console.log('Delete clicked for product:', productId);
+        
+        if (row) {
+            // Remove from edited list if it was there
+            editedProducts.delete(productId);
+            row.classList.remove('product-row-edited');
+            
+            // Add to deleted list and highlight
+            deletedProducts.add(productId);
+            row.classList.add('product-row-deleted');
+            
+            // Save to session storage
+            sessionStorage.setItem('deletedProducts', JSON.stringify(Array.from(deletedProducts)));
+            
+            console.log('Row highlighted for delete:', productId);
+            console.log('Deleted products set:', Array.from(deletedProducts));
+            console.log('Row classes:', row.classList);
+            console.log('Row element:', row);
+            console.log('Row has deleted class:', row.classList.contains('product-row-deleted'));
+            
+            // Show confirmation message
+            if (confirm('Are you sure you want to mark this product for deletion? The admin will review this change.')) {
+                console.log('Product marked for deletion:', productId);
+            } else {
+                // If user cancels, remove the highlighting
+                deletedProducts.delete(productId);
+                row.classList.remove('product-row-deleted');
+                console.log('Delete cancelled for product:', productId);
+            }
+        } else {
+            console.error('Row not found for product ID:', productId);
+            console.log('Looking for element with ID: product-row-' + productId);
+        }
+    }
+    
+    // Use event delegation for dynamically loaded content
+    document.addEventListener('click', function(event) {
+        console.log('Click detected on:', event.target);
+        console.log('Button classes:', event.target.classList);
+        
+        if (event.target.classList.contains('edit-product-btn')) {
+            console.log('Edit button clicked');
+            handleEditClick.call(event.target, event);
+        } else if (event.target.classList.contains('delete-product-btn')) {
+            console.log('Delete button clicked');
+            handleDeleteClick.call(event.target, event);
+        } else if (event.target.textContent === 'OK' && event.target.closest('#inventorySubmittedModal')) {
+            console.log('OK button clicked via event delegation');
+            
+            // Show pending icon
+            const pendingIcon = document.getElementById('pendingIcon');
+            if (pendingIcon) {
+                pendingIcon.style.display = 'inline-block';
+                console.log('Pending icon shown');
+            }
+            
+            // Maintain highlights when OK is clicked
+            editedProducts.forEach(productId => {
+                const row = document.getElementById('product-row-' + productId);
+                if (row) {
+                    row.classList.add('product-row-edited');
+                    row.style.backgroundColor = 'rgba(135, 206, 235, 0.7)';
+                    row.style.border = '2px solid #87CEEB';
+                    console.log('Maintained blue highlight for product:', productId);
+                }
+            });
+            
+            deletedProducts.forEach(productId => {
+                const row = document.getElementById('product-row-' + productId);
+                if (row) {
+                    row.classList.add('product-row-deleted');
+                    row.style.backgroundColor = 'rgba(255, 99, 99, 0.7)';
+                    row.style.border = '2px solid #FF6363';
+                    console.log('Maintained red highlight for product:', productId);
+                }
+            });
+        }
+    });
+    
+    // Add direct click handlers for Edit buttons in modals
+    document.addEventListener('click', function(event) {
+        if (event.target.type === 'submit' && event.target.textContent === 'Edit') {
+            event.preventDefault(); // Prevent normal form submission
+            console.log('Edit button clicked in modal');
+            console.log('Button element:', event.target);
+            
+            // Find the form that contains this button
+            const form = event.target.closest('form[data-product-id]');
+            console.log('Closest form:', form);
+            
+            if (form) {
+                console.log('Form found, submitting via AJAX');
+                
+                // Get the product ID and highlight the row immediately
+                const productId = form.getAttribute('data-product-id');
+                const row = document.getElementById('product-row-' + productId);
+                
+                if (row && productId) {
+                    // Remove from deleted list if it was there
+                    deletedProducts.delete(productId);
+                    row.classList.remove('product-row-deleted');
+                    
+                    // Add to edited list and highlight
+                    editedProducts.add(productId);
+                    row.classList.add('product-row-edited');
+                    
+                    // Save to session storage
+                    sessionStorage.setItem('editedProducts', JSON.stringify(Array.from(editedProducts)));
+                    
+                    console.log('Row highlighted for edit:', productId);
+                    
+                    // Force a visual update
+                    row.style.backgroundColor = 'rgba(135, 206, 235, 0.7)';
+                    row.style.border = '2px solid #87CEEB';
+                    
+                    // Build staged values from form and update UI only (no backend save yet)
+                    const formData = new FormData(form);
+                    const newValues = {
+                        name: formData.get('name'),
+                        category: formData.get('category'),
+                        price: formData.get('price'),
+                        cost_price: formData.get('cost_price'),
+                        reorder_min: formData.get('reorder_min'),
+                        reorder_max: formData.get('reorder_max'),
+                        stock: formData.get('stock'),
+                        qty_consumed: formData.get('qty_consumed'),
+                        qty_damaged: formData.get('qty_damaged'),
+                        qty_sold: formData.get('qty_sold')
+                    };
+
+                    // Persist staged values in sessionStorage so they survive refresh
+                    let stagedEdits = {};
+                    try { stagedEdits = JSON.parse(sessionStorage.getItem('stagedEdits') || '{}'); } catch(e) { stagedEdits = {}; }
+                    stagedEdits[productId] = newValues;
+                    sessionStorage.setItem('stagedEdits', JSON.stringify(stagedEdits));
+
+                    // Update the table visually
+                    if (row) {
+                        if (row.cells[1]) row.cells[1].textContent = newValues.name;
+                        if (row.cells[2]) row.cells[2].textContent = newValues.category;
+                        if (row.cells[3]) row.cells[3].textContent = parseFloat(newValues.price || 0).toFixed(2);
+                        if (row.cells[4]) row.cells[4].textContent = parseFloat(newValues.cost_price || 0).toFixed(2);
+                        if (row.cells[5]) row.cells[5].textContent = newValues.reorder_min || 0;
+                        if (row.cells[6]) row.cells[6].textContent = newValues.reorder_max || 0;
+                        if (row.cells[7]) row.cells[7].textContent = newValues.stock || 0;
+                        if (row.cells[8]) row.cells[8].textContent = newValues.qty_consumed || 0;
+                        if (row.cells[9]) row.cells[9].textContent = newValues.qty_damaged || 0;
+                        if (row.cells[10]) row.cells[10].textContent = newValues.qty_sold || 0;
+                        const qtyToPurchase = (parseInt(newValues.reorder_max || 0) - parseInt(newValues.stock || 0));
+                        if (row.cells[11]) row.cells[11].textContent = Math.max(0, qtyToPurchase);
+                        console.log('Row visually updated with staged values');
+                    }
+
+                    // Reset button and close modal
+                    const submitBtn = event.target;
+                    submitBtn.textContent = 'Edit';
+                    submitBtn.disabled = false;
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editProductModal' + productId));
+                    if (modal) { modal.hide(); }
+                    alert('Staged for review. Click the green Update button to submit to admin.');
+                } else {
+                    console.error('Row or productId not found:', { row, productId });
+                }
+            } else {
+                console.log('No form found');
+            }
+        }
+    });
+    
+    // Handle Update button click
+    const updateBtn = document.getElementById('submitInventoryBtn');
+    if (updateBtn) {
+        updateBtn.addEventListener('click', function() {
+            console.log('Main Update button clicked');
+            console.log('Edited products:', Array.from(editedProducts));
+            console.log('Deleted products:', Array.from(deletedProducts));
+            
+            // Create summary message
+            let summaryMessage = 'Your request for updating the inventory has been send to the Admin. Please wait for the Admin\'s approval.';
+            
+            // Submit changes to backend first
+            const submitData = {
+                edited_products: JSON.stringify(Array.from(editedProducts)),
+                deleted_products: JSON.stringify(Array.from(deletedProducts)),
+                staged_edits: JSON.stringify(stagedEdits),
+                _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            };
+
+            fetch('{{ route("clerk.inventory.submit-changes") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify(submitData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Changes submitted successfully:', data);
+                    
+                    // Show confirmation modal with summary
+                    const modal = document.getElementById('inventorySubmittedModal');
+                    if (modal) {
+                        // Update modal content
+                        const modalBody = modal.querySelector('.modal-body h5');
+                        if (modalBody) {
+                            modalBody.textContent = summaryMessage;
+                        }
+                        
+                        // Use Bootstrap modal instance to show the modal
+                        const bootstrapModal = new bootstrap.Modal(modal);
+                        bootstrapModal.show();
+                
+                        // Add event listener for OK button to maintain highlighting
+                        const okButton = modal.querySelector('button[data-bs-dismiss="modal"]');
+                        if (okButton) {
+                            console.log('OK button found, adding click handler');
+                            
+                            // Use a simple click handler
+                            okButton.onclick = function() {
+                                console.log('OK button clicked - maintaining highlights');
+                                
+                                // Show pending icon
+                                const pendingIcon = document.getElementById('pendingIcon');
+                                if (pendingIcon) {
+                                    pendingIcon.style.display = 'inline-block';
+                                    console.log('Pending icon shown');
+                                }
+                                
+                                // Keep all highlighted rows visible
+                                editedProducts.forEach(productId => {
+                                    const row = document.getElementById('product-row-' + productId);
+                                    if (row) {
+                                        row.classList.add('product-row-edited');
+                                        row.style.backgroundColor = 'rgba(135, 206, 235, 0.7)';
+                                        row.style.border = '2px solid #87CEEB';
+                                        console.log('Maintained blue highlight for product:', productId);
+                                    }
+                                });
+                                
+                                deletedProducts.forEach(productId => {
+                                    const row = document.getElementById('product-row-' + productId);
+                                    if (row) {
+                                        row.classList.add('product-row-deleted');
+                                        row.style.backgroundColor = 'rgba(255, 99, 99, 0.7)';
+                                        row.style.border = '2px solid #FF6363';
+                                        console.log('Maintained red highlight for product:', productId);
+                                    }
+                                });
+                            };
+                        } else {
+                            console.error('OK button not found in modal');
+                        }
+                    }
+                } else {
+                    console.error('Failed to submit changes:', data.message);
+                    alert('Error submitting changes: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting changes:', error);
+                alert('Error submitting changes. Please try again.');
+            });
+        });
+    }
+});
+</script>
 @endsection

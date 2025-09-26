@@ -17,7 +17,7 @@ return new class extends Migration
             $table->decimal('total_price', 10, 2)->nullable()->change();
             
             // Drop foreign key constraints first if they exist
-            $table->dropForeign(['product_id']);
+            $table->dropForeign('orders_product_id_foreign');
 
             // Remove product_id and quantity from orders table
             $table->dropColumn('product_id');

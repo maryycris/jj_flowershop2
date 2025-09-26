@@ -10,7 +10,18 @@
     <form action="{{ route('customer.checkout.payment_method') }}" method="GET" id="checkoutForm">
         @csrf
         <input type="hidden" name="recipient_type" id="recipientType" value="someone">
+        <input type="hidden" name="delivery_address" id="deliveryAddressHidden" value="">
         <input type="hidden" name="promo_code" id="promoCodeInputHidden" value="">
+        <input type="hidden" name="shipping_fee" id="shippingFeeInput" value="0">
+        @if(request('product_id'))
+            <input type="hidden" name="product_id" value="{{ request('product_id') }}">
+            <input type="hidden" name="quantity" value="{{ request('quantity', 1) }}">
+        @endif
+        @if(request('selected_items'))
+            @foreach(request('selected_items') as $itemId)
+                <input type="hidden" name="selected_items[]" value="{{ $itemId }}">
+            @endforeach
+        @endif
         <div class="row justify-content-center">
             <div class="col-lg-7">
                 <div class="bg-white rounded-3 p-4 mb-4" style="box-shadow: none;">
@@ -37,11 +48,66 @@
                         <button type="button" class="btn btn-outline-success flex-fill recipient-btn active" id="btnSomeone">Someone will receive the order</button>
                         <button type="button" class="btn btn-outline-success flex-fill recipient-btn" id="btnSelf">I will receive the order.</button>
                     </div>
+                    <div id="recipientFields" class="mb-3">
+                        <h6 class="fw-bold text-success mb-3">
+                            <i class="fas fa-user me-2"></i>Recipient Information
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Recipient Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="recipient_name" id="recipientName" placeholder="Enter recipient's full name" required>
+                                <small class="text-muted">Full name as it appears on ID</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Recipient Contact Number <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="recipient_phone" id="recipientPhone" placeholder="09XXXXXXXXX" required pattern="^09\d{9}$" maxlength="11">
+                                <small class="text-muted">Mobile number for delivery updates</small>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Relationship to Recipient</label>
+                                <select class="form-select" name="recipient_relationship" id="recipientRelationship">
+                                    <option value="">Select relationship</option>
+                                    <option value="family">Family Member</option>
+                                    <option value="friend">Friend</option>
+                                    <option value="colleague">Colleague</option>
+                                    <option value="partner">Partner/Spouse</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Special Instructions</label>
+                                <textarea class="form-control" name="recipient_instructions" id="recipientInstructions" rows="2" placeholder="Any special delivery instructions..."></textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label class="form-label fw-semibold">Delivery Message/Card Message</label>
+                                <textarea class="form-control" name="delivery_message" id="deliveryMessage" rows="3" placeholder="Write a personal message for the recipient..."></textarea>
+                                <small class="text-muted">This message will be included with the delivery</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="selfFields" class="mb-3" style="display:none">
+                        <!-- No extra fields if self -- can place customer info here if needed. -->
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Shipping Addresses</label>
-                        <select class="form-select" style="min-height: 120px;">
-                            <option>{{ Auth::user()->first_name }} {{ Auth::user()->last_name }}\nBang-bang Cordova\nCebu City\n+{{ Auth::user()->contact_number }}\nRegion VII</option>
+                        <select class="form-select" name="address_id" id="addressSelect" style="min-height: 120px;">
+                            @forelse(($addresses ?? []) as $addr)
+                                <option value="{{ $addr->id }}" data-address="{{ $addr->street_address }}, {{ $addr->barangay }}, {{ $addr->municipality ?? $addr->city }}, {{ $addr->region ?? 'Region VII' }}" @selected(optional($deliveryAddress)->id === $addr->id)>
+                                    {{ $addr->recipient_name ?? (Auth::user()->first_name.' '.Auth::user()->last_name) }} - {{ $addr->street_address }}, {{ $addr->barangay }}, {{ $addr->municipality ?? $addr->city }}
+                                </option>
+                            @empty
+                                <option disabled>No saved addresses. Add one in Address Book.</option>
+                            @endforelse
                         </select>
+                    </div>
+
+                    {{-- Delivery Map Component --}}
+                    <div class="mb-4">
+                        <x-delivery-map :selectedAddress="optional($deliveryAddress)->street_address . ', ' . optional($deliveryAddress)->barangay . ', ' . optional($deliveryAddress)->municipality . ', ' . optional($deliveryAddress)->city . ', ' . optional($deliveryAddress)->region ?? ''" />
                     </div>
                 </div>
             </div>
@@ -73,12 +139,12 @@
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span style="color: #888;">Shipping Fee</span>
-                        <span style="color: #222;">₱<span id="shippingFeeDisplay">{{ number_format($shippingFee ?? 50, 2) }}</span></span>
+                        <span style="color: #222;">₱<span id="shippingFeeDisplay">—</span></span>
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between mb-3">
                         <span style="font-weight: 600;">Total</span>
-                        <span style="color: #7bb47b; font-weight: 600; font-size: 1.15rem;">₱<span id="cartTotalFinal">{{ number_format($subtotal + ($shippingFee ?? 50), 2) }}</span></span>
+                        <span style="color: #7bb47b; font-weight: 600; font-size: 1.15rem;">₱<span id="cartTotalFinal">{{ number_format($subtotal, 2) }}</span></span>
                     </div>
                     <button type="submit" class="btn btn-success w-100" style="border-radius: 25px; font-weight: 600; font-size: 1.08rem;">Proceed to Payment Method</button>
                 </div>
@@ -123,63 +189,99 @@
 
 @push('scripts')
 <script>
-const orsApiKey = 'YOUR_ORS_API_KEY_HERE'; // <-- Replace with your actual ORS API key
-const shopLat = 10.2447; // Cordova, Cebu
-const shopLng = 123.9633;
-const baseFee = 30; // Minimum shipping fee
-const perKmRate = 10; // Shipping rate per km after base
-
-function updateShippingFee() {
-    const address = document.getElementById('delivery_address').value.trim();
-    if (!address) return;
-    // Geocode the address using ORS
-    fetch(`https://api.openrouteservice.org/geocode/search?api_key=${orsApiKey}&text=${encodeURIComponent(address)}&boundary.country=PH`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.features && data.features.length > 0) {
-                const coords = data.features[0].geometry.coordinates;
-                const destLng = coords[0];
-                const destLat = coords[1];
-                // Get distance from shop to destination
-                fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': orsApiKey,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        coordinates: [
-                            [shopLng, shopLat],
-                            [destLng, destLat]
-                        ]
-                    })
-                })
-                .then(res => res.json())
-                .then(route => {
-                    if (route && route.features && route.features.length > 0) {
-                        const meters = route.features[0].properties.summary.distance;
-                        const km = meters / 1000;
-                        let shippingFee = baseFee + Math.ceil(km) * perKmRate;
-                        if (shippingFee < baseFee) shippingFee = baseFee;
-                        document.getElementById('shippingFeeDisplay').textContent = `₱${shippingFee.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-                        const subtotal = parseFloat({{ $subtotal }});
-                        document.getElementById('totalDisplay').textContent = `₱${(subtotal + shippingFee).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-                        document.getElementById('shipping_fee').value = shippingFee;
-                    }
-                });
-            }
-        });
-}
-
+// Update shipping fee when address selection changes
 document.addEventListener('DOMContentLoaded', function() {
-    const addressInput = document.getElementById('delivery_address');
-    addressInput.addEventListener('blur', updateShippingFee);
-    addressInput.addEventListener('change', updateShippingFee);
-    // Optionally, update on keyup for more responsiveness
-    addressInput.addEventListener('keyup', function(e) {
-        if (e.key === 'Enter') updateShippingFee();
+    const addressSelect = document.getElementById('addressSelect');
+    const checkoutForm = document.getElementById('checkoutForm');
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', function(e) {
+            // Ensure shipping_fee is always sent
+            const feeInput = document.getElementById('shippingFeeInput');
+            const fee = feeInput ? feeInput.value : '';
+            
+            // Get delivery address from the map component
+            const deliveryAddressInput = document.getElementById('deliveryAddressInput');
+            const deliveryAddress = deliveryAddressInput ? deliveryAddressInput.value : '';
+            
+            // Update the hidden delivery address field
+            const deliveryAddressHidden = document.getElementById('deliveryAddressHidden');
+            if (deliveryAddressHidden) {
+                deliveryAddressHidden.value = deliveryAddress;
+            }
+            
+            const formData = new FormData(checkoutForm);
+            if (fee !== '') {
+                formData.set('shipping_fee', fee);
+            }
+            if (deliveryAddress !== '') {
+                formData.set('delivery_address', deliveryAddress);
+            }
+            const params = new URLSearchParams(formData);
+            e.preventDefault();
+            window.location.href = checkoutForm.action + '?' + params.toString();
+        });
+    }
+    
+    addressSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const address = selectedOption.getAttribute('data-address');
+        
+        if (address && address !== 'No saved addresses. Add one in Address Book.') {
+            // Update the delivery address input in the map component
+            const deliveryAddressInput = document.getElementById('deliveryAddressInput');
+            if (deliveryAddressInput) {
+                deliveryAddressInput.value = address;
+                // Trigger the map component's calculation
+                deliveryAddressInput.dispatchEvent(new Event('input'));
+            }
+        }
     });
+    
+    // Initial calculation if there's a selected address
+    // (Removed auto-calc on load; fee will update only after user provides/chooses an address)
 });
+
+// Function to update shipping fee display (called by map component)
+function updateShippingFeeDisplay(fee) {
+    console.log('updateShippingFeeDisplay called with fee:', fee);
+    
+    // Update the shipping fee display in the checkout summary
+    const shippingDisplay = document.getElementById('shippingFeeDisplay');
+    if (shippingDisplay) {
+        console.log('Found shipping display element, updating to:', fee);
+        shippingDisplay.textContent = fee.toFixed(2);
+    } else {
+        console.log('Shipping display element not found!');
+    }
+    
+    // Update the hidden input for form submission
+    const shippingInput = document.getElementById('shippingFeeInput');
+    if (shippingInput) {
+        console.log('Found shipping input element, updating to:', fee);
+        shippingInput.value = fee;
+    } else {
+        console.log('Shipping input element not found!');
+    }
+    
+    // Update the total only if a valid fee is provided
+    const subtotalElement = document.getElementById('cartSubtotal');
+    let total = 0;
+    if (subtotalElement) {
+        const subtotal = parseFloat(subtotalElement.textContent.replace(/,/g, ''));
+        total = subtotal + (fee || 0);
+        const totalDisplay = document.getElementById('cartTotalFinal');
+        if (totalDisplay) {
+            console.log('Updating total from', subtotal, 'to', total);
+            totalDisplay.textContent = total.toFixed(2);
+        } else {
+            console.log('Total display element not found!');
+        }
+    } else {
+        console.log('Subtotal element not found!');
+    }
+    
+    console.log('Updated shipping fee:', fee, 'Total:', total);
+}
 
 // Recipient type toggle (visual only)
 const btnSomeone = document.getElementById('btnSomeone');
@@ -187,10 +289,22 @@ const btnSelf = document.getElementById('btnSelf');
 btnSomeone.onclick = function() {
     btnSomeone.classList.add('active');
     btnSelf.classList.remove('active');
+    // Show recipient fields, require inputs
+    document.getElementById('recipientFields').style.display = '';
+    document.getElementById('recipientName').required = true;
+    document.getElementById('recipientPhone').required = true;
+    // Hide self fields
+    document.getElementById('selfFields').style.display = 'none';
 };
 btnSelf.onclick = function() {
     btnSelf.classList.add('active');
     btnSomeone.classList.remove('active');
+    // Hide recipient fields, remove required
+    document.getElementById('recipientFields').style.display = 'none';
+    document.getElementById('recipientName').required = false;
+    document.getElementById('recipientPhone').required = false;
+    // Show self fields (if needed)
+    document.getElementById('selfFields').style.display = '';
 };
 // Promo code Apply (visual only)
 document.getElementById('applyPromoBtn').onclick = function() {

@@ -26,12 +26,6 @@
             <a href="{{ route('customer.trackOrders.page') }}" class="sidebar-link d-flex align-items-center @if(request()->routeIs('customer.trackOrders.page')) active-link @endif" style="color: #222; font-weight: @if(request()->routeIs('customer.trackOrders.page')) 600 @else 400 @endif;">
                 <i class="fas fa-map-marked-alt me-2" style="color: #222;"></i> Track Order
             </a>
-            <a href="{{ route('customer.chat.index') }}" class="sidebar-link d-flex align-items-center @if(request()->routeIs('customer.chat.index')) active-link @endif" style="color: #222; font-weight: @if(request()->routeIs('customer.chat.index')) 600 @else 400 @endif;">
-                <i class="fas fa-comments me-2" style="color: #222;"></i> Chat Support
-            </a>
-            <a href="{{ route('customer.notifications.index') }}" class="sidebar-link d-flex align-items-center @if(request()->routeIs('customer.notifications.index')) active-link @endif" style="color: #222; font-weight: @if(request()->routeIs('customer.notifications.index')) 600 @else 400 @endif;">
-                <i class="fas fa-bell me-2" style="color: #222;"></i> Notifications
-            </a>
         </div>
     </div>
 </div>

@@ -12,7 +12,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('deliveries', function (Blueprint $table) {
-            $table->text('special_instructions')->nullable()->after('delivery_address');
             $table->unsignedBigInteger('validated_by')->nullable()->after('driver_id');
             $table->timestamp('validated_at')->nullable()->after('validated_by');
             $table->foreign('validated_by')->references('id')->on('users')->onDelete('set null');

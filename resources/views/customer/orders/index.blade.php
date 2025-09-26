@@ -141,14 +141,14 @@
 </style>
 
 <div class="container-fluid py-4">
-    <div class="row">
+    <div class="row justify-content-center">
         <!-- Sidebar -->
-        <div class="col-md-3">
+        <div class="col-md-3 col-lg-3">
             @include('customer.sidebar')
         </div>
         
         <!-- Main Content -->
-        <div class="col-md-9">
+        <div class="col-md-9 col-lg-7">
             <div class="py-4 px-3">
                 <div class="mb-3 d-flex align-items-center">
                     <ul class="nav nav-tabs order-tabs" id="orderTabs" role="tablist">

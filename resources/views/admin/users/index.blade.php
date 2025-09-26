@@ -18,7 +18,6 @@
                             <th>Sex</th>
                             <th>Role</th>
                             <th>Contact Number</th>
-                            <th>Store</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -30,7 +29,7 @@
                             <td>{{ $user->sex }}</td>
                             <td>{{ ucfirst($user->role) }}</td>
                             <td>{{ $user->contact_number }}</td>
-                            <td>{{ $user->store_name }}</td>
+                            
                             <td>
                                 <button class="btn btn-sm btn-primary edit-user-btn" data-bs-toggle="modal" data-bs-target="#updateUserModal" data-user='{{ json_encode($user) }}'>
                                     <i class="fas fa-edit"></i>
@@ -80,10 +79,7 @@
                         <label for="full_name" class="form-label">Full name</label>
                         <input type="text" class="form-control" id="full_name" name="name" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
-                    </div>
+                    
                     <div class="mb-3">
                         <label for="sex" class="form-label">Sex</label>
                         <select class="form-select" id="sex" name="sex" required>
@@ -101,7 +97,6 @@
                         <label for="role" class="form-label">Role</label>
                         <select class="form-select" id="role" name="role" required>
                             <option value="">Select Role</option>
-                            <option value="admin">Admin</option>
                             <option value="clerk">Clerk</option>
                             <option value="driver">Driver</option>
                         </select>
@@ -118,15 +113,7 @@
                         <label for="password_confirmation" class="form-label">Confirm Password</label>
                         <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="store_name" class="form-label">Store</label>
-                        <select class="form-select" id="store_name" name="store_name" required>
-                            <option value="">Select Store</option>
-                            <option value="Lapu-lapu">Lapu-lapu</option>
-                            <option value="Cebu City">Cebu City</option>
-                            <option value="Cordova">Cordova</option>
-                        </select>
-                    </div>
+                    
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -153,10 +140,7 @@
                         <label for="update_full_name" class="form-label">Full name</label>
                         <input type="text" class="form-control" id="update_full_name" name="name" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="update_email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="update_email" name="email" required>
-                    </div>
+                    
                     <div class="mb-3">
                         <label for="update_username" class="form-label">Username</label>
                         <input type="text" class="form-control" id="update_username" name="username" required>
@@ -175,20 +159,11 @@
                     <div class="mb-3">
                         <label for="update_role" class="form-label">Role</label>
                         <select class="form-select" id="update_role" name="role" required>
-                            <option value="admin">Admin</option>
                             <option value="clerk">Clerk</option>
                             <option value="driver">Driver</option>
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label for="update_store_name" class="form-label">Store</label>
-                        <select class="form-select" id="update_store_name" name="store_name" required>
-                            <option value="">Select Store</option>
-                            <option value="Lapu-lapu">Lapu-lapu</option>
-                            <option value="Cebu City">Cebu City</option>
-                            <option value="Cordova">Cordova</option>
-                        </select>
-                    </div>
+                    
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

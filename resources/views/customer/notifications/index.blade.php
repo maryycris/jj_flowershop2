@@ -1,301 +1,180 @@
 @extends('layouts.customer_app')
 
-@section('content')
-<div class="container-fluid" style="background: #f4faf4; min-height: 100vh;">
-    <div class="row" style="min-height: 100vh;">
-        <!-- Sidebar -->
-        <div class="col-md-3 px-0">
-            @include('customer.sidebar')
-    </div>
-        <!-- Main Content -->
-        <div class="col-md-9 d-flex flex-column align-items-start justify-content-start py-5">
-            <h4 class="mb-4" style="font-weight: 500; color: #222;">My Notifications</h4>
-            @if($notifications->count())
-            <div class="mb-3 d-flex gap-2">
-                <!-- Mark All as Read -->
-                <form method="POST" action="{{ route('customer.notifications.markAllAsRead') }}">
-                    @csrf
-                    <button type="submit" class="btn btn-primary btn-sm">Mark All as Read</button>
-                </form>
-                <!-- Delete All -->
-                <form method="POST" action="{{ route('customer.notifications.destroyAll') }}">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger btn-sm">Delete All</button>
-                </form>
-            </div>
-            @endif
-            <div class="w-100" style="max-width: 520px;">
-                @forelse($notifications as $notification)
-                @php
-                    $data = is_array($notification->data) ? $notification->data : json_decode($notification->data, true);
-                    $type = $data['type'] ?? ($notification->type ?? 'Notification');
-                    $message = $data['message'] ?? (is_string($data) ? $data : 'No details available.');
-                    $date = $notification->created_at->format('M d, Y');
-                    $isRead = $notification->read();
-                    $bgColor = $isRead ? '#fff' : '#e3f0ff'; // blue for unread, white for read
-                @endphp
-                    <div class="d-flex align-items-center mb-3 notification-card-custom notification-item"
-                        style="border-radius: 8px; background: {{ $bgColor }}; padding: 18px 24px; min-height: 80px; box-shadow: none; border: 1px solid #e0e0e0; cursor:pointer; position:relative;"
-                        data-id="{{ $notification->id }}"
-                        data-type="{{ $type }}"
-                        data-message="{{ $message }}"
-                        data-date="{{ $date }}"
-                        data-is-read="{{ $isRead ? '1' : '0' }}">
-                        <div class="flex-grow-1">
-                            <div style="font-size: 0.95rem; color: #888; margin-bottom: 4px;">{{ $date }}</div>
-                            <div style="font-size: 1.08rem; color: #333;">{{ \Illuminate\Support\Str::limit($message, 80) }}</div>
-                        </div>
-                        <div class="dropdown" style="position:absolute; top:10px; right:10px; z-index:2;">
-                            <button class="btn btn-sm btn-light p-1 px-2 border-0" type="button" id="dropdownMenuButton{{ $notification->id }}" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius:50%;">
-                                <span style="font-size:1.3rem; line-height:1;">&#8942;</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ $notification->id }}">
-                                @if(!$isRead)
-                                <li><a class="dropdown-item mark-read-action" href="#" data-id="{{ $notification->id }}">Mark as Read</a></li>
-                                @else
-                                <li><a class="dropdown-item mark-unread-action" href="#" data-id="{{ $notification->id }}">Mark as Unread</a></li>
-                                @endif
-                                <li>
-                                    <form action="{{ route('customer.notifications.delete', $notification->id) }}" method="POST" style="display:inline;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="dropdown-item text-danger">Delete</button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </div>
-                </div>
-                @empty
-                    <div class="d-flex align-items-center mb-3 notification-card-custom" style="border-radius: 8px; background: #fff; padding: 18px 24px; min-height: 80px; box-shadow: none; border: 1px solid #e0e0e0;">
-                        <div class="flex-grow-1">
-                            <div style="font-size: 0.95rem; color: #888; margin-bottom: 4px;">No notifications</div>
-                            <div style="font-size: 1.08rem; color: #333;">You have no notifications at this time.</div>
-                        </div>
-                        <div class="ms-3" style="width: 48px; height: 48px; background: #f4f4f4; border-radius: 6px; border: 1px solid #d2d2d2; display: flex; align-items: center; justify-content: center;"></div>
-                </div>
-                @endforelse
-            <div class="d-flex justify-content-center mt-4">
-                {{ $notifications->links('pagination::bootstrap-5') }}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+@section('title', 'Notifications')
 
-<!-- Notification Details Modal -->
-<div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="notificationModalLabel">Notification Details</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <h6 id="modalType"></h6>
-        <p id="modalMessage"></p>
-        <small class="text-muted" id="modalDate"></small>
+@section('content')
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-8">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="h3 mb-1 text-dark fw-bold">
+                        <i class="fas fa-bell text-primary me-2"></i>
+                        Notifications
+                    </h2>
+                    <p class="text-muted mb-0">Stay updated with your event status</p>
+    </div>
+                <button class="btn btn-outline-primary" onclick="markAllAsRead()">
+                    <i class="fas fa-check-double me-1"></i> Mark All Read
+                </button>
+            </div>
+
+            <!-- Notifications List -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <div id="notificationsList">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                        </div>
+                        </div>
+                </div>
+                </div>
       </div>
     </div>
   </div>
 </div>
 @endsection
 
-@push('scripts')
+@section('styles')
+<style>
+    .notification-item {
+        transition: background-color 0.2s ease;
+    }
+    .notification-item:hover {
+        background-color: #f8f9fa !important;
+    }
+    .notification-item:last-child {
+        border-bottom: none !important;
+    }
+    .card {
+        border-radius: 0.5rem;
+    }
+    .card-body {
+        padding: 0;
+    }
+    .notification-item {
+        min-height: auto;
+    }
+    .card {
+        max-width: 100%;
+    }
+    .notification-item .d-flex {
+        gap: 0.25rem;
+    }
+    .notification-item .flex-grow-1 {
+        min-width: 0;
+    }
+</style>
+@endsection
+
+@section('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Prevent dropdown click from triggering modal
-        document.querySelectorAll('.dropdown-toggle, .dropdown-menu').forEach(function(el) {
-            el.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
+document.addEventListener('DOMContentLoaded', function() {
+    loadNotifications();
+});
+
+function loadNotifications() {
+    fetch('{{ route("customer.notifications.list") }}')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            displayNotifications(Array.isArray(data) ? data : []);
+        })
+        .catch(error => {
+            console.error('Error loading notifications:', error);
+            document.getElementById('notificationsList').innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    Failed to load notifications. Please refresh the page.
+                </div>`;
         });
-        document.querySelectorAll('.notification-item').forEach(function(item) {
-            item.addEventListener('click', function(e) {
-                // Prevent modal if delete button is clicked
-                if (e.target.classList.contains('delete-notification-action')) return;
-                document.getElementById('modalType').textContent = this.getAttribute('data-type');
-                document.getElementById('modalMessage').textContent = this.getAttribute('data-message');
-                document.getElementById('modalDate').textContent = this.getAttribute('data-date');
-                var modal = new bootstrap.Modal(document.getElementById('notificationModal'));
-                modal.show();
-                if (this.getAttribute('data-is-read') === '0') {
-                    var notifId = this.getAttribute('data-id');
-                    fetch('/customer/notifications/' + notifId + '/read', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                            'Accept': 'application/json',
-                        },
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            this.style.background = '#fff';
-                            this.setAttribute('data-is-read', '1');
-                        }
-                    });
-                }
-            });
-        });
-        // Mark as Read
-        document.querySelectorAll('.mark-read-action').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                var notifId = this.getAttribute('data-id');
-                fetch('/customer/notifications/' + notifId + '/read', {
+}
+
+function displayNotifications(notifications) {
+    const container = document.getElementById('notificationsList');
+    
+    if (notifications.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-bell-slash text-muted" style="font-size: 3rem;"></i>
+                <h5 class="text-muted mt-3">No notifications yet</h5>
+                <p class="text-muted">You'll receive notifications when your event status changes</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = notifications.map(notification => `
+        <div class="notification-item p-3 border-bottom ${notification.read_at ? '' : 'bg-light'}" 
+             onclick="markAsRead(${notification.id})" style="cursor: pointer;">
+            <div class="d-flex align-items-start">
+                <div class="me-3">
+                    <i class="fas fa-${getNotificationIcon(notification.type)} text-primary"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-1 ${notification.read_at ? 'text-muted' : 'fw-bold'}">${notification.title}</h6>
+                    <p class="mb-1 text-muted">${notification.message}</p>
+                    <small class="text-muted">${formatDate(notification.created_at)}</small>
+                </div>
+                ${!notification.read_at ? '<div class="badge bg-primary rounded-pill">New</div>' : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function getNotificationIcon(type) {
+    switch(type) {
+        case 'event_status_change': return 'calendar-check';
+        default: return 'bell';
+    }
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now - date;
+    
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + ' minutes ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + ' hours ago';
+    return date.toLocaleDateString();
+}
+
+function markAsRead(notificationId) {
+    fetch(`{{ url('customer/notifications') }}/${notificationId}/read`, {
                     method: 'POST',
                     headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Accept': 'application/json',
-                    },
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        var card = this.closest('.notification-item');
-                        card.style.background = '#fff';
-                        card.setAttribute('data-is-read', '1');
-                        // Change dropdown to show 'Mark as Unread'
-                        this.parentElement.innerHTML = '<a class="dropdown-item mark-unread-action" href="#" data-id="' + notifId + '">Mark as Unread</a>';
-                    }
-                }.bind(this));
-            });
-        });
-        // Mark as Unread
-        document.querySelectorAll('.mark-unread-action').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                var notifId = this.getAttribute('data-id');
-                fetch('/customer/notifications/' + notifId + '/unread', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Accept': 'application/json',
-                    },
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        var card = this.closest('.notification-item');
-                        card.style.background = '#e3f0ff';
-                        card.setAttribute('data-is-read', '0');
-                        // Change dropdown to show 'Mark as Read'
-                        this.parentElement.innerHTML = '<a class="dropdown-item mark-read-action" href="#" data-id="' + notifId + '">Mark as Read</a>';
-                    }
-                }.bind(this));
-            });
-        });
-        // Delete
-        document.querySelectorAll('.delete-notification-action').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                var notifId = this.getAttribute('data-id');
-                if (confirm('Delete this notification?')) {
-                    fetch('/customer/notifications/' + notifId, {
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                            'Accept': 'application/json',
-                        },
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            this.closest('.notification-item').remove();
-                        }
-                    }.bind(this));
-                }
-            });
-        });
-        // Mark All as Read
-        var markAllBtn = document.getElementById('markAllReadBtn');
-        if (markAllBtn) {
-            markAllBtn.addEventListener('click', function() {
-                fetch('/customer/notifications/mark-all-read', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Accept': 'application/json',
-                    },
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.querySelectorAll('.notification-item').forEach(function(item) {
-                            item.style.background = '#fff';
-                            item.setAttribute('data-is-read', '1');
-                        });
-                    }
-                });
-            });
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json'
         }
-        // Delete All
-        var deleteAllBtn = document.getElementById('deleteAllBtn');
-        if (deleteAllBtn) {
-            deleteAllBtn.addEventListener('click', function() {
-                if (confirm('Delete all notifications?')) {
-                    fetch('/customer/notifications/destroy-all', {
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                            'Accept': 'application/json',
-                        },
                     })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            document.querySelectorAll('.notification-item').forEach(function(item) {
-                                item.remove();
-                            });
-                        }
-                    });
-                }
-            });
+            loadNotifications();
         }
     });
-</script>
-@endpush
+}
 
-@push('styles')
-<style>
-    body {
-        background: #f4faf4 !important;
-    }
-    .sidebar-links .sidebar-link {
-        display: block;
-        padding: 6px 18px;
-        border-radius: 4px;
-        color: #222;
-        font-weight: 400;
-        text-decoration: none;
-        margin-bottom: 2px;
-        background: transparent;
-        transition: background 0.2s, color 0.2s;
-    }
-    .sidebar-links .sidebar-link.active-link {
-        background: #cbe7cb;
-        color: #222;
-        font-weight: 600;
-    }
-    .sidebar-links .sidebar-link:hover {
-        background: #e0f2e0;
-        color: #222;
-    }
-    .notification-card-custom {
-        transition: background 0.2s;
-    }
-.notification-card-custom[data-is-read="0"] {
-    background: #e3f0ff !important;
+function markAllAsRead() {
+    fetch('{{ route("customer.notifications.readAll") }}', {
+                    method: 'POST',
+                    headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json'
+        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+            loadNotifications();
+        }
+    });
 }
-.notification-card-custom[data-is-read="1"] {
-    background: #fff !important;
-}
-.delete-notification-btn {
-    font-size: 1.2rem;
-    line-height: 1;
-    padding: 0 8px;
-    border-radius: 50%;
-}
-</style>
-@endpush
+</script>
+@endsection

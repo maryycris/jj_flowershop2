@@ -67,8 +67,8 @@
                 <hr>
                 <div class="mb-3" style="font-weight: 600; font-size: 1.1rem;">Purchase Summary</div>
                 <div class="d-flex justify-content-between mb-2">
-                    <span style="color: #888;">Subtotal ({{ count($cartItems) }} Item{{ count($cartItems) == 1 ? '' : 's' }})</span>
-                    <span style="color: #222;">₱<span id="cartSubtotal">{{ number_format($subtotal, 2) }}</span></span>
+                    <span style="color: #888;">Subtotal (0 Items)</span>
+                    <span style="color: #222;">₱<span id="cartSubtotal">0.00</span></span>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span style="color: #888;">Shipping Fee</span>
@@ -77,9 +77,9 @@
                 <hr>
                 <div class="d-flex justify-content-between mb-3">
                     <span style="font-weight: 600;">Subtotal</span>
-                    <span style="color: #7bb47b; font-weight: 600;">₱<span id="cartSubtotalFinal">{{ number_format($subtotal, 2) }}</span></span>
+                    <span style="color: #7bb47b; font-weight: 600;">₱<span id="cartSubtotalFinal">0.00</span></span>
                 </div>
-                <a href="{{ route('customer.checkout.index') }}" class="btn btn-success w-100" style="border-radius: 25px; font-weight: 600; font-size: 1.08rem;">Proceed to Checkout</a>
+                <button type="button" id="proceedToCheckoutBtn" class="btn btn-success w-100" style="border-radius: 25px; font-weight: 600; font-size: 1.08rem;" disabled>Proceed to Checkout</button>
             </div>
         </div>
     </div>
@@ -93,15 +93,37 @@
 
         function updateCartTotal() {
             let newSubtotal = 0;
+            let selectedItemsCount = 0;
+            
             document.querySelectorAll('.cart-item').forEach(itemElement => {
                 const quantity = parseInt(itemElement.querySelector('.quantity-input').value);
                 const unitPrice = parseFloat(itemElement.querySelector('.item-unit-price').textContent.replace(/[^0-9.-]+/g,""));
                 const itemTotalPrice = quantity * unitPrice;
                 itemElement.querySelector('.item-total-price').textContent = itemTotalPrice.toFixed(2);
-                newSubtotal += itemTotalPrice;
+                
+                // Only add to subtotal if item is selected
+                const checkbox = itemElement.querySelector('.item-checkbox');
+                if (checkbox && checkbox.checked) {
+                    newSubtotal += itemTotalPrice;
+                    selectedItemsCount++;
+                }
             });
+            
+            // Update subtotal display
             document.getElementById('cartSubtotal').textContent = newSubtotal.toFixed(2);
             document.getElementById('cartSubtotalFinal').textContent = newSubtotal.toFixed(2);
+            
+            // Update item count in subtotal text
+            const subtotalText = document.querySelector('#cartSubtotal').closest('div').querySelector('span:first-child');
+            if (subtotalText) {
+                subtotalText.textContent = `Subtotal (${selectedItemsCount} Item${selectedItemsCount === 1 ? '' : 's'})`;
+            }
+
+            // Enable/disable checkout button depending on selection
+            const proceedBtn = document.getElementById('proceedToCheckoutBtn');
+            if (proceedBtn) {
+                proceedBtn.disabled = selectedItemsCount === 0;
+            }
         }
 
         // Quantity controls
@@ -178,6 +200,31 @@
             });
         });
 
+        // Individual item checkboxes
+        document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateCartTotal();
+                
+                // Update select all checkbox state
+                const allCheckboxes = document.querySelectorAll('.item-checkbox');
+                const checkedCheckboxes = document.querySelectorAll('.item-checkbox:checked');
+                const selectAllCheckbox = document.getElementById('selectAllItems');
+                
+                if (selectAllCheckbox) {
+                    if (checkedCheckboxes.length === allCheckboxes.length) {
+                        selectAllCheckbox.checked = true;
+                        selectAllCheckbox.indeterminate = false;
+                    } else if (checkedCheckboxes.length === 0) {
+                        selectAllCheckbox.checked = false;
+                        selectAllCheckbox.indeterminate = false;
+                    } else {
+                        selectAllCheckbox.checked = false;
+                        selectAllCheckbox.indeterminate = true;
+                    }
+                }
+            });
+        });
+
         // Select all items checkbox
         const selectAllItemsCheckbox = document.getElementById('selectAllItems');
         if (selectAllItemsCheckbox) {
@@ -185,6 +232,32 @@
                 document.querySelectorAll('.item-checkbox').forEach(checkbox => {
                     checkbox.checked = this.checked;
                 });
+                updateCartTotal();
+            });
+        }
+
+        // Proceed to checkout button
+        const proceedToCheckoutBtn = document.getElementById('proceedToCheckoutBtn');
+        if (proceedToCheckoutBtn) {
+            proceedToCheckoutBtn.addEventListener('click', function() {
+                const selectedItems = document.querySelectorAll('.item-checkbox:checked');
+                if (selectedItems.length === 0) {
+                    alert('Please select at least one item to proceed to checkout.');
+                    return;
+                }
+                
+                // Get selected item IDs
+                const selectedItemIds = Array.from(selectedItems).map(checkbox => {
+                    return checkbox.closest('.cart-item').dataset.itemId;
+                });
+                
+                // Redirect to checkout with selected items
+                const checkoutUrl = new URL('{{ route("customer.checkout.index") }}', window.location.origin);
+                selectedItemIds.forEach(id => {
+                    checkoutUrl.searchParams.append('selected_items[]', id);
+                });
+                
+                window.location.href = checkoutUrl.toString();
             });
         }
 

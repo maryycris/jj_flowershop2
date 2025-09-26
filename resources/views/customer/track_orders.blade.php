@@ -2,8 +2,13 @@
 
 @section('content')
 <div class="container-fluid py-4" style="background: #f4faf4; min-height: 100vh;">
-    <div class="row">
-        <div class="col-md-7">
+    <div class="row justify-content-center">
+        <div class="col-md-3 col-lg-3">
+            @include('customer.sidebar')
+        </div>
+        <div class="col-md-9 col-lg-7">
+            <div class="row">
+                <div class="col-md-7">
             <h2 class="mb-4" style="font-weight: 500; color: #222;">Track Orders</h2>
             @if ($orders->isEmpty())
                 <div class="alert alert-info" role="alert">
@@ -38,8 +43,8 @@
                     @endforeach
                 </div>
             @endif
-        </div>
-        <div class="col-md-5">
+                </div>
+                <div class="col-md-5">
             <div class="card" style="border-radius: 8px;">
                 <div class="card-header d-flex align-items-center" style="background: #eafbe7; border-radius: 8px 8px 0 0;">
                     <span class="fw-bold" id="timeline-order-id" style="color: #4a9448;">Order #</span>
@@ -49,6 +54,8 @@
                     <ul class="timeline list-unstyled" id="order-timeline">
                         <li class="text-center text-muted">Select an order to view its timeline.</li>
                     </ul>
+                </div>
+            </div>
                 </div>
             </div>
         </div>

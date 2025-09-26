@@ -43,30 +43,48 @@
                                     <th>Name</th>
                                     <th>Order Number</th>
                                     <th>Date</th>
-                                    <th>Total</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
+                                    <th>Total</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($onlineOrders as $order)
-                                    <tr>
+                                    <tr class="cursor-pointer" onclick="window.location='{{ route('clerk.orders.online.invoice', $order) }}'">
                                         <td>{{ $order->user->name ?? 'N/A' }}</td>
                                         <td>{{ $order->id }}</td>
                                         <td>{{ $order->created_at->format('m/d/Y') }}</td>
-                                        <td>₱{{ number_format($order->total_price, 2) }}</td>
-                                        <td><span class="badge bg-warning text-dark">{{ ucfirst($order->status) }}</span></td>
                                         <td>
-                                            @if($order->status === 'pending')
-                                                <form action="{{ route('clerk.orders.approve', $order->id) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                                                </form>
-                                            @elseif($order->status === 'approved')
-                                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignDeliveryModal{{ $order->id }}">Assign for Delivery</button>
-                                            @endif
-                                            <a href="{{ route('clerk.orders.show', $order->id) }}" class="btn btn-sm btn-info">View</a>
+                                            @php
+                                                $statusClass = 'bg-warning text-dark';
+                                                $statusText = ucfirst($order->status);
+                                                
+                                                if ($order->order_status) {
+                                                    switch($order->order_status) {
+                                                        case 'approved':
+                                                            $statusClass = 'bg-success';
+                                                            $statusText = 'Approved';
+                                                            break;
+                                                        case 'on_delivery':
+                                                            $statusClass = 'bg-info';
+                                                            $statusText = 'On Delivery';
+                                                            break;
+                                                        case 'completed':
+                                                            $statusClass = 'bg-primary';
+                                                            $statusText = 'Completed';
+                                                            break;
+                                                        case 'cancelled':
+                                                            $statusClass = 'bg-danger';
+                                                            $statusText = 'Cancelled';
+                                                            break;
+                                                        default:
+                                                            $statusClass = 'bg-warning text-dark';
+                                                            $statusText = 'Pending';
+                                                    }
+                                                }
+                                            @endphp
+                                            <span class="badge {{ $statusClass }}">{{ $statusText }}</span>
                                         </td>
+                                        <td>₱{{ number_format($order->total_price, 2) }}</td>
                                     </tr>
                                 @empty
                                     <tr><td colspan="6" class="text-center">No online orders found.</td></tr>
@@ -98,29 +116,48 @@
                                     <th>Name</th>
                                     <th>Order Number</th>
                                     <th>Date</th>
-                                    <th>Total</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
+                                    <th>Total</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($walkInOrders as $order)
-                                    <tr>
+                                    <tr class="cursor-pointer" onclick="window.location='{{ route('clerk.orders.walkin.quotation', $order) }}'">
                                         <td>{{ $order->user->name ?? 'Walk-in Customer' }}</td>
                                         <td>{{ $order->id }}</td>
                                         <td>{{ $order->created_at->format('m/d/Y') }}</td>
-                                        <td>₱{{ number_format($order->total_price, 2) }}</td>
-                                        <td><span class="badge bg-secondary">{{ ucfirst($order->status) }}</span></td>
                                         <td>
-                                            @if($order->status === 'on_delivery')
-                                                <form action="{{ route('clerk.orders.markDelivered', $order->id) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-sm btn-success">Mark as Delivered</button>
-                                                </form>
-                                            @endif
-                                            <a href="{{ route('clerk.orders.show', $order->id) }}" class="btn btn-sm btn-info">View</a>
-                                            <a href="{{ route('clerk.orders.invoice', $order->id) }}" class="btn btn-sm btn-outline-secondary">Invoice</a>
+                                            @php
+                                                $statusClass = 'bg-secondary';
+                                                $statusText = ucfirst($order->status);
+                                                
+                                                if ($order->order_status) {
+                                                    switch($order->order_status) {
+                                                        case 'approved':
+                                                            $statusClass = 'bg-success';
+                                                            $statusText = 'Approved';
+                                                            break;
+                                                        case 'on_delivery':
+                                                            $statusClass = 'bg-info';
+                                                            $statusText = 'On Delivery';
+                                                            break;
+                                                        case 'completed':
+                                                            $statusClass = 'bg-primary';
+                                                            $statusText = 'Completed';
+                                                            break;
+                                                        case 'cancelled':
+                                                            $statusClass = 'bg-danger';
+                                                            $statusText = 'Cancelled';
+                                                            break;
+                                                        default:
+                                                            $statusClass = 'bg-secondary';
+                                                            $statusText = 'Pending';
+                                                    }
+                                                }
+                                            @endphp
+                                            <span class="badge {{ $statusClass }}">{{ $statusText }}</span>
                                         </td>
+                                        <td>₱{{ number_format($order->total_price, 2) }}</td>
                                     </tr>
                                 @empty
                                     <tr><td colspan="6" class="text-center">No walk-in orders found.</td></tr>

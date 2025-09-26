@@ -57,23 +57,36 @@
                     @endforeach
                 </tbody>
                 <tfoot>
+                    @php
+                        $subtotal = $order->products->sum(function($product) {
+                            return $product->pivot->quantity * $product->price;
+                        });
+                        $shippingFee = $order->delivery->shipping_fee ?? 0;
+                        
+                        // If shipping_fee is 0 or null, calculate it from the difference between total_price and subtotal
+                        if ($shippingFee == 0 && $order->total_price > $subtotal) {
+                            $shippingFee = $order->total_price - $subtotal;
+                        }
+                        
+                        $total = $subtotal + $shippingFee;
+                    @endphp
                     <tr>
                         <td colspan="4" class="text-end border-0"><strong>Subtotal:</strong></td>
-                        <td class="text-end border-0">₱{{ number_format($order->products->sum(function($product) { return $product->pivot->quantity * $product->price; }), 2) }}</td>
+                        <td class="text-end border-0">₱{{ number_format($subtotal, 2) }}</td>
                     </tr>
                     @if(strtolower($order->status) !== 'picked_up')
                     <tr>
                         <td colspan="4" class="text-end border-0"><strong>Shipping:</strong></td>
-                        <td class="text-end border-0">₱{{ number_format($order->delivery->shipping_fee ?? 0, 2) }}</td>
+                        <td class="text-end border-0">₱{{ number_format($shippingFee, 2) }}</td>
                     </tr>
                     <tr class="table-light">
                         <td colspan="4" class="text-end"><h4>Total:</h4></td>
-                        <td class="text-end"><h4>₱{{ number_format($order->total_price, 2) }}</h4></td>
+                        <td class="text-end"><h4>₱{{ number_format($total, 2) }}</h4></td>
                     </tr>
                     @else
                     <tr class="table-light">
                         <td colspan="4" class="text-end"><h4>Total:</h4></td>
-                        <td class="text-end"><h4>₱{{ number_format($order->total_price, 2) }}</h4></td>
+                        <td class="text-end"><h4>₱{{ number_format($total, 2) }}</h4></td>
                     </tr>
                     @endif
                 </tfoot>

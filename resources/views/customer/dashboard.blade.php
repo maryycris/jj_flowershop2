@@ -1,32 +1,33 @@
 @extends('layouts.customer_app')
 
 @section('content')
-<div class="container-fluid py-4" style="background: #f4faf4; min-height: 100vh;">
+<div class="container-fluid py-2" style="background: #f4faf4; min-height: 100vh;">
+
     <!-- Promoted Products Carousel -->
-    <div class="mx-auto mb-4" style="max-width: 900px;">
-        <div class="bg-white rounded-4 p-3 position-relative" style="box-shadow: none;">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <button class="btn btn-link text-success p-0" data-bs-target="#promotedCarousel" data-bs-slide="prev"><i class="bi bi-chevron-left" style="font-size: 2rem;"></i></button>
-                <h5 class="mb-0 fw-bold text-center flex-grow-1" style="font-size: 1.2rem; color: #385E42;">Promoted Products</h5>
-                <button class="btn btn-link text-success p-0" data-bs-target="#promotedCarousel" data-bs-slide="next"><i class="bi bi-chevron-right" style="font-size: 2rem;"></i></button>
+    <div class="mx-auto mb-3" style="max-width: 1000px;">
+        <div class="bg-white rounded-3 p-3 position-relative shadow-sm">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+                <button class="btn btn-link text-success p-0" data-bs-target="#promotedCarousel" data-bs-slide="prev"><i class="bi bi-chevron-left" style="font-size: 1.5rem;"></i></button>
+                <h5 class="mb-0 fw-bold text-center flex-grow-1" style="font-size: 1.1rem; color: #385E42;">Promoted Products</h5>
+                <button class="btn btn-link text-success p-0" data-bs-target="#promotedCarousel" data-bs-slide="next"><i class="bi bi-chevron-right" style="font-size: 1.5rem;"></i></button>
             </div>
-            <div id="promotedCarousel" class="carousel slide" data-bs-ride="carousel">
+            <div id="promotedCarousel" class="carousel slide mt-1" data-bs-ride="carousel">
                 <div class="carousel-inner">
                     @foreach($promotedProducts as $i => $product)
                     <div class="carousel-item @if($i === 0) active @endif text-center">
-                        <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" style="height: 180px; object-fit: cover; border-radius: 12px;">
-                        <div class="mt-2 fw-bold" style="font-size: 1.08rem;">{{ $product->name }}</div>
-                        <div class="text-success" style="font-size: 1.05rem;">₱{{ number_format($product->price, 2) }}</div>
+                        <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" style="height: 150px; object-fit: cover; border-radius: 8px;">
+                        <div class="mt-1 fw-bold" style="font-size: 1rem;">{{ $product->name }}</div>
+                        <div class="text-success" style="font-size: 0.95rem;">₱{{ number_format($product->price, 2) }}</div>
                     </div>
                     @endforeach
                 </div>
-            </div>
-        </div>
+                </div>
+                </div>
     </div>
 
     <!-- Category Tabs -->
-    <div class="mx-auto mb-3" style="max-width: 900px;">
-        <ul class="nav nav-tabs border-0 justify-content-center category-tabs" id="productTabs" role="tablist" style="background: #fff; border-radius: 12px 12px 0 0; box-shadow: none;">
+    <div class="mx-auto" style="max-width: 1000px;">
+        <ul class="nav nav-tabs border-0 justify-content-center category-tabs mb-2" id="productTabs" role="tablist" style="background: transparent; border-radius: 8px 8px 0 0; box-shadow: none;">
             @php
                 $categories = ['all' => 'All', 'bouquets' => 'Bouquets', 'packages' => 'Packages', 'gifts' => 'Gifts'];
                 $currentCategory = $categories[request('category', 'all')] ?? 'All';
@@ -37,70 +38,10 @@
             </li>
             @endforeach
         </ul>
-    </div>
 
-    <!-- Product Filtering Section -->
-    <div class="container-fluid py-4">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                <div class="bg-white rounded-4 shadow-sm p-4 mb-4">
-                    <h4 class="mb-3 text-center" style="color: #385E42; font-weight: 600;">Filter Products</h4>
-                    
-                    <div class="row">
-                        <!-- Price Range Filter -->
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label fw-semibold">Price Range</label>
-                            <select class="form-select" id="priceFilter">
-                                <option value="">All Prices</option>
-                                <option value="0-500">Under ₱500</option>
-                                <option value="500-1000">₱500 - ₱1,000</option>
-                                <option value="1000-2000">₱1,000 - ₱2,000</option>
-                                <option value="2000+">Above ₱2,000</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Popularity Filter -->
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label fw-semibold">Sort By</label>
-                            <select class="form-select" id="popularityFilter">
-                                <option value="">Default</option>
-                                <option value="popular">Most Popular</option>
-                                <option value="newest">Newest</option>
-                                <option value="price_low">Price: Low to High</option>
-                                <option value="price_high">Price: High to Low</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Category Filter -->
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label fw-semibold">Category</label>
-                            <select class="form-select" id="categoryFilter">
-                                <option value="">All Categories</option>
-                                <option value="bouquets">Bouquets</option>
-                                <option value="packages">Packages</option>
-                                <option value="gifts">Gifts</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="text-center">
-                        <button class="btn btn-success" id="applyFilters">
-                            <i class="fas fa-filter me-2"></i>Apply Filters
-                        </button>
-                        <button class="btn btn-outline-secondary ms-2" id="clearFilters">
-                            <i class="fas fa-times me-2"></i>Clear Filters
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Products Section -->
-    <div class="mx-auto" style="max-width: 900px;">
-        <div class="bg-white rounded-4 p-4" style="box-shadow: none;">
-            <div class="mb-3 fw-bold fs-5" style="color: #385E42;">{{ $currentCategory }}</div>
-            <div class="row g-3 product-grid">
+        <!-- Products Section -->
+        <div class="mb-1 fw-bold fs-5" style="color: #385E42; padding-left: 15px;">{{ $currentCategory }}</div>
+        <div class="row g-2 product-grid" style="padding-left: 15px; padding-right: 15px;">
                 @forelse($products as $product)
                 <div class="col-6 col-md-4 col-lg-3">
                     <a href="#" class="text-decoration-none text-dark" onclick='openProductModal({
@@ -110,11 +51,11 @@
                         image: "{{ asset('storage/' . $product->image) }}",
                         description: "{{ addslashes($product->description ?? '') }}"
                     }); return false;'>
-                        <div class="card product-card h-100" style="border: 1px solid #e0e0e0; border-radius: 10px; box-shadow: none; transition: transform 0.2s;">
-                            <img src="{{ asset('storage/' . $product->image) }}" class="card-img-top product-image" alt="{{ $product->name }}" style="height: 150px; object-fit: cover; border-radius: 8px 8px 0 0;">
-                            <div class="card-body text-center p-2">
-                                <h6 class="card-title mb-1" style="font-size: 1.05rem; font-weight: 500; color: #222;">{{ $product->name }}</h6>
-                                <p class="card-text product-price" style="color: #7bb47b; font-weight: 600; font-size: 1.02rem;">₱{{ number_format($product->price, 2) }}</p>
+                        <div class="card product-card h-100" style="border: none; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; background: transparent;">
+                            <img src="{{ asset('storage/' . $product->image) }}" class="card-img-top product-image" alt="{{ $product->name }}" style="height: 240px; object-fit: cover; border-radius: 8px 8px 0 0;">
+                            <div class="card-body text-center" style="background: transparent; padding: 20px 15px 15px 15px;">
+                                <h6 class="card-title mb-2" style="font-size: 0.8rem; font-weight: 600; color: #2c3e50; line-height: 1.2;">{{ $product->name }}</h6>
+                                <p class="card-text product-price mb-0" style="color: #27ae60; font-weight: 700; font-size: 0.85rem;">₱{{ number_format($product->price, 2) }}</p>
                             </div>
                         </div>
                     </a>
@@ -124,7 +65,6 @@
                     <p class="text-center">No products found.</p>
                 </div>
                 @endforelse
-            </div>
         </div>
     </div>
     @include('customer.products.modal')
@@ -136,51 +76,93 @@
     body { background: #f4faf4; }
     .category-tabs .nav-link {
         border: none !important;
-        color: #385E42 !important;
+        color: #7f8c8d !important;
         font-weight: 500;
-        background: #fff !important;
-        margin: 0 1.5rem;
-        font-size: 1.12rem;
+        background: transparent !important;
+        margin: 0 1rem;
+        font-size: 1rem;
         border-radius: 0;
-        padding: 10px 0 14px 0;
+        padding: 10px 16px;
         position: relative;
-        transition: color 0.2s;
+        transition: all 0.3s ease;
     }
     .category-tabs .nav-link.active {
-        color: #7bb47b !important;
-        font-weight: 600;
+        color: #27ae60 !important;
+        font-weight: 700;
     }
     .category-tabs .nav-link.active::after {
         content: '';
-        display: block;
-        margin: 0 auto;
-        width: 60%;
-        height: 4px;
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 3px;
+        background: #27ae60;
         border-radius: 2px;
-        background: #7bb47b;
-        margin-top: 6px;
+    }
+    .category-tabs .nav-link:hover {
+        color: #27ae60 !important;
+        background: #f8f9fa !important;
     }
     .category-tabs {
         border-bottom: none !important;
+        padding: 0 1rem;
     }
     .product-card {
-        border: 1px solid #e0e0e0;
-        border-radius: 10px;
+        border: none;
+        border-radius: 8px;
         overflow: hidden;
-        transition: transform 0.2s, box-shadow 0.2s;
-        box-shadow: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        background: transparent;
     }
     .product-card:hover {
-        transform: translateY(-5px) scale(1.03);
-        box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
     }
     .product-image {
-        height: 150px;
+        height: 240px;
+        width: 100%;
+        display: block;
         object-fit: cover;
+        object-position: center;
+        background-color: transparent;
+        padding: 0;
+        margin: 0;
+        border-radius: 8px 8px 0 0;
+        transition: transform 0.3s ease;
+    }
+    .product-card:hover .product-image {
+        transform: scale(1.05);
     }
     .product-price {
-        color: #7bb47b;
+        color: #27ae60;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+    .card-title {
+        color: #2c3e50;
         font-weight: 600;
+        font-size: 0.8rem;
+        line-height: 1.2;
+    }
+    .card-body {
+        padding: 20px 15px 15px 15px !important;
+    }
+    .product-grid {
+        background: transparent;
+        border-radius: 0 0 8px 8px;
+        padding: 0;
+        box-shadow: none;
+        min-height: 300px;
     }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Dashboard initialization
+    console.log('Dashboard loaded');
+});
+</script>
 @endpush

@@ -59,21 +59,100 @@
                     </tr>
                     @endforeach
                 </tbody>
-                <tfoot>
-                    <tr>
+                <tfoot style="background-color: #f8f9fa;">
+                    @php
+                        $subtotal = $order->products->sum(function($product) {
+                            return $product->pivot->quantity * $product->price;
+                        });
+                        $shippingFee = $order->delivery->shipping_fee ?? 0;
+                        
+                        // If shipping_fee is 0 or null, calculate it from the difference between total_price and subtotal
+                        if ($shippingFee == 0 && $order->total_price > $subtotal) {
+                            $shippingFee = $order->total_price - $subtotal;
+                        }
+                        
+                        $total = $subtotal + $shippingFee;
+                        
+                        // Debug information
+                        \Log::info('Invoice Debug', [
+                            'order_id' => $order->id,
+                            'subtotal' => $subtotal,
+                            'shipping_fee' => $shippingFee,
+                            'order_total_price' => $order->total_price,
+                            'calculated_total' => $total,
+                            'delivery_exists' => $order->delivery ? 'yes' : 'no',
+                            'delivery_shipping_fee' => $order->delivery ? $order->delivery->shipping_fee : 'no delivery'
+                        ]);
+                    @endphp
+                    <tr style="border-top: 2px solid #dee2e6;">
                         <td colspan="4" class="text-end border-0"><strong>Subtotal:</strong></td>
-                        <td class="text-end border-0">₱{{ number_format($order->total_price, 2) }}</td>
+                        <td class="text-end border-0"><strong>₱{{ number_format($subtotal, 2) }}</strong></td>
                     </tr>
-                    <tr>
-                        <td colspan="4" class="text-end border-0"><strong>Shipping:</strong></td>
-                        <td class="text-end border-0">₱0.00</td>
+                    <tr style="border-top: 1px solid #dee2e6;">
+                        <td colspan="4" class="text-end border-0"><strong>Shipping Fee:</strong></td>
+                        <td class="text-end border-0"><strong>₱{{ number_format($shippingFee, 2) }}</strong></td>
                     </tr>
-                    <tr class="table-light">
-                        <td colspan="4" class="text-end"><h4>Total:</h4></td>
-                        <td class="text-end"><h4>₱{{ number_format($order->total_price, 2) }}</h4></td>
+                    <tr class="table-light" style="border-top: 2px solid #dee2e6; background-color: #e9ecef !important;">
+                        <td colspan="4" class="text-end"><h4 class="mb-0">Total:</h4></td>
+                        <td class="text-end"><h4 class="mb-0">₱{{ number_format($total, 2) }}</h4></td>
+                    </tr>
+                    <!-- Debug information -->
+                    <tr style="background-color: #f8f9fa; font-size: 0.8rem; border-top: 1px solid #dee2e6;">
+                        <td colspan="5" class="text-center text-muted">
+                            Debug: Subtotal=₱{{ number_format($subtotal, 2) }}, Shipping=₱{{ number_format($shippingFee, 2) }}, Order Total=₱{{ number_format($order->total_price, 2) }}
+                        </td>
                     </tr>
                 </tfoot>
             </table>
+            
+            <!-- Shipping Fee Breakdown - Alternative Display -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            @php
+                                $subtotal = $order->products->sum(function($product) {
+                                    return $product->pivot->quantity * $product->price;
+                                });
+                                $shippingFee = $order->delivery->shipping_fee ?? 0;
+                                
+                                // If shipping_fee is 0 or null, calculate it from the difference between total_price and subtotal
+                                if ($shippingFee == 0 && $order->total_price > $subtotal) {
+                                    $shippingFee = $order->total_price - $subtotal;
+                                }
+                                
+                                $total = $subtotal + $shippingFee;
+                            @endphp
+                            <h5 class="card-title">Order Summary</h5>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Subtotal:</strong>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <strong>₱{{ number_format($subtotal, 2) }}</strong>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Shipping Fee:</strong>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <strong>₱{{ number_format($shippingFee, 2) }}</strong>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-6">
+                                    <h4>Total:</h4>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <h4>₱{{ number_format($total, 2) }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

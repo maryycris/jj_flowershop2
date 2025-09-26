@@ -13,6 +13,7 @@
                             <th>Customer</th>
                             <th>Qty</th>
                             <th>Total</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -23,6 +24,7 @@
                             <td>{{ $sale->customer }}</td>
                             <td>{{ $sale->qty }}</td>
                             <td>₱{{ number_format($sale->total, 2) }}</td>
+                            <td>{{ $sale->status }}</td>
                         </tr>
                         @endforeach
                     </tbody>

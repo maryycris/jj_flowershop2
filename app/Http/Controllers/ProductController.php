@@ -12,12 +12,46 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $query = Product::query();
-
-        if ($request->has('category') && $request->category !== 'all') {
+        
+        // Filter by category
+        if ($request->has('category') && $request->category !== '') {
             $query->where('category', $request->category);
         }
-
-        $products = $query->latest()->get(); // Get all products or filtered produ,cts
+        
+        // Filter by price range
+        if ($request->has('price_min') && $request->price_min !== '' && $request->price_min !== null) {
+            $query->where('price', '>=', $request->price_min);
+        }
+        
+        if ($request->has('price_max') && $request->price_max !== '' && $request->price_max !== null) {
+            $query->where('price', '<=', $request->price_max);
+        }
+        
+        // Sort products
+        $sort = $request->get('sort', 'newest');
+        switch ($sort) {
+            case 'name_asc':
+                $query->orderBy('name', 'asc');
+                break;
+            case 'name_desc':
+                $query->orderBy('name', 'desc');
+                break;
+            case 'price_asc':
+                $query->orderBy('price', 'asc');
+                break;
+            case 'price_desc':
+                $query->orderBy('price', 'desc');
+                break;
+            case 'oldest':
+                $query->orderBy('created_at', 'asc');
+                break;
+            case 'newest':
+            default:
+                $query->orderBy('created_at', 'desc');
+                break;
+        }
+        
+        $products = $query->get();
         $categories = Product::select('category')->distinct()->pluck('category');
         $promotedProducts = Product::orderBy('created_at', 'desc')->take(3)->get();
 
@@ -192,30 +226,74 @@ class ProductController extends Controller
      */
     public function inventory(Request $request)
     {
-        $products = Product::all();
-        $totalProducts = $products->count();
-        $lowStock = $products->where('stock', '<=', 10)->count();
-        $wellStocked = $products->where('stock', '>', 10)->count();
-        $categories = $products->unique('category')->count();
+        // Show ALL flower-related products and materials in inventory
+        // Include finished products + raw materials (exclude only office supplies)
+        $excludeCategories = ['Office Supplies'];
+        $products = Product::whereNotIn('category', $excludeCategories)->get();
+        return view('admin.inventory', compact('products'));
+    }
 
-        $filter = $request->input('filter', 'all');
-        $filteredProducts = $products;
-        if ($filter === 'low_stock') {
-            $filteredProducts = $products->where('stock', '<=', 10);
-        } elseif ($filter === 'well_stocked') {
-            $filteredProducts = $products->where('stock', '>', 10);
-        } elseif ($filter === 'categories') {
-            // Optionally, could filter by a specific category
-            // For now, show all products
-            $filteredProducts = $products;
+    public function storeInventory(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string|max:255|unique:products,code',
+            'name' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
+            'reorder_min' => 'nullable|integer|min:0',
+            'reorder_max' => 'nullable|integer|min:0',
+            'stock' => 'nullable|integer|min:0',
+        ]);
+
+        Product::create([
+            'code' => $request->code,
+            'name' => $request->name,
+            'category' => $request->category,
+            'price' => $request->price,
+            'cost_price' => $request->cost_price ?? 0,
+            'reorder_min' => $request->reorder_min ?? 0,
+            'reorder_max' => $request->reorder_max ?? 0,
+            'stock' => $request->stock ?? 0,
+            'description' => 'Inventory item from ' . $request->category,
+            'qty_consumed' => 0,
+            'qty_damaged' => 0,
+            'qty_sold' => 0,
+            'status' => true,
+        ]);
+
+        return redirect()->route('admin.inventory.index')->with('success', 'Product added successfully!');
+    }
+
+    public function updateInventory(Request $request, Product $product)
+    {
+        $request->validate([
+            'code' => 'required|string|max:255|unique:products,code,' . $product->id,
+            'name' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
+            'reorder_min' => 'nullable|integer|min:0',
+            'reorder_max' => 'nullable|integer|min:0',
+            'stock' => 'nullable|integer|min:0',
+        ]);
+
+        $product->update([
+            'code' => $request->code,
+            'name' => $request->name,
+            'category' => $request->category,
+            'price' => $request->price,
+            'cost_price' => $request->cost_price ?? 0,
+            'reorder_min' => $request->reorder_min ?? 0,
+            'reorder_max' => $request->reorder_max ?? 0,
+            'stock' => $request->stock ?? 0,
+        ]);
+
+        // Return JSON response for AJAX requests
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Product updated successfully!']);
         }
 
-        return view('admin.inventory', [
-            'products' => $filteredProducts,
-            'totalProducts' => $totalProducts,
-            'lowStock' => $lowStock,
-            'wellStocked' => $wellStocked,
-            'categories' => $categories,
-        ]);
+        return redirect()->route('admin.inventory.index')->with('success', 'Product updated successfully!');
     }
 } 

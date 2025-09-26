@@ -10,6 +10,136 @@
 
 <div class="card shadow-sm mb-3">
     <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-map me-2"></i>Delivery Map & Route</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-12">
+                <div id="driverDeliveryMap" style="height: 300px; width: 100%; border-radius: 8px; overflow: hidden; background: #f8f9fa;"></div>
+            </div>
+            <div class="col-12 d-flex justify-content-between">
+                <div>
+                    <small class="text-muted">Distance</small><br>
+                    <strong id="driverDistanceDisplay">Calculating…</strong>
+                </div>
+                <div>
+                    <small class="text-muted">ETA</small><br>
+                    <strong id="driverEtaDisplay">—</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+    (function() {
+        const shopCoords = { lat: 10.3157, lng: 123.8854 }; // Bangbang, Cordova
+        const address = @json($delivery->delivery_address ?? '');
+
+        // Simple area-based fallback (same assumptions as checkout map)
+        function fallbackMatch(addressText) {
+            const normalized = (addressText || '').toLowerCase();
+            const areaData = {
+                // Cordova (0km)
+                'cordova': { lat: 10.3157, lng: 123.8854, distance: 0 },
+                'bang-bang': { lat: 10.3157, lng: 123.8854, distance: 0 },
+                'poblacion': { lat: 10.3157, lng: 123.8854, distance: 0 },
+                'catarman': { lat: 10.3157, lng: 123.8854, distance: 0 },
+                'gabi': { lat: 10.3157, lng: 123.8854, distance: 0 },
+                'pilipog': { lat: 10.3157, lng: 123.8854, distance: 0 },
+                'day-as': { lat: 10.3157, lng: 123.8854, distance: 0 },
+                'buagsong': { lat: 10.3157, lng: 123.8854, distance: 0 },
+                'san miguel': { lat: 10.3157, lng: 123.8854, distance: 0 },
+
+                // Lapu-Lapu (12km approx)
+                'lapu-lapu': { lat: 10.3103, lng: 123.9494, distance: 12 },
+                'mactan': { lat: 10.3103, lng: 123.9494, distance: 12 },
+                'basak': { lat: 10.3103, lng: 123.9494, distance: 12 },
+                'agus': { lat: 10.3103, lng: 123.9494, distance: 12 },
+                'maribago': { lat: 10.3103, lng: 123.9494, distance: 12 },
+                'marigondon': { lat: 10.3103, lng: 123.9494, distance: 12 },
+                'pajac': { lat: 10.3103, lng: 123.9494, distance: 12 },
+                'pajo': { lat: 10.3103, lng: 123.9494, distance: 12 },
+                'pusok': { lat: 10.3103, lng: 123.9494, distance: 12 },
+
+                // Mandaue (20km approx)
+                'mandaue': { lat: 10.3236, lng: 123.9221, distance: 20 },
+                'subangdaku': { lat: 10.3236, lng: 123.9221, distance: 20 },
+                'tipolo': { lat: 10.3236, lng: 123.9221, distance: 20 },
+
+                // Cebu City (25km approx)
+                'cebu city': { lat: 10.3157, lng: 123.8854, distance: 25 },
+                'lahug': { lat: 10.3320, lng: 123.8980, distance: 25 },
+                'it park': { lat: 10.3290, lng: 123.9050, distance: 25 },
+
+                // Talisay (30km approx)
+                'talisay': { lat: 10.2447, lng: 123.9633, distance: 30 },
+
+                // Consolacion (22km approx)
+                'consolacion': { lat: 10.3766, lng: 123.9573, distance: 22 }
+            };
+            for (const [key, data] of Object.entries(areaData)) {
+                if (normalized.includes(key)) return data;
+            }
+            return { lat: 10.3157, lng: 123.8854, distance: 20 }; // default
+        }
+
+        function initDriverMap() {
+            const mapEl = document.getElementById('driverDeliveryMap');
+            if (!mapEl) return;
+
+            const map = L.map('driverDeliveryMap');
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            const dest = fallbackMatch(address);
+
+            // Markers
+            const shopMarker = L.marker([shopCoords.lat, shopCoords.lng]).addTo(map);
+            shopMarker.bindPopup('J & J Flower Shop').openPopup();
+
+            const destMarker = L.marker([dest.lat, dest.lng]).addTo(map);
+            destMarker.bindPopup('Delivery Destination');
+
+            // Fit bounds
+            const bounds = L.latLngBounds([
+                [shopCoords.lat, shopCoords.lng],
+                [dest.lat, dest.lng]
+            ]);
+            map.fitBounds(bounds, { padding: [20, 20] });
+
+            // Draw straight polyline as visual (fallback; routing server optional)
+            L.polyline([
+                [shopCoords.lat, shopCoords.lng],
+                [dest.lat, dest.lng]
+            ], { color: '#198754', weight: 4, opacity: 0.8 }).addTo(map);
+
+            // Display distance and ETA (2 mins/km approx)
+            const distanceKm = dest.distance;
+            const etaMinutes = Math.round(distanceKm * 2);
+            document.getElementById('driverDistanceDisplay').textContent = distanceKm + ' km';
+            document.getElementById('driverEtaDisplay').textContent = etaMinutes + ' min';
+        }
+
+        // Initialize on load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initDriverMap);
+        } else {
+            initDriverMap();
+        }
+    })();
+    </script>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-header bg-light">
         <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Order Information</h5>
     </div>
     <div class="card-body">

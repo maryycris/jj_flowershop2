@@ -33,7 +33,8 @@ class OrderController extends Controller
             $type = $request->input('type', 'online');
             $search = $request->input('search');
             if ($type === 'walkin') {
-                $walkInOrdersQuery = Order::with(['user', 'products'])->where('type', 'walk-in');
+                $walkInOrdersQuery = Order::with(['user', 'products'])->where('type', 'walk-in')
+                    ->whereIn('status', ['quotation', 'validated', 'done', 'approved']); // Only show appropriate walk-in statuses
                 if ($search) {
                     $walkInOrdersQuery->where(function($q) use ($search) {
                         $q->whereHas('user', function($uq) use ($search) {
@@ -152,6 +153,7 @@ class OrderController extends Controller
             'recipient_name' => $validatedData['customer_name'] ?? ($user->name ?? 'N/A'),
             'recipient_phone' => $walkInUser->contact_number ?? ($user->contact_number ?? 'N/A'),
             'delivery_address' => $validatedData['delivery_address'] ?? 'N/A',
+            'shipping_fee' => $shippingFee,
         ]);
         $delivery->save();
 
@@ -186,7 +188,7 @@ class OrderController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $order->load(['user', 'products', 'delivery']); // Eager load relationships for the show view
+        $order->load(['user', 'products', 'delivery', 'paymentTracking']); // Eager load relationships for the show view
 
         if (Auth::user()->role === 'customer') {
             return view('customer.orders.show', compact('order'));
@@ -204,7 +206,7 @@ class OrderController extends Controller
     {
         $validatedData = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'status' => 'required|string|in:pending,approved,validated,processing,shipped,completed,cancelled,on_delivery',
+            'status' => 'required|string|in:pending,approved,validated,processing,shipped,completed,cancelled,out_for_delivery,delivered',
             'notes' => 'nullable|string',
             'products' => 'required|array',
             'products.*.product_id' => 'required|exists:products,id',
@@ -391,7 +393,7 @@ class OrderController extends Controller
         }
 
         $request->validate([
-            'payment_method' => 'required|in:gcash,paymaya',
+            'payment_method' => 'required|in:gcash,paymaya,seabank,rcbc',
             'reference_number' => 'nullable|string|max:100',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
         ]);
@@ -476,11 +478,11 @@ class OrderController extends Controller
         $delivery->delivery_address = $order->delivery_address ?? 'N/A';
         $delivery->save();
 
-        // Update order status
-        $order->status = 'on_delivery';
+        // Update order status (standardized)
+        $order->status = 'out_for_delivery';
         $order->save();
 
-        return redirect()->back()->with('success', 'Order assigned for delivery. Status updated to "On Delivery".');
+        return redirect()->back()->with('success', 'Order assigned for delivery. Status updated to "Out for Delivery".');
     }
 
     /**

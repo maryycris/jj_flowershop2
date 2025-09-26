@@ -39,12 +39,19 @@ class AuthController extends Controller
             $user = Auth::user();
             if (!$user->is_verified) {
                 Auth::logout();
-                return back()->withErrors(['email' => 'Please verify your email first.']);
+                return back()->withErrors(['login_field' => 'Please verify your email first.']);
             }
             $role = $user->role;
             return redirect()->route("$role.dashboard");
         }
-        return back()->withErrors(['Invalid credentials']);
+        
+        // Check if user exists but wrong password
+        $userExists = \App\Models\User::where('email', $loginField)->orWhere('contact_number', $loginField)->first();
+        if ($userExists) {
+            return back()->withErrors(['password' => 'Incorrect password. Please try again.']);
+        }
+        
+        return back()->withErrors(['login_field' => 'No account found with this email or phone number. Please register first.']);
     }
 
     public function showRegister() {
@@ -53,10 +60,17 @@ class AuthController extends Controller
     }
 
     public function register(Request $request) {
-        // Custom validation: at least one of email or contact_number is required
+        // Check if user already exists before validation
+        $existingUser = \App\Models\User::where('email', $request->email)->first();
+        if ($existingUser) {
+            return back()->with('error', 'You already have an account with this email. Please login instead.')->withInput();
+        }
+
+        // Updated validation: only email is required now
         $request->validate([
             'first_name' => ['required', 'string', 'max:255', 'regex:/^\\S.*\\S$|^\\S$/'],
             'last_name' => ['required', 'string', 'max:255', 'regex:/^\\S.*\\S$|^\\S$/'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', 'min:6'],
         ], [
             'first_name.regex' => 'First Name must not start or end with a space.',
@@ -65,37 +79,7 @@ class AuthController extends Controller
         ]);
 
         $email = $request->input('email');
-        $phone = $request->input('contact_number');
-        $verificationChannel = $request->input('verification_channel');
-
-        // At least one required
-        if (empty($email) && empty($phone)) {
-            return back()->withErrors(['at_least_one' => 'Please provide at least a Gmail or a phone number.'])->withInput();
-        }
-
-        // If both are provided, require channel selection
-        if ($email && $phone && !$verificationChannel) {
-            return back()->withErrors(['verification_channel' => 'Please select where you want to receive your verification code.'])->withInput();
-        }
-
-        // If only one is provided, set channel automatically
-        if (!$verificationChannel) {
-            $verificationChannel = $email ? 'email' : 'phone';
-        }
-
-        // Validate uniqueness for whichever is provided
-        if ($email) {
-            $request->validate([
-                'email' => ['email', 'max:255', 'unique:users,email'],
-            ]);
-        }
-        if ($phone) {
-            $request->validate([
-                'contact_number' => ['digits:11', 'unique:users,contact_number'],
-            ], [
-                'contact_number.digits' => 'Phone Number must be exactly 11 digits.',
-            ]);
-        }
+        $verificationChannel = 'email'; // Always use email for verification
 
         // Generate verification code and expiry
         $verificationCode = rand(100000, 999999);
@@ -106,7 +90,7 @@ class AuthController extends Controller
                 'first_name' => trim($request->first_name),
                 'last_name' => trim($request->last_name),
                 'email' => $email,
-                'contact_number' => $phone,
+                'contact_number' => null, // No phone number required
                 'password' => bcrypt($request->password),
                 'verification_channel' => $verificationChannel,
                 'verification_code' => $verificationCode,
@@ -126,10 +110,10 @@ class AuthController extends Controller
                 return back()->withErrors(['email' => 'Failed to send verification code to your email. Please try again.'])->withInput();
             }
         } else if ($verificationChannel === 'phone' && $phone) {
-            // For now, just simulate SMS sending (integration needed for real SMS)
-            // You can implement SMS sending here using a provider like Twilio or Semaphore
-            // For demo, we'll just flash the code (not for production)
-            session(['sms_demo_code' => $verificationCode]);
+            // REAL SMS sending via Semaphore
+            \App\Helpers\SMSHelper::sendSMS($phone, $verificationCode);
+            // Do not set or display demo code at all; send only via SMS now
+            session()->forget('sms_demo_code');
         }
 
         // Redirect to verification page
@@ -149,8 +133,20 @@ class AuthController extends Controller
             abort(404);
         }
         if ($provider === 'facebook') {
-            return Socialite::driver('facebook')->with(['auth_type' => 'reauthenticate'])->redirect();
+            // Force logout and re-authentication to allow account selection
+            return Socialite::driver('facebook')
+                ->with(['auth_type' => 'reauthenticate'])
+                ->scopes(['email'])
+                ->redirect();
         }
+        
+        if ($provider === 'google') {
+            // Request additional scopes for Google login
+            return Socialite::driver('google')
+                ->scopes(['email', 'profile', 'https://www.googleapis.com/auth/user.phonenumbers.read'])
+                ->redirect();
+        }
+        
         return Socialite::driver($provider)->redirect();
     }
 
@@ -166,46 +162,78 @@ class AuthController extends Controller
             return redirect('/login')->withErrors(['message' => 'Authentication failed or cancelled.']);
         }
 
-        // Generate verification code
-        $verificationCode = rand(100000, 999999);
-        $expiresAt = now()->addMinutes(10);
-
-        // Find or create user, but do NOT mark as verified yet
-        $user = User::firstOrCreate(
-            ['email' => $socialUser->getEmail()],
-            [
-                'name' => $socialUser->getName(),
+        // Find existing user or create new one for social login
+        $user = User::where('email', $socialUser->getEmail())->first();
+        
+        if (!$user) {
+            // Split the full name into first and last name
+            $fullName = $socialUser->getName();
+            $nameParts = explode(' ', trim($fullName), 2);
+            $firstName = $nameParts[0] ?? '';
+            $lastName = $nameParts[1] ?? '';
+            
+            // Try to get phone number from Google (if available)
+            $phoneNumber = null;
+            try {
+                $phoneNumber = $socialUser->getPhoneNumber();
+            } catch (\Exception $e) {
+                // Phone number not available or permission not granted
+            }
+            
+            // Create new user for social login
+            $user = new User([
+                'name' => $fullName,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $socialUser->getEmail(),
+                'contact_number' => $phoneNumber,
                 'profile_picture' => $socialUser->getAvatar(),
                 'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(24)),
                 'role' => 'customer',
-                'google_id' => $provider === 'google' ? $socialUser->getId() : null,
-                'facebook_id' => $provider === 'facebook' ? $socialUser->getId() : null,
-                'is_verified' => false,
-            ]
-        );
-        // If user exists but doesn't have the social ID, update it
-        if ($provider === 'google' && !$user->google_id) {
-            $user->google_id = $socialUser->getId();
+                'is_verified' => true, // Auto-verify social login users
+            ]);
+            
+            // Set social IDs
+            if ($provider === 'google') {
+                $user->google_id = $socialUser->getId();
+            }
+            if ($provider === 'facebook') {
+                $user->facebook_id = $socialUser->getId();
+            }
+            
+            $user->save();
+            \Log::info('New user created via social login', ['email' => $socialUser->getEmail(), 'provider' => $provider]);
+        } else {
+            // Update social IDs if not set
+            if ($provider === 'google' && !$user->google_id) {
+                $user->google_id = $socialUser->getId();
+            }
+            if ($provider === 'facebook' && !$user->facebook_id) {
+                $user->facebook_id = $socialUser->getId();
+            }
+            
+            // Update first_name and last_name if they're empty
+            if (empty($user->first_name) || empty($user->last_name)) {
+                $fullName = $socialUser->getName();
+                $nameParts = explode(' ', trim($fullName), 2);
+                $user->first_name = $nameParts[0] ?? $user->first_name;
+                $user->last_name = $nameParts[1] ?? $user->last_name;
+            }
+            
+            // Note: Social providers don't provide phone numbers by default
+            // Users will need to add their phone number manually in their profile
+            
+            $user->save();
         }
-        if ($provider === 'facebook' && !$user->facebook_id) {
-            $user->facebook_id = $socialUser->getId();
-        }
-        // Save verification code and expiry to user
-        $user->verification_code = $verificationCode;
-        $user->verification_expires_at = $expiresAt;
-        $user->save();
 
-        // Send code to email (Mailtrap)
-        \Mail::raw("Your JJ Flowershop verification code is: $verificationCode", function ($message) use ($socialUser) {
-            $message->to($socialUser->getEmail())
-                ->subject('JJ Flowershop Social Login Verification Code');
-        });
-
-        // Store user id in session for verification
-        session(['pending_social_user_id' => $user->id]);
-
-        // Redirect to verification form
-        return redirect()->route('social.verify.form')->with('success', 'A verification code has been sent to your email. Please enter the code to continue.');
+        // Log in the user directly (no verification needed for social login)
+        \Auth::login($user, true);
+        
+        $message = $user->wasRecentlyCreated ? 
+            'Welcome to JJ Flowershop! Your account has been created and you are now logged in.' :
+            'Welcome back! You are now logged in.';
+        
+        return redirect()->route('customer.dashboard')->with('success', $message);
     }
 
     public function showSocialVerifyForm() {
@@ -237,6 +265,64 @@ class AuthController extends Controller
         \Auth::login($user, true);
         session()->forget('pending_social_user_id');
         return redirect()->route('customer.dashboard')->with('success', 'Logged in via Social Login!');
+    }
+
+    public function resendEmailCode()
+    {
+        $userId = session('pending_social_user_id');
+        if (!$userId) {
+            return redirect('/register')->with('error', 'No social login in progress.');
+        }
+        
+        $user = User::find($userId);
+        if (!$user) {
+            return redirect('/register')->with('error', 'No social login in progress.');
+        }
+        
+        // Generate new code
+        $verificationCode = rand(100000, 999999);
+        $expiresAt = now()->addMinutes(10);
+        
+        $user->verification_code = $verificationCode;
+        $user->verification_expires_at = $expiresAt;
+        $user->save();
+        
+        // Send email
+        \Mail::raw("Your JJ Flowershop verification code is: $verificationCode\n\nThis code will expire in 10 minutes.", function ($message) use ($user) {
+            $message->to($user->email)
+                ->subject('JJ Flowershop Verification Code (Resent)');
+        });
+        
+        return redirect()->route('social.verify.form')->with('success', 'Verification code has been resent to your email!');
+    }
+    
+    public function resendSMSCode()
+    {
+        // For now, redirect to email resend since social profiles don't provide phone numbers
+        return redirect()->route('social.resend.email')->with('info', 'Phone verification not available for social login. Resending to email instead.');
+    }
+
+    public function manualVerifyUser($userId)
+    {
+        // This method is for support team to manually verify users
+        // In a real application, you'd want to add authentication/authorization here
+        
+        $user = User::find($userId);
+        if (!$user) {
+            return redirect('/register')->with('error', 'User not found.');
+        }
+        
+        // Mark user as verified
+        $user->is_verified = true;
+        $user->verification_code = null;
+        $user->verification_expires_at = null;
+        $user->save();
+        
+        // Log in the user
+        \Auth::login($user, true);
+        session()->forget('pending_social_user_id');
+        
+        return redirect()->route('customer.dashboard')->with('success', 'Account manually verified by support team. Welcome!');
     }
 
     // Show the phone verification form after Facebook login
@@ -392,8 +478,13 @@ class AuthController extends Controller
                 return back()->withErrors(['email' => 'Failed to resend verification code to your email. Please try again.']);
             }
         } else if ($pending['verification_channel'] === 'phone' && $pending['contact_number']) {
-            // Simulate SMS for demo
-            session(['sms_demo_code' => $verificationCode]);
+            // REAL SMS sending via Semaphore
+            \App\Helpers\SMSHelper::sendSMS($pending['contact_number'], $verificationCode);
+            if (app()->environment('local')) {
+                session(['sms_demo_code' => $verificationCode]);
+            } else {
+                session()->forget('sms_demo_code');
+            }
         }
         return redirect()->route('verify.code')->with('success', 'A new verification code has been sent.');
     }

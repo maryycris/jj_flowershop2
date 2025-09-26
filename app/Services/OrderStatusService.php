@@ -3,131 +3,199 @@
 namespace App\Services;
 
 use App\Models\Order;
-use App\Models\OrderStatusHistory;
+use App\Models\Delivery;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class OrderStatusService
 {
     /**
-     * Update order status based on payment completion
+     * Approve an order and update its status
      */
-    public static function handlePaymentCompleted(Order $order)
+    public function approveOrder(Order $order, $approvedBy)
     {
-        $oldStatus = $order->status;
-        
-        // Update order status to 'approved' (ready to ship) when payment is completed
-        $order->update([
-            'status' => 'approved',
-            'payment_status' => 'paid'
-        ]);
+        DB::beginTransaction();
+        try {
+            // Determine invoice status based on payment method
+            $invoiceStatus = 'ready'; // Default for COD
+            if (in_array(strtolower($order->payment_method), ['gcash', 'paymaya', 'rcbc'])) {
+                $invoiceStatus = 'paid'; // Already paid via online payment
+            }
 
-        // Record status change
-        if ($oldStatus !== $order->status) {
-            OrderStatusHistory::create([
-                'order_id' => $order->id,
-                'status' => $order->status,
-                'message' => 'Payment completed. Order is now ready for shipping.',
+            $order->update([
+                'order_status' => 'approved',
+                'approved_at' => now(),
+                'approved_by' => $approvedBy,
+                'invoice_status' => $invoiceStatus,
+                'invoice_generated_at' => now(),
+                'invoice_paid_at' => $invoiceStatus === 'paid' ? now() : null,
             ]);
-        }
 
-        Log::info('Order status updated to approved after payment', [
-            'order_id' => $order->id,
-            'old_status' => $oldStatus,
-            'new_status' => $order->status
-        ]);
-    }
+            // Create payment tracking for online payments
+            if ($invoiceStatus === 'paid') {
+                $order->paymentTracking()->create([
+                    'payment_method' => strtolower($order->payment_method),
+                    'amount' => $order->total_price,
+                    'payment_date' => now()->toDateString(),
+                    'status' => 'completed',
+                    'recorded_by' => $approvedBy,
+                    'memo' => 'Payment processed via ' . strtoupper($order->payment_method),
+                ]);
+            }
 
-    /**
-     * Update order status when delivery is assigned to driver
-     */
-    public static function handleDeliveryAssigned(Order $order)
-    {
-        $oldStatus = $order->status;
-        
-        // Update order status to 'processing' (to receive) when delivery is assigned
-        $order->update(['status' => 'processing']);
-
-        // Record status change
-        if ($oldStatus !== $order->status) {
-            OrderStatusHistory::create([
-                'order_id' => $order->id,
-                'status' => $order->status,
-                'message' => 'Delivery assigned to driver. Order is now in transit.',
+            // Create status history
+            $order->statusHistories()->create([
+                'status' => 'approved',
+                'notes' => 'Order approved by ' . auth()->user()->name,
+                'changed_by' => $approvedBy,
             ]);
-        }
 
-        Log::info('Order status updated to processing after delivery assignment', [
-            'order_id' => $order->id,
-            'old_status' => $oldStatus,
-            'new_status' => $order->status
-        ]);
+            DB::commit();
+            
+            Log::info("Order {$order->id} approved by user {$approvedBy} with invoice status: {$invoiceStatus}");
+            
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Failed to approve order {$order->id}: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
-     * Update order status when delivery is completed
+     * Assign driver and update order to on_delivery status
      */
-    public static function handleDeliveryCompleted(Order $order)
+    public function assignDriver(Order $order, $driverId, $assignedBy)
     {
-        $oldStatus = $order->status;
-        
-        // Update order status to 'completed' (ready for review) when delivery is completed
-        $order->update(['status' => 'completed']);
-
-        // Record status change
-        if ($oldStatus !== $order->status) {
-            OrderStatusHistory::create([
-                'order_id' => $order->id,
-                'status' => $order->status,
-                'message' => 'Delivery completed. Order is now ready for customer review.',
+        DB::beginTransaction();
+        try {
+            // Update order status
+            $order->update([
+                'order_status' => 'on_delivery',
+                'on_delivery_at' => now(),
+                'assigned_driver_id' => $driverId,
             ]);
-        }
 
-        Log::info('Order status updated to completed after delivery', [
-            'order_id' => $order->id,
-            'old_status' => $oldStatus,
-            'new_status' => $order->status
-        ]);
-    }
+            // Update delivery record
+            if ($order->delivery) {
+                $order->delivery->update([
+                    'driver_id' => $driverId,
+                    'status' => 'on_delivery',
+                ]);
+            }
 
-    /**
-     * Get the display status for customer view
-     */
-    public static function getCustomerDisplayStatus($orderStatus)
-    {
-        switch ($orderStatus) {
-            case 'pending':
-                return 'to_pay';
-            case 'approved':
-                return 'to_ship';
-            case 'processing':
-                return 'to_receive';
-            case 'completed':
-                return 'to_review';
-            case 'cancelled':
-                return 'cancelled';
-            default:
-                return $orderStatus;
+            // Create status history
+            $order->statusHistories()->create([
+                'status' => 'on_delivery',
+                'notes' => 'Driver assigned and order is now on delivery',
+                'changed_by' => $assignedBy,
+            ]);
+
+            DB::commit();
+            
+            Log::info("Order {$order->id} assigned to driver {$driverId} by user {$assignedBy}");
+            
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Failed to assign driver to order {$order->id}: " . $e->getMessage());
+            return false;
         }
     }
 
     /**
-     * Get status label for display
+     * Mark order as completed
      */
-    public static function getStatusLabel($status)
+    public function completeOrder(Order $order, $completedBy)
     {
-        switch ($status) {
-            case 'to_pay':
-                return 'To Pay';
-            case 'to_ship':
-                return 'To Ship';
-            case 'to_receive':
-                return 'To Receive';
-            case 'to_review':
-                return 'To Review';
-            case 'cancelled':
-                return 'Cancelled';
-            default:
-                return ucfirst($status);
+        DB::beginTransaction();
+        try {
+            $order->update([
+                'order_status' => 'completed',
+                'completed_at' => now(),
+            ]);
+
+            // Update delivery status
+            if ($order->delivery) {
+                $order->delivery->update([
+                    'status' => 'delivered',
+                ]);
+            }
+
+            // Create status history
+            $order->statusHistories()->create([
+                'status' => 'completed',
+                'notes' => 'Order completed',
+                'changed_by' => $completedBy,
+            ]);
+
+            DB::commit();
+            
+            Log::info("Order {$order->id} completed by user {$completedBy}");
+            
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Failed to complete order {$order->id}: " . $e->getMessage());
+            return false;
         }
     }
-} 
+
+    /**
+     * Register payment for COD orders
+     */
+    public function registerPayment(Order $order, $paymentData, $recordedBy)
+    {
+        DB::beginTransaction();
+        try {
+            // Create payment tracking record
+            $paymentTracking = $order->paymentTracking()->create([
+                'payment_method' => $paymentData['payment_method'],
+                'amount' => $paymentData['amount'],
+                'payment_date' => $paymentData['payment_date'],
+                'memo' => $paymentData['memo'] ?? null,
+                'status' => 'completed',
+                'recorded_by' => $recordedBy,
+            ]);
+
+            // Update order invoice status to paid
+            $order->update([
+                'invoice_status' => 'paid',
+                'invoice_paid_at' => now(),
+                'payment_status' => 'paid',
+            ]);
+
+            // Create status history
+            $order->statusHistories()->create([
+                'status' => 'paid',
+                'notes' => 'Payment registered: ' . strtoupper($paymentData['payment_method']) . ' - ₱' . number_format($paymentData['amount'], 2),
+                'changed_by' => $recordedBy,
+            ]);
+
+            DB::commit();
+            
+            Log::info("Payment registered for order {$order->id}: {$paymentData['payment_method']} - ₱{$paymentData['amount']}");
+            
+            return $paymentTracking;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Failed to register payment for order {$order->id}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get order counts for dashboard
+     */
+    public function getOrderCounts()
+    {
+        return [
+            'pending' => Order::where('order_status', 'pending')->count(),
+            'approved' => Order::where('order_status', 'approved')->count(),
+            'on_delivery' => Order::where('order_status', 'on_delivery')->count(),
+            'completed_today' => Order::where('order_status', 'completed')
+                ->whereDate('completed_at', now()->toDateString())
+                ->count(),
+        ];
+    }
+}

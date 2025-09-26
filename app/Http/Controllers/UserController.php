@@ -6,13 +6,15 @@ use App\Models\User;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Redirect;
 
 class UserController extends Controller
 {
     public function index()
     {
-        $users = User::where('role', '!=', 'customer')->get(); // Only staff, not customers
+        // Show only staff accounts except admin
+        $users = User::whereNotIn('role', ['customer', 'admin'])->get();
         $stores = Store::all();
         return view('admin.users.index', compact('users', 'stores'));
     }
@@ -23,22 +25,25 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'sex' => 'required|string|in:M,F',
             'contact_number' => 'required|string|max:20',
-            'role' => 'required|string|in:admin,clerk,customer,driver',
+            'role' => 'required|string|in:clerk,driver',
             'username' => 'required|string|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'email' => 'required|email|unique:users,email',
-            'store_name' => $request->role === 'admin' ? 'nullable' : 'required|string|in:Lapu-lapu,Cebu City,Cordova',
         ]);
+        // Generate an internal email since the field was removed from the UI
+        $emailBase = strtolower(preg_replace('/[^a-z0-9]+/i', '', $request->username)) ?: 'staff';
+        $email = $emailBase . '@internal.local';
+        while (User::where('email', $email)->exists()) {
+            $email = $emailBase . '+' . Str::random(4) . '@internal.local';
+        }
 
         User::create([
             'name' => $request->name,
-            'email' => $request->email,
+            'email' => $email,
             'sex' => $request->sex,
             'contact_number' => $request->contact_number,
             'role' => $request->role,
             'username' => $request->username,
             'password' => Hash::make($request->password),
-            'store_name' => $request->store_name,
         ]);
 
         return Redirect::route('admin.users.index')->with('success', 'User created successfully!');
@@ -50,8 +55,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'sex' => 'required|string|in:M,F',
             'contact_number' => 'required|string|max:20',
-            'role' => 'required|string|in:admin,clerk,customer,driver',
-            'store_name' => $request->role === 'admin' ? 'nullable' : 'required|string|in:Lapu-lapu,Cebu City,Cordova',
+            'role' => 'required|string|in:clerk,driver',
             'username' => 'required|string|max:255|unique:users,username,' . $user->id,
         ]);
 
@@ -59,7 +63,7 @@ class UserController extends Controller
         $user->sex = $request->sex;
         $user->contact_number = $request->contact_number;
         $user->role = $request->role;
-        $user->store_name = $request->store_name;
+        // No store_name field anymore
         $user->username = $request->username;
         $user->save();
 

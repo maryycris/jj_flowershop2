@@ -77,9 +77,9 @@
             <div class="fw-semibold mt-2 mb-1">{{ $user->name ?? 'Clerk name' }}</div>
         </div>
         <div class="w-100">
-            <a href="{{ route('clerk.dashboard') }}" class="clerk-sidebar-link d-flex align-items-center mb-3 @if(request()->routeIs('clerk.dashboard')) active @endif"><i class="bi bi-house-door me-2"></i> Dashboard</a>
-            <a href="{{ route('clerk.profile.edit') }}" class="clerk-sidebar-link d-flex align-items-center mb-3 @if(request()->routeIs('clerk.profile.edit')) active @endif"><i class="bi bi-person-lines-fill me-2"></i> Edit profile</a>
-            <a href="{{ route('clerk.notifications.index') }}" class="clerk-sidebar-link d-flex align-items-center mb-3 @if(request()->routeIs('clerk.notifications.index')) active @endif"><i class="bi bi-bell me-2"></i> Notification</a>
+            <a href="{{ route('clerk.dashboard') }}" class="clerk-sidebar-link d-flex align-items-center mb-3 @if(request()->routeIs('clerk.dashboard')) active @endif">Dashboard</a>
+            <a href="{{ route('clerk.profile.edit') }}" class="clerk-sidebar-link d-flex align-items-center mb-3 @if(request()->routeIs('clerk.profile.edit')) active @endif">Edit profile</a>
+            <a href="{{ route('clerk.notifications.index') }}" class="clerk-sidebar-link d-flex align-items-center mb-3 @if(request()->routeIs('clerk.notifications.index')) active @endif">Notification</a>
         </div>
     </div>
     

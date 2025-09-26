@@ -22,14 +22,26 @@ class ReportController extends Controller
 
     public function inventory()
     {
-        $products = Product::all();
+        // Load ALL flower-related products and materials, then for each product compute units sold (sum of quantity in order_product)
+        // Include finished products + raw materials (exclude only office supplies)
+        $excludeCategories = ['Office Supplies'];
+        $products = Product::whereNotIn('category', $excludeCategories)->get();
+
+        // Add "units_sold" property dynamically
+        $products->map(function($product) {
+            $product->units_sold = DB::table('order_product')
+                ->where('product_id', $product->id)
+                ->sum('quantity');
+            return $product;
+        });
+
         return view('admin.reports.inventory', compact('products'));
     }
 
     public function sales()
     {
-        $sales = Order::with('user')
-            ->where('status', 'completed')
+        // Show all orders regardless of status for comprehensive reporting
+        $sales = Order::with('user', 'products')
             ->orderByDesc('created_at')
             ->get()
             ->map(function($order) {
@@ -37,8 +49,10 @@ class ReportController extends Controller
                     'date' => $order->created_at->format('m/d/Y'),
                     'order_number' => str_pad($order->id, 5, '0', STR_PAD_LEFT),
                     'customer' => $order->user->name ?? 'N/A',
-                    'qty' => $order->products->sum(function($p) { return $p->pivot->quantity; }),
-                    'total' => $order->total_price,
+                    // Ensure qty always numeric
+                    'qty' => $order->products->sum(function($p) { return $p->pivot->quantity ?? 0; }),
+                    'total' => $order->total_price ?? 0,
+                    'status' => $order->status,
                 ];
             });
         return view('admin.reports.sales', compact('sales'));
@@ -49,6 +63,7 @@ class ReportController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $categoryName = $request->input('category_name');
+        $status = $request->input('status');
 
         $query = Order::query()
             ->select(
@@ -56,26 +71,28 @@ class ReportController extends Controller
                 DB::raw('SUM(orders.total_price) as total_sales'),
                 DB::raw('COUNT(DISTINCT orders.id) as total_orders')
             )
-            ->join('order_items', 'orders.id', '=', 'order_items.order_id')
-            ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->where('orders.status', 'completed')
+            ->join('order_product', 'orders.id', '=', 'order_product.order_id')
+            ->join('products', 'order_product.product_id', '=', 'products.id')
             ->groupBy(DB::raw('DATE(orders.created_at)'))
             ->orderBy('date');
 
+        if ($status && $status !== 'all_completed') {
+            $query->where('orders.status', $status);
+        }
+        // If 'all_completed', show all orders that are paid/delivered/completed but not just limited to 'completed'
+        if ($status === 'all_completed') {
+            $query->whereIn('orders.status', ['completed', 'paid', 'delivered', 'on_delivery', 'approved']);
+        }
         if ($startDate) {
             $query->whereDate('orders.created_at', '>=', $startDate);
         }
-
         if ($endDate) {
             $query->whereDate('orders.created_at', '<=', $endDate);
         }
-
         if ($categoryName) {
             $query->where('products.category', $categoryName);
         }
-
         $salesData = $query->get();
-
         return response()->json($salesData);
     }
 

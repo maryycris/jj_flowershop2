@@ -18,9 +18,7 @@
                     @endforeach
                 </div>
             @endif
-            @if(session('sms_demo_code'))
-                <div class="alert alert-info">[SMS Demo] Code: <b>{{ session('sms_demo_code') }}</b></div>
-            @endif
+            {{-- Verification code is now only sent via SMS. No demo code shown in UI. --}}
             @if(isset($expired) && $expired)
                 <div class="alert alert-warning">Your verification code has expired. Please resend a new code.</div>
                 <form method="POST" action="{{ route('verify.code.resend') }}">

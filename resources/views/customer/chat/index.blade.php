@@ -8,7 +8,8 @@
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-chat-dots me-2"></i>
-                        Chat Support
+                        Chat Support - Main Chat Page
+                        <small class="d-block text-success-light">Use this dedicated chat interface for better experience</small>
                     </h5>
                 </div>
                 <div class="card-body p-0">

@@ -20,17 +20,25 @@ class PayMongoService
     public function createSource($amount, $type, $redirectUrl)
     {
         try {
+            $amountInCents = (int) ($amount * 100);
+            \Log::info('PayMongo createSource', [
+                'original_amount' => $amount,
+                'amount_in_cents' => $amountInCents,
+                'type' => $type,
+                'redirect_url' => $redirectUrl
+            ]);
+            
             $response = $this->client->post($this->baseUrl . '/sources', [
                 'auth' => [$this->secretKey, ''],
                 'json' => [
                     'data' => [
                         'attributes' => [
-                            'amount' => $amount * 100, // PayMongo expects cents
+                            'amount' => $amountInCents, // PayMongo expects cents as integer
                             'redirect' => [
                                 'success' => $redirectUrl,
                                 'failed' => $redirectUrl,
                             ],
-                            'type' => $type, // 'gcash' or 'paymaya'
+                            'type' => $type, // 'gcash' or 'maya'
                             'currency' => 'PHP',
                         ]
                     ]

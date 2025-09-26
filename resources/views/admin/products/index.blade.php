@@ -25,25 +25,70 @@
         </div>
     </div>
 
-    <!-- Category Tabs -->
+    <!-- Filter Section -->
     <div class="mx-auto mb-3" style="max-width: 900px;">
-        <ul class="nav nav-tabs border-0 justify-content-center" id="productTabs" role="tablist" style="background: #fff; border-radius: 12px 12px 0 0;">
-            @php
-                $categories = ['all' => 'All', 'bouquets' => 'Bouquets', 'packages' => 'Packages', 'gifts' => 'Gifts'];
-                $currentCategory = $categories[request('category', 'all')] ?? 'All';
-            @endphp
-            @foreach($categories as $key => $label)
-            <li class="nav-item" role="presentation">
-                <a class="nav-link @if(request('category', 'all') === $key) active @endif" href="?category={{ $key }}" style="font-weight: 500; color: #8ACB88; border: none; border-bottom: 3px solid transparent; @if(request('category', 'all') === $key) border-bottom: 3px solid #8ACB88; color: #385E42; background: #fff; @endif">{{ $label }}</a>
-        </li>
-        @endforeach
-    </ul>
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" action="{{ route('admin.products.index') }}" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="category" class="form-label">Category</label>
+                        <select name="category" id="category" class="form-select">
+                            <option value="">All Categories</option>
+                            <option value="Fresh Flowers" {{ request('category') == 'Fresh Flowers' ? 'selected' : '' }}>Fresh Flowers</option>
+                            <option value="Dried Flowers" {{ request('category') == 'Dried Flowers' ? 'selected' : '' }}>Dried Flowers</option>
+                            <option value="Artificial Flowers" {{ request('category') == 'Artificial Flowers' ? 'selected' : '' }}>Artificial Flowers</option>
+                            <option value="Floral Supplies" {{ request('category') == 'Floral Supplies' ? 'selected' : '' }}>Floral Supplies</option>
+                            <option value="Packaging Materials" {{ request('category') == 'Packaging Materials' ? 'selected' : '' }}>Packaging Materials</option>
+                            <option value="Materials, Tools, and Equipment" {{ request('category') == 'Materials, Tools, and Equipment' ? 'selected' : '' }}>Materials, Tools, and Equipment</option>
+                            <option value="Office Supplies" {{ request('category') == 'Office Supplies' ? 'selected' : '' }}>Office Supplies</option>
+                            <option value="Other Offers" {{ request('category') == 'Other Offers' ? 'selected' : '' }}>Other Offers</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="price_min" class="form-label">Min Price</label>
+                        <input type="number" name="price_min" id="price_min" class="form-control" value="{{ request('price_min') }}" placeholder="0.00" step="0.01">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="price_max" class="form-label">Max Price</label>
+                        <input type="number" name="price_max" id="price_max" class="form-control" value="{{ request('price_max') }}" placeholder="9999.99" step="0.01">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="sort" class="form-label">Sort By</label>
+                        <select name="sort" id="sort" class="form-select">
+                            <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>Name A-Z</option>
+                            <option value="name_desc" {{ request('sort') == 'name_desc' ? 'selected' : '' }}>Name Z-A</option>
+                            <option value="price_asc" {{ request('sort') == 'price_asc' ? 'selected' : '' }}>Price Low-High</option>
+                            <option value="price_desc" {{ request('sort') == 'price_desc' ? 'selected' : '' }}>Price High-Low</option>
+                            <option value="newest" {{ request('sort') == 'newest' ? 'selected' : '' }}>Newest First</option>
+                            <option value="oldest" {{ request('sort') == 'oldest' ? 'selected' : '' }}>Oldest First</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel"></i> Apply Filters
+                        </button>
+                        <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Clear Filters
+                        </a>
+                        <span class="ms-3 text-muted">
+                            Showing {{ $products->count() }} product(s)
+                        </span>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Product Grid Card -->
     <div class="mx-auto" style="max-width: 900px;">
         <div class="bg-white rounded-4 shadow-sm p-4">
-            <div class="mb-3 fw-bold fs-5">{{ $currentCategory }}</div>
+            <div class="mb-3 fw-bold fs-5">
+                @if(request('category'))
+                    {{ request('category') }} Products
+                @else
+                    All Products
+                @endif
+            </div>
             <div class="row g-3 product-grid">
         <!-- Add New Product Card -->
                 <div class="col-6 col-md-4 col-lg-3">
@@ -109,9 +154,14 @@
                         <label for="product_category" class="form-label">Category</label>
                         <select class="form-select" id="product_category" name="category" required>
                             <option value="">Select Category</option>
-                            <option value="bouquets">Bouquets</option>
-                            <option value="packages">Packages</option>
-                            <option value="gifts">Gifts</option>
+                            <option value="Fresh Flowers">Fresh Flowers</option>
+                            <option value="Dried Flowers">Dried Flowers</option>
+                            <option value="Artificial Flowers">Artificial Flowers</option>
+                            <option value="Floral Supplies">Floral Supplies</option>
+                            <option value="Packaging Materials">Packaging Materials</option>
+                            <option value="Materials, Tools, and Equipment">Materials, Tools, and Equipment</option>
+                            <option value="Office Supplies">Office Supplies</option>
+                            <option value="Other Offers">Other Offers</option>
                         </select>
                     </div>
                     
@@ -182,9 +232,14 @@
                     <div class="mb-3">
                         <label for="edit_product_category" class="form-label">Category</label>
                         <select class="form-select" id="edit_product_category" name="category" required>
-                            <option value="bouquets">Bouquets</option>
-                            <option value="packages">Packages</option>
-                            <option value="gifts">Gifts</option>
+                            <option value="Fresh Flowers">Fresh Flowers</option>
+                            <option value="Dried Flowers">Dried Flowers</option>
+                            <option value="Artificial Flowers">Artificial Flowers</option>
+                            <option value="Floral Supplies">Floral Supplies</option>
+                            <option value="Packaging Materials">Packaging Materials</option>
+                            <option value="Materials, Tools, and Equipment">Materials, Tools, and Equipment</option>
+                            <option value="Office Supplies">Office Supplies</option>
+                            <option value="Other Offers">Other Offers</option>
                         </select>
                     </div>
                 </div>

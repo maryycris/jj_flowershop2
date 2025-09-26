@@ -84,6 +84,16 @@
                 <td>₱{{ number_format($lineTotal, 2) }}</td>
             </tr>
         @endforeach
+        @php
+            $shippingFee = $order->delivery->shipping_fee ?? 0;
+            
+            // If shipping_fee is 0 or null, calculate it from the difference between total_price and subtotal
+            if ($shippingFee == 0 && $order->total_price > $subtotal) {
+                $shippingFee = $order->total_price - $subtotal;
+            }
+            
+            $grandTotal = $subtotal + $shippingFee;
+        @endphp
         <tr class="total">
             <td></td>
             <td></td>
@@ -94,13 +104,13 @@
             <td></td>
             <td></td>
             <td><strong>Shipping:</strong></td>
-            <td>₱50.00</td>
+            <td>₱{{ number_format($shippingFee, 2) }}</td>
         </tr>
         <tr class="total">
             <td></td>
             <td></td>
             <td><strong>Grand Total:</strong></td>
-            <td>₱{{ number_format($subtotal + 50, 2) }}</td>
+            <td>₱{{ number_format($grandTotal, 2) }}</td>
         </tr>
     </table>
     <br>

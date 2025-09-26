@@ -16,7 +16,7 @@ class PaymentController extends Controller
     public function gcashPayment($orderId)
     {
         $order = Order::findOrFail($orderId);
-        
+
         // Verify the order belongs to the authenticated user
         if ($order->user_id !== Auth::id()) {
             abort(403, 'Unauthorized access to order.');
@@ -31,10 +31,10 @@ class PaymentController extends Controller
         return view('customer.payment.gcash', compact('order'));
     }
 
-    public function paymayaPayment($orderId)
+    public function grabPayPayment($orderId)
     {
         $order = Order::findOrFail($orderId);
-        
+
         // Verify the order belongs to the authenticated user
         if ($order->user_id !== Auth::id()) {
             abort(403, 'Unauthorized access to order.');
@@ -46,13 +46,211 @@ class PaymentController extends Controller
                             ->with('error', 'This order is not ready for payment.');
         }
 
-        return view('customer.payment.paymaya', compact('order'));
+        // Prepare PayMongo Checkout Session for GrabPay
+        try {
+            $amount = $order->total_amount * 100; // PayMongo expects amount in cents
+
+            $response = \Illuminate\Support\Facades\Http::withToken(env('PAYMONGO_SECRET_KEY'))
+                ->post(env('PAYMONGO_BASE_URL', 'https://api.paymongo.com/v1') . '/checkout_sessions', [
+                    'data' => [
+                        'attributes' => [
+                            'billing' => [
+                                'name' => $order->customer_name ?? Auth::user()->name,
+                                'email' => $order->customer_email ?? Auth::user()->email,
+                            ],
+                            'amount' => $amount,
+                            'description' => 'Order #' . $order->id,
+                            'redirect' => [
+                                'success' => route('customer.payment.callback', $order->id),
+                                'failed' => route('customer.orders.show', $order->id),
+                            ],
+                            'type' => 'grab_pay', // IMPORTANT: use 'grab_pay' for GrabPay
+                        ]
+                    ]
+                ]);
+
+            if ($response->successful()) {
+                // Optionally save the source id to the order for callback verification
+                $order->update([
+                    'paymongo_source_id' => $response['data']['id'] ?? null,
+                ]);
+                return redirect($response['data']['attributes']['checkout_url']);
+            } else {
+                \Log::error('GrabPay Payment Error: ' . $response->body());
+                return back()->with('error', 'An error occured while preparing payment. Please try again.');
+            }
+        } catch (\Exception $e) {
+            \Log::error('GrabPay Payment Exception: ' . $e->getMessage());
+            return back()->with('error', 'An error occured while preparing payment. Please try again.');
+        }
+    }
+
+    public function paymayaPayment($orderId)
+    {
+        $order = Order::findOrFail($orderId);
+
+        // Verify the order belongs to the authenticated user
+        if ($order->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized access to order.');
+        }
+
+        // Check if order is in payment_pending status
+        if ($order->status !== 'payment_pending') {
+            return redirect()->route('customer.orders.show', $order->id)
+                            ->with('error', 'This order is not ready for payment.');
+        }
+
+        // Prepare PayMongo Checkout Session for PayMaya
+        try {
+            $amount = $order->total_amount * 100; // PayMongo expects amount in cents
+
+            $response = \Illuminate\Support\Facades\Http::withToken(env('PAYMONGO_SECRET_KEY'))
+                ->post(env('PAYMONGO_BASE_URL', 'https://api.paymongo.com/v1') . '/checkout_sessions', [
+                    'data' => [
+                        'attributes' => [
+                            'billing' => [
+                                'name' => $order->customer_name ?? Auth::user()->name,
+                                'email' => $order->customer_email ?? Auth::user()->email,
+                            ],
+                            'amount' => $amount,
+                            'description' => 'Order #' . $order->id,
+                            'redirect' => [
+                                'success' => route('customer.payment.callback', $order->id),
+                                'failed' => route('customer.orders.show', $order->id),
+                            ],
+                            'type' => 'paymaya', // IMPORTANT: use 'paymaya' for PayMaya
+                        ]
+                    ]
+                ]);
+
+            if ($response->successful()) {
+                // Optionally save the source id to the order for callback verification
+                $order->update([
+                    'paymongo_source_id' => $response['data']['id'] ?? null,
+                ]);
+                return redirect($response['data']['attributes']['checkout_url']);
+            } else {
+                \Log::error('PayMaya Payment Error: ' . $response->body());
+                return back()->with('error', 'An error occured while preparing payment. Please try again.');
+            }
+        } catch (\Exception $e) {
+            \Log::error('PayMaya Payment Exception: ' . $e->getMessage());
+            return back()->with('error', 'An error occured while preparing payment. Please try again.');
+        }
+    }
+
+    public function seabankPayment($orderId)
+    {
+        $order = Order::findOrFail($orderId);
+
+        // Verify the order belongs to the authenticated user
+        if ($order->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized access to order.');
+        }
+
+        // Check if order is in payment_pending status
+        if ($order->status !== 'payment_pending') {
+            return redirect()->route('customer.orders.show', $order->id)
+                            ->with('error', 'This order is not ready for payment.');
+        }
+
+        // Prepare PayMongo Checkout Session for Seabank
+        try {
+            $amount = $order->total_amount * 100; // PayMongo expects amount in cents
+
+            $response = \Illuminate\Support\Facades\Http::withToken(env('PAYMONGO_SECRET_KEY'))
+                ->post(env('PAYMONGO_BASE_URL', 'https://api.paymongo.com/v1') . '/checkout_sessions', [
+                    'data' => [
+                        'attributes' => [
+                            'billing' => [
+                                'name' => $order->customer_name ?? Auth::user()->name,
+                                'email' => $order->customer_email ?? Auth::user()->email,
+                            ],
+                            'amount' => $amount,
+                            'description' => 'Order #' . $order->id,
+                            'redirect' => [
+                                'success' => route('customer.payment.callback', $order->id),
+                                'failed' => route('customer.orders.show', $order->id),
+                            ],
+                            'type' => 'seabank', // IMPORTANT: use 'seabank' for Seabank
+                        ]
+                    ]
+                ]);
+
+            if ($response->successful()) {
+                // Optionally save the source id to the order for callback verification
+                $order->update([
+                    'paymongo_source_id' => $response['data']['id'] ?? null,
+                ]);
+                return redirect($response['data']['attributes']['checkout_url']);
+            } else {
+                \Log::error('Seabank Payment Error: ' . $response->body());
+                return back()->with('error', 'An error occured while preparing payment. Please try again.');
+            }
+        } catch (\Exception $e) {
+            \Log::error('Seabank Payment Exception: ' . $e->getMessage());
+            return back()->with('error', 'An error occured while preparing payment. Please try again.');
+        }
+    }
+
+    public function rcbcPayment($orderId)
+    {
+        $order = Order::findOrFail($orderId);
+
+        // Verify the order belongs to the authenticated user
+        if ($order->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized access to order.');
+        }
+
+        // Check if order is in payment_pending status
+        if ($order->status !== 'payment_pending') {
+            return redirect()->route('customer.orders.show', $order->id)
+                            ->with('error', 'This order is not ready for payment.');
+        }
+
+        // Prepare PayMongo Checkout Session for RCBC
+        try {
+            $amount = $order->total_amount * 100; // PayMongo expects amount in cents
+
+            $response = \Illuminate\Support\Facades\Http::withToken(env('PAYMONGO_SECRET_KEY'))
+                ->post(env('PAYMONGO_BASE_URL', 'https://api.paymongo.com/v1') . '/checkout_sessions', [
+                    'data' => [
+                        'attributes' => [
+                            'billing' => [
+                                'name' => $order->customer_name ?? Auth::user()->name,
+                                'email' => $order->customer_email ?? Auth::user()->email,
+                            ],
+                            'amount' => $amount,
+                            'description' => 'Order #' . $order->id,
+                            'redirect' => [
+                                'success' => route('customer.payment.callback', $order->id),
+                                'failed' => route('customer.orders.show', $order->id),
+                            ],
+                            'type' => 'rcbc', // IMPORTANT: use 'rcbc' for RCBC
+                        ]
+                    ]
+                ]);
+
+            if ($response->successful()) {
+                // Optionally save the source id to the order for callback verification
+                $order->update([
+                    'paymongo_source_id' => $response['data']['id'] ?? null,
+                ]);
+                return redirect($response['data']['attributes']['checkout_url']);
+            } else {
+                \Log::error('RCBC Payment Error: ' . $response->body());
+                return back()->with('error', 'An error occured while preparing payment. Please try again.');
+            }
+        } catch (\Exception $e) {
+            \Log::error('RCBC Payment Exception: ' . $e->getMessage());
+            return back()->with('error', 'An error occured while preparing payment. Please try again.');
+        }
     }
 
     public function processPayment(Request $request, $orderId)
     {
         $order = Order::findOrFail($orderId);
-        
+
         // Verify the order belongs to the authenticated user
         if ($order->user_id !== Auth::id()) {
             abort(403, 'Unauthorized access to order.');
@@ -80,13 +278,33 @@ class PaymentController extends Controller
                 'payment_pin.required' => 'PIN is required.',
                 'payment_pin.digits' => 'PIN must be exactly 4 digits.',
             ]);
+        } elseif ($paymentMethod === 'seabank') {
+            $request->validate([
+                'seabank_number' => ['required', 'regex:/^09\\d{9}$/'],
+                'payment_pin' => ['required', 'digits:4'],
+            ], [
+                'seabank_number.required' => 'Seabank number is required.',
+                'seabank_number.regex' => 'Seabank number must be 11 digits and start with 09.',
+                'payment_pin.required' => 'PIN is required.',
+                'payment_pin.digits' => 'PIN must be exactly 4 digits.',
+            ]);
+        } elseif ($paymentMethod === 'rcbc') {
+            $request->validate([
+                'rcbc_number' => ['required', 'regex:/^09\\d{9}$/'],
+                'payment_pin' => ['required', 'digits:4'],
+            ], [
+                'rcbc_number.required' => 'RCBC number is required.',
+                'rcbc_number.regex' => 'RCBC number must be 11 digits and start with 09.',
+                'payment_pin.required' => 'PIN is required.',
+                'payment_pin.digits' => 'PIN must be exactly 4 digits.',
+            ]);
         }
 
         try {
             // Simulate payment processing
             // In production, you would verify payment with the gateway
             $paymentSuccess = $request->input('payment_status') === 'success';
-            
+
             if ($paymentSuccess) {
                 // Use OrderStatusService to handle payment completion
                 OrderStatusService::handlePaymentCompleted($order);
@@ -138,6 +356,8 @@ class PaymentController extends Controller
 
     public function paymongoCallback(Request $request, $orderId)
     {
+        \Log::info('PayMongo callback hit', ['order_id' => $orderId, 'user_id' => Auth::id()]);
+        
         $order = Order::findOrFail($orderId);
         // Optional: check if the order belongs to the user
         if ($order->user_id !== Auth::id()) {
@@ -145,30 +365,81 @@ class PaymentController extends Controller
         }
 
         // Check payment status from PayMongo
-        $paymongo = new PayMongoService();
+        $checkoutSessionId = $order->paymongo_checkout_session_id;
         $sourceId = $order->paymongo_source_id;
-        if (!$sourceId) {
-            return redirect()->route('customer.orders.show', $order->id)
-                ->with('error', 'No PayMongo source found for this order.');
-        }
-        try {
-            $status = $paymongo->getSourceStatus($sourceId);
-            if ($status === 'chargeable' || $status === 'paid') {
-                $order->update([
-                    'payment_status' => 'paid',
-                    'status' => 'pending', // still needs approval
-                ]);
-                // Optionally notify admin/clerk here
+        
+        if ($checkoutSessionId) {
+            // Handle Checkout Sessions (new method)
+            \Log::info('Checking checkout session', ['session_id' => $checkoutSessionId]);
+            try {
+                $response = \Illuminate\Support\Facades\Http::withBasicAuth(env('PAYMONGO_SECRET_KEY'), '')
+                    ->get(env('PAYMONGO_BASE_URL', 'https://api.paymongo.com/v1') . '/checkout_sessions/' . $checkoutSessionId);
+                
+                \Log::info('Checkout session response', ['status' => $response->status(), 'body' => $response->body()]);
+                
+                if ($response->successful()) {
+                    $session = $response->json('data');
+                    $sessionStatus = $session['attributes']['status'] ?? 'unknown';
+                    $payments = $session['attributes']['payments'] ?? [];
+                    
+                    \Log::info('Checkout session status', ['session_status' => $sessionStatus, 'payments_count' => count($payments)]);
+                    
+                    // Check if any payment is paid
+                    $isPaid = false;
+                    foreach ($payments as $payment) {
+                        if (($payment['attributes']['status'] ?? '') === 'paid') {
+                            $isPaid = true;
+                            break;
+                        }
+                    }
+                    
+                    if ($isPaid) {
+                        $order->update([
+                            'payment_status' => 'paid',
+                            'status' => 'pending', // still needs approval
+                        ]);
+                        \Log::info('Order updated to paid', ['order_id' => $order->id]);
+                        return redirect()->route('customer.orders.show', $order->id)
+                            ->with('success', 'Payment successful! Your order is now pending approval.');
+                    } else {
+                        \Log::info('Payment not completed', ['session_status' => $sessionStatus, 'payments' => $payments]);
+                        return redirect()->route('customer.orders.show', $order->id)
+                            ->with('error', 'Payment not completed. Please try again.');
+                    }
+                } else {
+                    \Log::error('PayMongo checkout session error', ['response' => $response->body()]);
+                    return redirect()->route('customer.orders.show', $order->id)
+                        ->with('error', 'An error occurred while verifying payment.');
+                }
+            } catch (\Exception $e) {
+                \Log::error('PayMongo checkout session exception', ['error' => $e->getMessage()]);
                 return redirect()->route('customer.orders.show', $order->id)
-                    ->with('success', 'Payment successful! Your order is now pending approval.');
-            } else {
-                return redirect()->route('customer.orders.show', $order->id)
-                    ->with('error', 'Payment not completed. Please try again.');
+                    ->with('error', 'An error occurred while verifying payment.');
             }
-        } catch (\Exception $e) {
-            \Log::error('PayMongo callback error', ['error' => $e->getMessage()]);
+        } elseif ($sourceId) {
+            // Handle Sources API (old method for backward compatibility)
+            $paymongo = new PayMongoService();
+            try {
+                $status = $paymongo->getSourceStatus($sourceId);
+                if ($status === 'chargeable' || $status === 'paid') {
+                    $order->update([
+                        'payment_status' => 'paid',
+                        'status' => 'pending', // still needs approval
+                    ]);
+                    return redirect()->route('customer.orders.show', $order->id)
+                        ->with('success', 'Payment successful! Your order is now pending approval.');
+                } else {
+                    return redirect()->route('customer.orders.show', $order->id)
+                        ->with('error', 'Payment not completed. Please try again.');
+                }
+            } catch (\Exception $e) {
+                \Log::error('PayMongo callback error', ['error' => $e->getMessage()]);
+                return redirect()->route('customer.orders.show', $order->id)
+                    ->with('error', 'An error occurred while verifying payment.');
+            }
+        } else {
             return redirect()->route('customer.orders.show', $order->id)
-                ->with('error', 'An error occurred while verifying payment.');
+                ->with('error', 'No PayMongo payment session found for this order.');
         }
     }
 
@@ -178,4 +449,4 @@ class PaymentController extends Controller
         // This would typically send an email or create a notification record
         \Log::info('Payment completed notification should be sent for order', ['order_id' => $order->id]);
     }
-} 
+}

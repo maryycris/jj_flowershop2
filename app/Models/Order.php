@@ -20,6 +20,15 @@ class Order extends Model
         'payment_status',
         'payment_method',
         'type',
+        'order_status',
+        'approved_at',
+        'on_delivery_at',
+        'completed_at',
+        'approved_by',
+        'assigned_driver_id',
+        'invoice_status',
+        'invoice_generated_at',
+        'invoice_paid_at',
     ];
 
     /**
@@ -64,5 +73,29 @@ class Order extends Model
     public function statusHistories()
     {
         return $this->hasMany(OrderStatusHistory::class);
+    }
+
+    /**
+     * Get the user who approved the order.
+     */
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * Get the assigned driver for the order.
+     */
+    public function assignedDriver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_driver_id');
+    }
+
+    /**
+     * Get the payment tracking records for the order.
+     */
+    public function paymentTracking()
+    {
+        return $this->hasMany(PaymentTracking::class);
     }
 }

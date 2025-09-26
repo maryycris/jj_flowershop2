@@ -17,7 +17,9 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             UsersTableSeeder::class,
             ProductsTableSeeder::class,
+            InventorySeeder::class,
             OrdersTableSeeder::class,
+            DriverSeeder::class,
         ]);
 
         // Seed a default store if not exists

@@ -32,6 +32,13 @@ class CustomerNotificationController extends Controller
         return back()->with('success', 'Notification marked as read.');
     }
 
+    public function markAsUnread($id)
+    {
+        $notification = auth()->user()->notifications()->findOrFail($id);
+        $notification->markAsUnread();
+        return back()->with('success', 'Notification marked as unread.');
+    }
+
     public function destroy($id)
     {
         $notification = auth()->user()->notifications()->findOrFail($id);

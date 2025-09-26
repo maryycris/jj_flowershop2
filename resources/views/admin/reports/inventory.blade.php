@@ -27,13 +27,13 @@
                             <td>{{ $product->code ?? $product->id ?? 'N/A' }}</td>
                             <td>{{ $product->name ?? 'N/A' }}</td>
                             <td>{{ $product->category ?? 'N/A' }}</td>
-                            <td>{{ $product->price ?? 'N/A' }}</td>
+                            <td>{{ $product->price ?? 0 }}</td>
                             <td>{{ $product->expiration_date ?? 'N/A' }}</td>
-                            <td>{{ $product->reorder_min ?? 'N/A' }}</td>
+                            <td>{{ $product->reorder_min ?? 0 }}</td>
                             <td>{{ $product->qty_damaged ?? 0 }}</td>
                             <td>{{ $product->stock ?? 0 }}</td>
                             <td>{{ $product->restock_qty ?? 0 }}</td>
-                            <td>{{ $product->qty_sold ?? 0 }}</td>
+                            <td>{{ $product->units_sold ?? 0 }}</td>
                             <td>{{ $product->last_restock ?? 'N/A' }}</td>
                         </tr>
                         @empty

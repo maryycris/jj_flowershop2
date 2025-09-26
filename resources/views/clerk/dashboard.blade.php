@@ -7,12 +7,11 @@
             <i class="bi bi-person-circle" style="font-size:3.5rem;color:#888;"></i>
             <div class="fw-semibold mt-2 mb-1">Clerk name</div>
         </div>
-        <!-- Sidebar links -->
-        <ul class="sidebar-links">
-            <li><a href="{{ route('clerk.dashboard') }}">Dashboard</a></li>
-            <li><a href="{{ route('clerk.profile.edit') }}">Edit profile</a></li>
-            <li><a href="{{ route('clerk.notifications.index') }}">Notification</a></li>
-        </ul>
+        <div class="w-100">
+            <a href="{{ route('clerk.dashboard') }}" class="clerk-sidebar-link d-flex align-items-center mb-3 @if(request()->routeIs('clerk.dashboard')) active @endif">Dashboard</a>
+            <a href="{{ route('clerk.profile.edit') }}" class="clerk-sidebar-link d-flex align-items-center mb-3 @if(request()->routeIs('clerk.profile.edit')) active @endif">Edit profile</a>
+            <a href="{{ route('clerk.notifications.index') }}" class="clerk-sidebar-link d-flex align-items-center mb-3 @if(request()->routeIs('clerk.notifications.index')) active @endif">Notification</a>
+        </div>
     </div>
     <div class="flex-grow-1 p-4">
         <!-- Main dashboard cards (admin style) -->

@@ -18,4 +18,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::post('/calculate-shipping-fee', [\App\Http\Controllers\ShippingFeeController::class, 'calculate']); 
+Route::post('/calculate-shipping-fee', [\App\Http\Controllers\ShippingFeeController::class, 'calculate']);
+
+// Map and routing API endpoints
+Route::post('/map/geocode', [\App\Http\Controllers\MapController::class, 'geocode']);
+Route::post('/map/route', [\App\Http\Controllers\MapController::class, 'getRoute']);
+Route::post('/map/shipping-calculate', [\App\Http\Controllers\MapController::class, 'calculateShippingWithDistance']); 

@@ -70,20 +70,58 @@
                 </div>
             </div>
 
-            <!-- Invoice Buttons -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">Invoice Options</h5>
+            <!-- Payment Receipt / Order Slip / Invoice Options -->
+            @php
+                $isCOD = strtoupper($order->payment_method) === 'COD';
+                $isOnDelivery = $order->order_status === 'on_delivery' || $order->order_status === 'completed';
+            @endphp
+            
+            @if($isOnDelivery)
+                <!-- Invoice Options - Only show when order is on delivery or completed -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">Invoice Options</h5>
+                    </div>
+                    <div class="card-body">
+                        <a href="{{ route('customer.orders.invoice.view', $order->id) }}" class="btn btn-primary me-2" target="_blank">
+                            <i class="fas fa-eye me-2"></i> View Invoice
+                        </a>
+                        <a href="{{ route('customer.orders.invoice.download', $order->id) }}" class="btn btn-success">
+                            <i class="fas fa-download me-2"></i> Download PDF
+                        </a>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <a href="{{ route('customer.orders.invoice.view', $order->id) }}" class="btn btn-primary me-2" target="_blank">
-                        <i class="fas fa-eye me-2"></i> View Invoice
-                    </a>
-                    <a href="{{ route('customer.orders.invoice.download', $order->id) }}" class="btn btn-success">
-                        <i class="fas fa-download me-2"></i> Download PDF
-                    </a>
+            @elseif($isCOD)
+                <!-- Order Slip - Show when COD payment method -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Order Slip</h5>
+                    </div>
+                    <div class="card-body">
+                        <a href="{{ route('customer.orders.invoice.view', $order->id) }}" class="btn btn-primary me-2" target="_blank">
+                            <i class="fas fa-eye me-2"></i> View Order Slip
+                        </a>
+                        <a href="{{ route('customer.orders.invoice.download', $order->id) }}" class="btn btn-success">
+                            <i class="fas fa-download me-2"></i> Download Order Slip
+                        </a>
+                    </div>
                 </div>
-            </div>
+            @else
+                <!-- Payment Receipt - Show for other payment methods -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Payment Receipt</h5>
+                    </div>
+                    <div class="card-body">
+                        <a href="{{ route('customer.orders.invoice.view', $order->id) }}" class="btn btn-primary me-2" target="_blank">
+                            <i class="fas fa-eye me-2"></i> View Receipt
+                        </a>
+                        <a href="{{ route('customer.orders.invoice.download', $order->id) }}" class="btn btn-success">
+                            <i class="fas fa-download me-2"></i> Download Receipt
+                        </a>
+                    </div>
+                </div>
+            @endif
 
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-info text-white">

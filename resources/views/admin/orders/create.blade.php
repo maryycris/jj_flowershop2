@@ -11,7 +11,7 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="customer_name" class="form-label">Customer Name</label>
-                        <input type="text" class="form-control" id="customer_name" name="customer_name" placeholder="Enter customer's name" required>
+                        <input type="text" class="form-control" id="customer_name" name="customer_name" placeholder="Enter customer's name" required style="text-transform: capitalize;">
                     </div>
                     <div class="col-md-6 mb-3">
                         <label for="order_date" class="form-label">Order Date</label>
@@ -48,11 +48,11 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="invoice_address" class="form-label">Invoice Address</label>
-                        <textarea class="form-control" id="invoice_address" name="invoice_address" rows="2" placeholder="Enter invoice address" required></textarea>
+                        <textarea class="form-control" id="invoice_address" name="invoice_address" rows="2" placeholder="Enter invoice address" required style="text-transform: capitalize;"></textarea>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label for="delivery_address" class="form-label">Delivery Address</label>
-                        <textarea class="form-control" id="delivery_address" name="delivery_address" rows="2" placeholder="Enter delivery address" required></textarea>
+                        <textarea class="form-control" id="delivery_address" name="delivery_address" rows="2" placeholder="Enter delivery address" required style="text-transform: capitalize;"></textarea>
                     </div>
                 </div>
                 <hr class="my-4">
@@ -251,6 +251,24 @@ document.addEventListener('DOMContentLoaded', function () {
     updatePaymentMethods();
     toggleShippingFee();
     calculateTotal();
+    
+    // Prevent leading spaces and ensure proper case
+    function preventLeadingSpaces(input) {
+        input.addEventListener('input', function(e) {
+            if (e.target.value.startsWith(' ')) {
+                e.target.value = e.target.value.trim();
+            }
+        });
+        
+        input.addEventListener('keydown', function(e) {
+            if (e.key === ' ' && e.target.selectionStart === 0) {
+                e.preventDefault();
+            }
+        });
+    }
+    
+    // Apply to all text inputs and textareas
+    document.querySelectorAll('input[type="text"], textarea').forEach(preventLeadingSpaces);
 });
 </script>
 @endpush 

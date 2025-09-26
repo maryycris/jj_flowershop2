@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\OrderStatusService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -13,12 +14,8 @@ class AdminController extends Controller
 {
     public function dashboard()
     {
-        $pendingOrdersCount = Order::where('status', 'pending')->count();
-        $approvedOrdersCount = Order::where('status', 'approved')->count();
-        $onDeliveryCount = Order::where('status', 'on_delivery')->count();
-        $completedTodayCount = Order::where('status', 'delivered')
-            ->whereDate('updated_at', now()->toDateString())
-            ->count();
+        $orderStatusService = new OrderStatusService();
+        $orderCounts = $orderStatusService->getOrderCounts();
 
         // You can keep these if needed for other parts of the dashboard not shown in the prototype
         // $totalOrders = Order::count();
@@ -27,7 +24,12 @@ class AdminController extends Controller
         // $totalRevenue = Order::where('status', 'completed')->sum('total_price');
         // $recentOrders = Order::with('user')->latest()->take(5)->get();
 
-        return view('admin.dashboard', compact('pendingOrdersCount', 'approvedOrdersCount', 'onDeliveryCount', 'completedTodayCount'));
+        return view('admin.dashboard', [
+            'pendingOrdersCount' => $orderCounts['pending'],
+            'approvedOrdersCount' => $orderCounts['approved'],
+            'onDeliveryCount' => $orderCounts['on_delivery'],
+            'completedTodayCount' => $orderCounts['completed_today']
+        ]);
     }
 
     public function chatbox(Request $request)
@@ -128,5 +130,93 @@ class AdminController extends Controller
         $user->save();
 
         return back()->with('success', 'Password updated successfully!');
+    }
+
+    /**
+     * Approve an order
+     */
+    public function approveOrder(Request $request, $orderId)
+    {
+        try {
+            $order = Order::findOrFail($orderId);
+            $orderStatusService = new OrderStatusService();
+            
+            if ($orderStatusService->approveOrder($order, auth()->id())) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Order approved successfully'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to approve order'
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error approving order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Assign driver to order
+     */
+    public function assignDriver(Request $request, $orderId)
+    {
+        $request->validate([
+            'driver_id' => 'required|exists:users,id'
+        ]);
+
+        try {
+            $order = Order::findOrFail($orderId);
+            $orderStatusService = new OrderStatusService();
+            
+            if ($orderStatusService->assignDriver($order, $request->driver_id, auth()->id())) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Driver assigned successfully'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to assign driver'
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error assigning driver: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Complete an order
+     */
+    public function completeOrder(Request $request, $orderId)
+    {
+        try {
+            $order = Order::findOrFail($orderId);
+            $orderStatusService = new OrderStatusService();
+            
+            if ($orderStatusService->completeOrder($order, auth()->id())) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Order completed successfully'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to complete order'
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error completing order: ' . $e->getMessage()
+            ], 500);
+        }
     }
 } 

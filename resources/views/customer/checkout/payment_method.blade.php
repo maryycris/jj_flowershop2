@@ -18,6 +18,16 @@
         <input type="hidden" name="delivery_time" value="{{ session('checkout_data.delivery_time', '') }}">
         <input type="hidden" name="shipping_fee" value="{{ $shippingFee }}">
         <input type="hidden" name="promo_code" value="{{ session('checkout_data.promo_code', '') }}">
+        @if(request('product_id'))
+            <input type="hidden" name="product_id" value="{{ request('product_id') }}">
+            <input type="hidden" name="quantity" value="{{ request('quantity', 1) }}">
+        @endif
+        @if(request('selected_items'))
+            @foreach(request('selected_items') as $itemId)
+                <input type="hidden" name="selected_items[]" value="{{ $itemId }}">
+            @endforeach
+        @endif
+        
         
         <div class="row justify-content-center">
             <!-- Payment Methods Column -->
@@ -25,7 +35,8 @@
                 <div class="bg-white rounded-3 p-4 mb-4" style="box-shadow: none;">
                     <h4 class="mb-4" style="font-weight: 600; color: #222;">Payment Methods</h4>
                     
-                    <!-- Maya Payment Option -->
+                    
+                    <!-- PayMaya Payment Option -->
                     <div class="payment-option-card mb-3" data-payment="paymaya">
                         <div class="d-flex align-items-center justify-content-between p-3" style="border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
                             <div class="d-flex align-items-center">
@@ -33,8 +44,40 @@
                                     <span style="color: white; font-weight: bold; font-size: 1.2rem;">M</span>
                                 </div>
                                 <div>
-                                    <div style="font-weight: 600; color: #222;">Maya</div>
-                                    <div style="font-size: 0.9rem; color: #666;">Pay with Maya wallet</div>
+                                    <div style="font-weight: 600; color: #222;">PayMaya</div>
+                                    <div style="font-size: 0.9rem; color: #666;">Pay with PayMaya wallet</div>
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-right text-muted"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Seabank Payment Option -->
+                    <div class="payment-option-card mb-3" data-payment="seabank">
+                        <div class="d-flex align-items-center justify-content-between p-3" style="border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                            <div class="d-flex align-items-center">
+                                <div class="payment-icon me-3" style="width: 50px; height: 50px; background: #00a8ff; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-ship" style="color: white; font-size: 1.2rem;"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: #222;">Seabank</div>
+                                    <div style="font-size: 0.9rem; color: #666;">Pay with Seabank wallet</div>
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-right text-muted"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- RCBC Payment Option -->
+                    <div class="payment-option-card mb-3" data-payment="rcbc">
+                        <div class="d-flex align-items-center justify-content-between p-3" style="border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                            <div class="d-flex align-items-center">
+                                <div class="payment-icon me-3" style="width: 50px; height: 50px; background: #8b4513; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <span style="color: white; font-weight: bold; font-size: 1.2rem;">R</span>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: #222;">RCBC</div>
+                                    <div style="font-size: 0.9rem; color: #666;">Pay with RCBC bank</div>
                                 </div>
                             </div>
                             <i class="fas fa-chevron-right text-muted"></i>
@@ -87,6 +130,15 @@
             </div>
             
             <!-- Purchase Summary Column -->
+            @php
+                $feeParam = request()->query('shipping_fee');
+                if (!is_null($feeParam)) {
+                    $sanitized = is_numeric($feeParam) ? (string)$feeParam : preg_replace('/[^0-9.]/', '', (string)$feeParam);
+                    if ($sanitized !== '' && is_numeric($sanitized)) {
+                        $shippingFee = (float)$sanitized;
+                    }
+                }
+            @endphp
             <div class="col-lg-5">
                 <div class="bg-white rounded-3 p-4 mb-4" style="box-shadow: none;">
                     <h4 class="mb-4" style="font-weight: 600; color: #222;">Purchase Summary</h4>
@@ -172,21 +224,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const paymentOptions = document.querySelectorAll('.payment-option-card');
     const selectedPaymentInput = document.getElementById('selectedPaymentMethod');
     const completeOrderBtn = document.getElementById('completeOrderBtn');
+    const paymentForm = document.getElementById('paymentForm');
     
+    // No payment type toggle on this page
+
     // Payment option selection
     paymentOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            // Remove selected class from all options
+        option.addEventListener('click', function(e) {
+            e.preventDefault();
             paymentOptions.forEach(opt => opt.classList.remove('selected'));
-            
-            // Add selected class to clicked option
             this.classList.add('selected');
-            
-            // Set the selected payment method
             const paymentMethod = this.dataset.payment;
             selectedPaymentInput.value = paymentMethod;
-            
-            // Enable the complete order button
             completeOrderBtn.disabled = false;
         });
     });
