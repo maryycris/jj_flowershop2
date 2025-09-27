@@ -50,34 +50,74 @@ class ClerkController extends Controller
     }
 
     public function storeProduct(Request $request) {
-        $request->validate([
+        $validated = $request->validate([
             'code' => 'required|string|max:255|unique:products,code',
             'name' => 'required|string|max:255',
-            'category' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
+            'category' => 'required|string|max:255',
+            'image' => 'required|image|max:2048',
+            'description' => 'nullable|string',
+            'stock' => 'nullable|integer|min:0',
             'cost_price' => 'nullable|numeric|min:0',
             'reorder_min' => 'nullable|integer|min:0',
             'reorder_max' => 'nullable|integer|min:0',
-            'stock' => 'nullable|integer|min:0',
+            'compositions' => 'nullable|array',
+            'compositions.*.component_id' => 'required_with:compositions|integer|exists:products,id',
+            'compositions.*.component_name' => 'required_with:compositions|string|max:255',
+            'compositions.*.quantity' => 'required_with:compositions|numeric|min:0.01',
+            'compositions.*.unit' => 'required_with:compositions|string|max:50',
         ]);
 
-        \App\Models\Product::create([
-            'code' => $request->code,
-            'name' => $request->name,
-            'category' => $request->category,
-            'price' => $request->price,
-            'cost_price' => $request->cost_price ?? 0,
-            'reorder_min' => $request->reorder_min ?? 0,
-            'reorder_max' => $request->reorder_max ?? 0,
-            'stock' => $request->stock ?? 0,
-            'description' => 'Inventory item from ' . $request->category,
+        $productData = [
+            'code' => $validated['code'],
+            'name' => $validated['name'],
+            'price' => $validated['price'],
+            'category' => $validated['category'],
+            'description' => $validated['description'] ?? null,
+            'stock' => $validated['stock'] ?? 0,
+            'cost_price' => $validated['cost_price'] ?? 0,
+            'reorder_min' => $validated['reorder_min'] ?? 0,
+            'reorder_max' => $validated['reorder_max'] ?? 0,
             'qty_consumed' => 0,
             'qty_damaged' => 0,
             'qty_sold' => 0,
             'status' => true,
-        ]);
+            'is_approved' => false, // Clerk products need admin approval
+        ];
 
-        return redirect()->route('clerk.inventory.index')->with('success', 'Product added successfully!');
+        if ($request->hasFile('image')) {
+            $productData['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        $product = \App\Models\Product::create($productData);
+
+        // Save product compositions (materials needed)
+        if ($request->has('compositions') && is_array($request->compositions)) {
+            foreach ($request->compositions as $composition) {
+                if (!empty($composition['component_id']) && !empty($composition['component_name']) && !empty($composition['quantity'])) {
+                    $product->compositions()->create([
+                        'component_id' => $composition['component_id'],
+                        'component_name' => $composition['component_name'],
+                        'quantity' => $composition['quantity'],
+                        'unit' => $composition['unit'],
+                        'description' => $composition['description'] ?? null,
+                    ]);
+                }
+            }
+        }
+
+        // Notify all admins that a clerk added a product
+        $admins = \App\Models\User::where('role', 'admin')->get();
+        foreach ($admins as $admin) {
+            $admin->notify(new \App\Notifications\ProductApprovalNotification($product, auth()->user(), 'added'));
+        }
+
+        return redirect()->route('clerk.product_catalog.index')->with('success', 'Product added successfully! It will be reviewed by an admin before being published.');
+    }
+
+    public function getInventoryItems()
+    {
+        return \App\Services\InventoryService::getAvailableInventoryItems();
     }
 
     public function updateProduct(Request $request, \App\Models\Product $product) {

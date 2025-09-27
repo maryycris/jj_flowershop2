@@ -144,7 +144,21 @@ class DriverController extends Controller
                 // Inventory deduction logic
                 foreach ($order->products as $product) {
                     $qty = $product->pivot->quantity;
-                    $product->stock = max(0, $product->stock - $qty);
+                    
+                    // Check if product has composition (materials needed)
+                    if ($product->compositions()->exists()) {
+                        // Use InventoryService to deduct materials
+                        $result = \App\Services\InventoryService::deductMaterialsForProduct($product, $qty);
+                        
+                        if (!$result['success']) {
+                            // Log the error but don't stop the process
+                            \Log::error("Failed to deduct materials for product {$product->name}: " . $result['message']);
+                        }
+                    } else {
+                        // For products without composition, just deduct from stock directly
+                        $product->stock = max(0, $product->stock - $qty);
+                    }
+                    
                     $product->qty_sold = ($product->qty_sold ?? 0) + $qty;
                     $product->save();
                 }

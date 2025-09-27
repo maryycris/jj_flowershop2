@@ -8,6 +8,7 @@ class ProductComposition extends Model
 {
     protected $fillable = [
         'product_id',
+        'component_id',
         'component_name',
         'quantity',
         'unit',

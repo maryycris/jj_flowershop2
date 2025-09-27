@@ -95,13 +95,26 @@ class DeliveryController extends Controller
             $order = $delivery->order;
             foreach ($order->products as $product) {
                 $qty = $product->pivot->quantity;
-                // Deduct from stock
-                $product->stock = max(0, $product->stock - $qty);
+                
+                // Check if product has composition (materials needed)
+                if ($product->compositions()->exists()) {
+                    // Use InventoryService to deduct materials
+                    $result = \App\Services\InventoryService::deductMaterialsForProduct($product, $qty);
+                    
+                    if (!$result['success']) {
+                        // If materials can't be deducted, show error
+                        return redirect()->route('deliveries.index')
+                            ->with('error', 'Cannot complete delivery: ' . $result['message'] . 
+                                   (isset($result['insufficient_materials']) ? 
+                                    ' Missing: ' . implode(', ', array_column($result['insufficient_materials'], 'component')) : ''));
+                    }
+                } else {
+                    // For products without composition, just deduct from stock directly
+                    $product->stock = max(0, $product->stock - $qty);
+                }
+                
                 // Add to qty_sold
                 $product->qty_sold = ($product->qty_sold ?? 0) + $qty;
-                // Optionally handle damaged/consumed if you want to add fields to the request and pivot
-                // $product->qty_damaged = ($product->qty_damaged ?? 0) + ($request->input('damaged_'.$product->id) ?? 0);
-                // $product->qty_consumed = ($product->qty_consumed ?? 0) + ($request->input('consumed_'.$product->id) ?? 0);
                 $product->save();
             }
             // Also update the order status to delivered

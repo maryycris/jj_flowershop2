@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'JJ Flowershop') }}</title>
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
+    <title><?php echo e(config('app.name', 'JJ Flowershop')); ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -115,7 +115,7 @@
         }
         .card { border-radius: 0.75rem; }
     </style>
-    @stack('styles')
+    <?php echo $__env->yieldPushContent('styles'); ?>
     <style>
     /* Hide Bootstrap dropdown caret for admin profile */
     #adminProfileDropdown::after {
@@ -160,19 +160,19 @@
         </div>
         <div class="admin-user dropdown">
             <a href="#" class="d-flex align-items-center gap-2 text-white text-decoration-none" id="adminProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="cursor:pointer;">
-                @if(auth()->user()->profile_picture)
-                    <img src="{{ asset('storage/' . auth()->user()->profile_picture) }}" alt="Profile Picture" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid white;">
-                @else
+                <?php if(auth()->user()->profile_picture): ?>
+                    <img src="<?php echo e(asset('storage/' . auth()->user()->profile_picture)); ?>" alt="Profile Picture" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid white;">
+                <?php else: ?>
                     <i class="bi bi-person-circle text-white"></i>
-                @endif
-                <span class="fw-semibold">{{ auth()->user()->name }}</span>
+                <?php endif; ?>
+                <span class="fw-semibold"><?php echo e(auth()->user()->name); ?></span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminProfileDropdown">
-                <li><a class="dropdown-item" href="{{ route('admin.profile') }}">My Profile</a></li>
+                <li><a class="dropdown-item" href="<?php echo e(route('admin.profile')); ?>">My Profile</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
+                    <form method="POST" action="<?php echo e(route('logout')); ?>">
+                        <?php echo csrf_field(); ?>
                         <button type="submit" class="dropdown-item">Log out</button>
                     </form>
                 </li>
@@ -183,103 +183,107 @@
 </div>
 <div class="navbar-admin-links-row">
     <div class="navbar-admin-links">
-        <a href="{{ route('admin.products.index') }}" class="nav-link @if(request()->routeIs('admin.products.*')) active @endif"><i class="bi bi-grid"></i> Product catalog</a>
-        <a href="{{ route('admin.inventory.index') }}" class="nav-link @if(request()->routeIs('admin.inventory.index')) active @endif"><i class="bi bi-clipboard"></i> Inventory</a>
-        <div class="nav-link dropdown d-inline-block @if(request()->routeIs('admin.orders.*') || request()->routeIs('admin.walkInOrders.*')) active @endif" style="padding: 0;">
+        <a href="<?php echo e(route('admin.products.index')); ?>" class="nav-link <?php if(request()->routeIs('admin.products.*')): ?> active <?php endif; ?>"><i class="bi bi-grid"></i> Product catalog</a>
+        <a href="<?php echo e(route('admin.inventory.index')); ?>" class="nav-link <?php if(request()->routeIs('admin.inventory.index')): ?> active <?php endif; ?>"><i class="bi bi-clipboard"></i> Inventory</a>
+        <div class="nav-link dropdown d-inline-block <?php if(request()->routeIs('admin.orders.*') || request()->routeIs('admin.walkInOrders.*')): ?> active <?php endif; ?>" style="padding: 0;">
             <a href="#" class="dropdown-toggle text-decoration-none text-white" id="salesOrdersDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="padding: 0.5rem 1rem; display: inline-block;">
                 <i class="bi bi-cart"></i> Sales Orders <i class="bi bi-chevron-down ms-1"></i>
             </a>
             <ul class="dropdown-menu" aria-labelledby="salesOrdersDropdown" style="background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                <li><a class="dropdown-item" href="{{ route('admin.orders.index', ['type' => 'online']) }}" style="padding: 0.75rem 1rem; color: #333; transition: background-color 0.2s;">
+                <li><a class="dropdown-item" href="<?php echo e(route('admin.orders.index', ['type' => 'online'])); ?>" style="padding: 0.75rem 1rem; color: #333; transition: background-color 0.2s;">
                     <i class="bi bi-globe me-2"></i> Online Orders
                 </a></li>
-                <li><a class="dropdown-item" href="{{ route('admin.orders.index', ['type' => 'walkin']) }}" style="padding: 0.75rem 1rem; color: #333; transition: background-color 0.2s;">
+                <li><a class="dropdown-item" href="<?php echo e(route('admin.orders.index', ['type' => 'walkin'])); ?>" style="padding: 0.75rem 1rem; color: #333; transition: background-color 0.2s;">
                     <i class="bi bi-shop me-2"></i> Walk-in Orders
                 </a></li>
             </ul>
         </div>
-        <a href="{{ route('admin.chatbox') }}" class="nav-link @if(request()->routeIs('admin.chatbox')) active @endif"><i class="bi bi-chat"></i> Chat</a>
+        <a href="<?php echo e(route('admin.chatbox')); ?>" class="nav-link <?php if(request()->routeIs('admin.chatbox')): ?> active <?php endif; ?>"><i class="bi bi-chat"></i> Chat</a>
     </div>
 </div>
-@if(!(request()->routeIs('admin.orders.*') || request()->routeIs('admin.walkInOrders.*') || request()->routeIs('admin.products.*') || request()->routeIs('admin.inventory.index') || request()->routeIs('admin.chatbox')))
+<?php if(!(request()->routeIs('admin.orders.*') || request()->routeIs('admin.walkInOrders.*') || request()->routeIs('admin.products.*') || request()->routeIs('admin.inventory.index') || request()->routeIs('admin.chatbox'))): ?>
 <div class="d-flex" id="wrapper">
     <!-- Sidebar -->
     <div class="sidebar-container sidebar-clean d-flex flex-column align-items-center py-4" style="background: #F6FBF4; min-width: 220px; max-width: 260px; height: 100vh; ">
         <div class="sidebar-profile text-center mb-4">
             <div class="sidebar-profile-icon mx-auto mb-2">
-                @if(auth()->user()->profile_picture)
-                    <img src="{{ asset('storage/' . auth()->user()->profile_picture) }}" alt="Profile Picture" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #4CAF50;">
-                @else
+                <?php if(auth()->user()->profile_picture): ?>
+                    <img src="<?php echo e(asset('storage/' . auth()->user()->profile_picture)); ?>" alt="Profile Picture" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #4CAF50;">
+                <?php else: ?>
                     <i class="bi bi-person-circle" style="font-size: 3.5rem; color: #888;"></i>
-                @endif
+                <?php endif; ?>
             </div>
-            <div class="sidebar-profile-label" style="font-size: 1.1rem; color: #222; font-weight: 500;">{{ auth()->user()->name }}</div>
+            <div class="sidebar-profile-label" style="font-size: 1.1rem; color: #222; font-weight: 500;"><?php echo e(auth()->user()->name); ?></div>
         </div>
         <nav class="w-100">
             <ul class="nav flex-column align-items-center align-items-md-start w-100">
                 <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.dashboard') }}" class="sidebar-link @if(request()->routeIs('admin.dashboard')) active @endif">Dashboard</a>
+                    <a href="<?php echo e(route('admin.dashboard')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.dashboard')): ?> active <?php endif; ?>">Dashboard</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.analytics') }}" class="sidebar-link @if(request()->routeIs('admin.analytics')) active @endif">Analytics</a>
+                    <a href="<?php echo e(route('admin.analytics')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.analytics')): ?> active <?php endif; ?>">Analytics</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.events.index') }}" class="sidebar-link @if(request()->routeIs('admin.events.index')) active @endif">Events</a>
+                    <a href="<?php echo e(route('admin.events.index')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.events.index')): ?> active <?php endif; ?>">Events</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.users.index') }}" class="sidebar-link @if(request()->routeIs('admin.users.*')) active @endif">Manage Accounts</a>
+                    <a href="<?php echo e(route('admin.users.index')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.users.*')): ?> active <?php endif; ?>">Manage Accounts</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.inventory.index') }}" class="sidebar-link @if(request()->routeIs('admin.inventory.*')) active @endif">Inventory Reports</a>
+                    <a href="<?php echo e(route('admin.inventory.index')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.inventory.*')): ?> active <?php endif; ?>">Inventory Reports</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.reports.sales') }}" class="sidebar-link @if(request()->routeIs('admin.reports.sales')) active @endif">Sales Report</a>
+                    <a href="<?php echo e(route('admin.reports.sales')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.reports.sales')): ?> active <?php endif; ?>">Sales Report</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.notifications.index') }}" class="sidebar-link @if(request()->routeIs('admin.notifications.index')) active @endif">Notifications</a>
+                    <a href="<?php echo e(route('admin.notifications.index')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.notifications.index')): ?> active <?php endif; ?>">Notifications</a>
                 </li>
             </ul>
         </nav>
     </div>
     <div id="page-content-wrapper" class="flex-grow-1">
         <div class="container-fluid py-4" style="padding-left: 4.0vw; padding-right: 4.0vw;">
-            @if(session('success'))
+            <?php if(session('success')): ?>
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
+                    <?php echo e(session('success')); ?>
+
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-            @endif
-            @yield('admin_content')
+            <?php endif; ?>
+            <?php echo $__env->yieldContent('admin_content'); ?>
         </div>
     </div>
 </div>
-@else
+<?php else: ?>
 <div class="container-fluid py-4" style="padding-left: 4.0vw; padding-right: 4.0vw;">
-    @if(session('success'))
+    <?php if(session('success')): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
+            <?php echo e(session('success')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    @endif
-    @yield('admin_content')
+    <?php endif; ?>
+    <?php echo $__env->yieldContent('admin_content'); ?>
 </div>
-@endif
+<?php endif; ?>
 <div class="container-fluid py-4" style="padding-left: 4.0vw; padding-right: 4.0vw;">
-    @if(session('success'))
+    <?php if(session('success')): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="fas fa-check-circle me-2"></i>
-            {{ session('success') }}
+            <?php echo e(session('success')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    @endif
-    @if(session('error'))
+    <?php endif; ?>
+    <?php if(session('error')): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="fas fa-exclamation-circle me-2"></i>
-            {{ session('error') }}
+            <?php echo e(session('error')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    @endif
-    @yield('content')
+    <?php endif; ?>
+    <?php echo $__env->yieldContent('content'); ?>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <!-- SweetAlert2 CDN -->
@@ -308,9 +312,9 @@
 
     // Show success message on page load if exists
     document.addEventListener('DOMContentLoaded', function() {
-        @if(session('success'))
-            showSweetAlertWithCheckbox('Success!', '{{ session('success') }}', 'success', 3000);
-        @endif
+        <?php if(session('success')): ?>
+            showSweetAlertWithCheckbox('Success!', '<?php echo e(session('success')); ?>', 'success', 3000);
+        <?php endif; ?>
     });
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -324,6 +328,6 @@
         }, 2000);
     });
 </script>
-@stack('scripts')
+<?php echo $__env->yieldPushContent('scripts'); ?>
 </body>
-</html> 
+</html> <?php /**PATH C:\xampp\htdocs\JJ_Flowershop_Capstone\resources\views/layouts/admin_app.blade.php ENDPATH**/ ?>

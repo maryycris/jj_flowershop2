@@ -264,14 +264,14 @@
                 <li class="nav-item"><a class="nav-link" href="#reviews">Review</a></li>
             </ul>
             <div class="navbar-icons ms-3">
-                <a href="{{ route('customer.login') }}" title="View Cart (Login Required)"><i class="bi bi-cart3"></i></a>
+                <a href="<?php echo e(route('customer.login')); ?>" title="View Cart (Login Required)"><i class="bi bi-cart3"></i></a>
                 <div class="dropdown d-inline-block">
                     <a href="#" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Login / Profile" style="padding:0; border:none; background:none;">
                         <i class="bi bi-person-circle"></i>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                        <li><a class="dropdown-item" href="{{ route('customer.login') }}">Customer Login</a></li>
-                        <li><a class="dropdown-item" href="{{ route('staff.login') }}">Staff Login</a></li>
+                        <li><a class="dropdown-item" href="<?php echo e(route('customer.login')); ?>">Customer Login</a></li>
+                        <li><a class="dropdown-item" href="<?php echo e(route('staff.login')); ?>">Staff Login</a></li>
                     </ul>
             </div>
         </div>
@@ -325,7 +325,7 @@
                 <div class="subtitle">Beautifully arranged flowers,<br>delivered fresh — just when you need them.</div>
                 <hr>
                 <p>J & J Flower Shop offers handcrafted bouquets and floral gifts perfect for any occasion. We deliver love across Cebu City and nearby provinces fresh, fast, and always with care.</p>
-                <a href="{{ route('customer.login') }}" class="btn btn-shop">Shop Now</a>
+                <a href="<?php echo e(route('customer.login')); ?>" class="btn btn-shop">Shop Now</a>
                 </div>
             </div>
         </div>
@@ -469,7 +469,7 @@
                             <div class="prod-card"><img src="<?= $img ?>" alt="Bouquet"><div class="cap">Bouquet</div></div>
                         <?php endforeach; ?>
                     </div>
-                    <a href="{{ route('customer.login') }}" class="btn btn-sm btn-outline-success mt-2">View All</a>
+                    <a href="<?php echo e(route('customer.login')); ?>" class="btn btn-sm btn-outline-success mt-2">View All</a>
                 </div>
                 <div class="col-md-4 text-center mb-4">
                     <div style="color:#1a8c5a; font-size:1.13rem; font-weight:500; margin-bottom:10px;">Packages</div>
@@ -478,7 +478,7 @@
                             <div class="prod-card"><img src="<?= $img ?>" alt="Package"><div class="cap">Package</div></div>
                         <?php endforeach; ?>
                     </div>
-                    <a href="{{ route('customer.login') }}" class="btn btn-sm btn-outline-success mt-2">View All</a>
+                    <a href="<?php echo e(route('customer.login')); ?>" class="btn btn-sm btn-outline-success mt-2">View All</a>
                 </div>
                 <div class="col-md-4 text-center mb-4">
                     <div style="color:#1a8c5a; font-size:1.13rem; font-weight:500; margin-bottom:10px;">Gifts</div>
@@ -487,7 +487,7 @@
                             <div class="prod-card"><img src="<?= $img ?>" alt="Gift"><div class="cap">Gift</div></div>
                         <?php endforeach; ?>
                     </div>
-                    <a href="{{ route('customer.login') }}" class="btn btn-sm btn-outline-success mt-2">View All</a>
+                    <a href="<?php echo e(route('customer.login')); ?>" class="btn btn-sm btn-outline-success mt-2">View All</a>
                 </div>
             </div>
         </div>
@@ -595,7 +595,7 @@
                 <div class="footer-content" style="padding-bottom: 20px;">
                     <h5 style="color: #fff; margin-bottom: 15px;">J & J Flower Shop</h5>
                     <p style="color: #e6f5e6; margin-bottom: 10px;">Est. 2023 - Your trusted flower shop in Cebu</p>
-                    <p style="color: #e6f5e6; font-size: 0.9rem;">© {{ date('Y') }} J & J Flower Shop. All rights reserved.</p>
+                    <p style="color: #e6f5e6; font-size: 0.9rem;">© <?php echo e(date('Y')); ?> J & J Flower Shop. All rights reserved.</p>
                 </div>
             </div>
         </div>
@@ -674,4 +674,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 </body>
-</html> 
+</html> <?php /**PATH C:\xampp\htdocs\JJ_Flowershop_Capstone\resources\views/welcome.blade.php ENDPATH**/ ?>

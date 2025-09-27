@@ -1,7 +1,7 @@
-@php $hideSidebar = true; @endphp
-@extends('layouts.admin_app')
+<?php $hideSidebar = true; ?>
 
-@section('admin_content')
+
+<?php $__env->startSection('admin_content'); ?>
 <div class="container-fluid py-4" style="background: #f6faf6; min-height: 100vh;">
     <!-- Promoted Products Carousel -->
     <div class="mx-auto mb-4" style="max-width: 900px;">
@@ -13,13 +13,13 @@
             </div>
             <div id="promotedCarousel" class="carousel slide" data-bs-ride="carousel">
                 <div class="carousel-inner">
-                    @foreach($promotedProducts as $i => $product)
-                    <div class="carousel-item @if($i === 0) active @endif text-center">
-                        <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" style="height: 180px; object-fit: cover; border-radius: 12px;">
-                        <div class="mt-2 fw-bold">{{ $product->name }}</div>
-                        <div class="text-success">₱{{ number_format($product->price, 2) }}</div>
+                    <?php $__currentLoopData = $promotedProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <div class="carousel-item <?php if($i === 0): ?> active <?php endif; ?> text-center">
+                        <img src="<?php echo e(asset('storage/' . $product->image)); ?>" alt="<?php echo e($product->name); ?>" style="height: 180px; object-fit: cover; border-radius: 12px;">
+                        <div class="mt-2 fw-bold"><?php echo e($product->name); ?></div>
+                        <div class="text-success">₱<?php echo e(number_format($product->price, 2)); ?></div>
                     </div>
-                    @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
             </div>
         </div>
@@ -29,49 +29,49 @@
     <div class="mx-auto mb-3" style="max-width: 900px;">
         <div class="card">
             <div class="card-body">
-                <form method="GET" action="{{ route('admin.products.index') }}" class="row g-3">
+                <form method="GET" action="<?php echo e(route('admin.products.index')); ?>" class="row g-3">
                     <div class="col-md-4">
                         <label for="category" class="form-label">Category</label>
                         <select name="category" id="category" class="form-select">
                             <option value="">All Categories</option>
-                            <option value="Fresh Flowers" {{ request('category') == 'Fresh Flowers' ? 'selected' : '' }}>Fresh Flowers</option>
-                            <option value="Dried Flowers" {{ request('category') == 'Dried Flowers' ? 'selected' : '' }}>Dried Flowers</option>
-                            <option value="Artificial Flowers" {{ request('category') == 'Artificial Flowers' ? 'selected' : '' }}>Artificial Flowers</option>
-                            <option value="Floral Supplies" {{ request('category') == 'Floral Supplies' ? 'selected' : '' }}>Floral Supplies</option>
-                            <option value="Packaging Materials" {{ request('category') == 'Packaging Materials' ? 'selected' : '' }}>Packaging Materials</option>
-                            <option value="Materials, Tools, and Equipment" {{ request('category') == 'Materials, Tools, and Equipment' ? 'selected' : '' }}>Materials, Tools, and Equipment</option>
-                            <option value="Office Supplies" {{ request('category') == 'Office Supplies' ? 'selected' : '' }}>Office Supplies</option>
-                            <option value="Other Offers" {{ request('category') == 'Other Offers' ? 'selected' : '' }}>Other Offers</option>
+                            <option value="Fresh Flowers" <?php echo e(request('category') == 'Fresh Flowers' ? 'selected' : ''); ?>>Fresh Flowers</option>
+                            <option value="Dried Flowers" <?php echo e(request('category') == 'Dried Flowers' ? 'selected' : ''); ?>>Dried Flowers</option>
+                            <option value="Artificial Flowers" <?php echo e(request('category') == 'Artificial Flowers' ? 'selected' : ''); ?>>Artificial Flowers</option>
+                            <option value="Floral Supplies" <?php echo e(request('category') == 'Floral Supplies' ? 'selected' : ''); ?>>Floral Supplies</option>
+                            <option value="Packaging Materials" <?php echo e(request('category') == 'Packaging Materials' ? 'selected' : ''); ?>>Packaging Materials</option>
+                            <option value="Materials, Tools, and Equipment" <?php echo e(request('category') == 'Materials, Tools, and Equipment' ? 'selected' : ''); ?>>Materials, Tools, and Equipment</option>
+                            <option value="Office Supplies" <?php echo e(request('category') == 'Office Supplies' ? 'selected' : ''); ?>>Office Supplies</option>
+                            <option value="Other Offers" <?php echo e(request('category') == 'Other Offers' ? 'selected' : ''); ?>>Other Offers</option>
                         </select>
                     </div>
                     <div class="col-md-3">
                         <label for="price_min" class="form-label">Min Price</label>
-                        <input type="number" name="price_min" id="price_min" class="form-control" value="{{ request('price_min') }}" placeholder="0.00" step="0.01">
+                        <input type="number" name="price_min" id="price_min" class="form-control" value="<?php echo e(request('price_min')); ?>" placeholder="0.00" step="0.01">
                     </div>
                     <div class="col-md-3">
                         <label for="price_max" class="form-label">Max Price</label>
-                        <input type="number" name="price_max" id="price_max" class="form-control" value="{{ request('price_max') }}" placeholder="9999.99" step="0.01">
+                        <input type="number" name="price_max" id="price_max" class="form-control" value="<?php echo e(request('price_max')); ?>" placeholder="9999.99" step="0.01">
                     </div>
                     <div class="col-md-2">
                         <label for="sort" class="form-label">Sort By</label>
                         <select name="sort" id="sort" class="form-select">
-                            <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>Name A-Z</option>
-                            <option value="name_desc" {{ request('sort') == 'name_desc' ? 'selected' : '' }}>Name Z-A</option>
-                            <option value="price_asc" {{ request('sort') == 'price_asc' ? 'selected' : '' }}>Price Low-High</option>
-                            <option value="price_desc" {{ request('sort') == 'price_desc' ? 'selected' : '' }}>Price High-Low</option>
-                            <option value="newest" {{ request('sort') == 'newest' ? 'selected' : '' }}>Newest First</option>
-                            <option value="oldest" {{ request('sort') == 'oldest' ? 'selected' : '' }}>Oldest First</option>
+                            <option value="name_asc" <?php echo e(request('sort') == 'name_asc' ? 'selected' : ''); ?>>Name A-Z</option>
+                            <option value="name_desc" <?php echo e(request('sort') == 'name_desc' ? 'selected' : ''); ?>>Name Z-A</option>
+                            <option value="price_asc" <?php echo e(request('sort') == 'price_asc' ? 'selected' : ''); ?>>Price Low-High</option>
+                            <option value="price_desc" <?php echo e(request('sort') == 'price_desc' ? 'selected' : ''); ?>>Price High-Low</option>
+                            <option value="newest" <?php echo e(request('sort') == 'newest' ? 'selected' : ''); ?>>Newest First</option>
+                            <option value="oldest" <?php echo e(request('sort') == 'oldest' ? 'selected' : ''); ?>>Oldest First</option>
                         </select>
                     </div>
                     <div class="col-12">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-funnel"></i> Apply Filters
                         </button>
-                        <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary">
+                        <a href="<?php echo e(route('admin.products.index')); ?>" class="btn btn-outline-secondary">
                             <i class="bi bi-x-circle"></i> Clear Filters
                         </a>
                         <span class="ms-3 text-muted">
-                            Showing {{ $products->count() }} product(s)
+                            Showing <?php echo e($products->count()); ?> product(s)
                         </span>
                     </div>
                 </form>
@@ -83,11 +83,11 @@
     <div class="mx-auto" style="max-width: 900px;">
         <div class="bg-white rounded-4 shadow-sm p-4">
             <div class="mb-3 fw-bold fs-5">
-                @if(request('category'))
-                    {{ request('category') }} Products
-                @else
+                <?php if(request('category')): ?>
+                    <?php echo e(request('category')); ?> Products
+                <?php else: ?>
                     All Products
-                @endif
+                <?php endif; ?>
             </div>
             <div class="row g-3 product-grid">
         <!-- Add New Product Card -->
@@ -96,30 +96,30 @@
                 <i class="fas fa-plus fa-3x text-muted"></i>
             </div>
 </div>
-        @forelse($products as $product)
+        <?php $__empty_1 = true; $__currentLoopData = $products; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                 <div class="col-6 col-md-4 col-lg-3">
             <div class="card product-card h-100">
-                        <img src="{{ asset('storage/' . $product->image) }}" class="card-img-top product-image" alt="{{ $product->name }}">
+                        <img src="<?php echo e(asset('storage/' . $product->image)); ?>" class="card-img-top product-image" alt="<?php echo e($product->name); ?>">
                         <div class="card-body text-center">
-                            <h6 class="card-title mb-1">{{ $product->name }}</h6>
-                            <p class="card-text product-price">₱{{ number_format($product->price, 2) }}</p>
+                            <h6 class="card-title mb-1"><?php echo e($product->name); ?></h6>
+                            <p class="card-text product-price">₱<?php echo e(number_format($product->price, 2)); ?></p>
                             <div class="d-flex justify-content-center gap-2 mt-2">
-                        <button class="btn btn-sm btn-info edit-product-btn" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product='{{ json_encode($product) }}'>Edit</button>
-                                <button class="btn btn-sm btn-warning manage-images-btn" data-bs-toggle="modal" data-bs-target="#manageImagesModal" data-product='{{ json_encode($product) }}'>Images</button>
-                        <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this product and its images?');">
-                    @csrf
-                    @method('DELETE')
+                        <button class="btn btn-sm btn-info edit-product-btn" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product='<?php echo e(json_encode($product)); ?>'>Edit</button>
+                                <button class="btn btn-sm btn-warning manage-images-btn" data-bs-toggle="modal" data-bs-target="#manageImagesModal" data-product='<?php echo e(json_encode($product)); ?>'>Images</button>
+                        <form action="<?php echo e(route('admin.products.destroy', $product->id)); ?>" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this product and its images?');">
+                    <?php echo csrf_field(); ?>
+                    <?php echo method_field('DELETE'); ?>
                     <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                 </form>
                     </div>
                 </div>
             </div>
         </div>
-        @empty
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
         <div class="col-12">
                     <p class="text-center">No products found.</p>
         </div>
-        @endforelse
+        <?php endif; ?>
             </div>
     </div>
 </div>
@@ -132,8 +132,8 @@
                 <h5 class="modal-title" id="addProductModalLabel">Add New Product</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
-                @csrf
+            <form action="<?php echo e(route('admin.products.store')); ?>" method="POST" enctype="multipart/form-data">
+                <?php echo csrf_field(); ?>
                 <div class="modal-body">
                     <div class="mb-3 text-center">
                         <label for="product_image" class="btn btn-outline-secondary">
@@ -231,8 +231,8 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editProductForm" method="POST">
-                @csrf
-                @method('PUT')
+                <?php echo csrf_field(); ?>
+                <?php echo method_field('PUT'); ?>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="edit_product_name" class="form-label">Product name</label>
@@ -274,7 +274,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="manageImagesForm" method="POST" enctype="multipart/form-data">
-                @csrf
+                <?php echo csrf_field(); ?>
                 <div class="modal-body">
                     <div class="text-center mb-3">
                         <label for="manage_product_image" class="btn btn-outline-secondary">
@@ -301,9 +301,9 @@
     </div>
 </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
     body { background: #f6faf6; }
     .product-card {
@@ -341,9 +341,9 @@
         border-bottom: none !important;
     }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Image preview for Add Product Modal
@@ -430,7 +430,7 @@
             // Show current image if exists
             var currentImagePreview = document.getElementById('current_image_preview');
             if (product.image) {
-                currentImagePreview.src = '{{ asset('storage/') }}' + '/' + product.image;
+                currentImagePreview.src = '<?php echo e(asset('storage/')); ?>' + '/' + product.image;
                 currentImagePreview.style.display = 'block';
             } else {
                 currentImagePreview.style.display = 'none';
@@ -630,4 +630,6 @@
         });
     });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.admin_app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\JJ_Flowershop_Capstone\resources\views/admin/products/index.blade.php ENDPATH**/ ?>

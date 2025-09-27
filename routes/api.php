@@ -20,6 +20,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post('/calculate-shipping-fee', [\App\Http\Controllers\ShippingFeeController::class, 'calculate']);
 
+// Inventory API endpoints
+Route::get('/inventory-items', [\App\Http\Controllers\Clerk\ClerkController::class, 'getInventoryItems']);
+
 // Map and routing API endpoints
 Route::post('/map/geocode', [\App\Http\Controllers\MapController::class, 'geocode']);
 Route::post('/map/route', [\App\Http\Controllers\MapController::class, 'getRoute']);

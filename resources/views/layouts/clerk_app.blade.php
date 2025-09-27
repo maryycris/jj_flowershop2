@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     @stack('styles')
     <style>
-        body { font-family: 'Poppins', sans-serif; min-height: 100vh; background: #f8f9fa;padding: 0 4.0vw; }
+        body { font-family: 'Poppins', sans-serif; min-height: 100vh; background: #f8f9fa; padding-top: 120px; }
         .clerk-navbar-bg {
             background: #5E8458;
             color: #fff;
@@ -23,8 +23,9 @@
             margin-left: calc(50% - 50vw);
             margin-right: calc(50% - 50vw);
             padding-bottom: 10px;
-            position: relative;
-            z-index: 10;
+            position: fixed;
+            top: 0;
+            z-index: 1000;
         }
         .clerk-navbar-content { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0 6.0vw; height: 56px; padding-top: 6px; }
         .clerk-logo-title { display: flex; align-items: center; gap: 1.2rem; }
@@ -187,8 +188,7 @@
                 </a>
             </div>
         </nav>
-        <div class="clerk-navbar-spacer"></div>
-        <div class="container-fluid py-4">
+        <div class="container-fluid py-4" style="padding-left: 4.0vw; padding-right: 4.0vw;">
             @yield('content')
         </div>
     </div>

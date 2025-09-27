@@ -11,6 +11,7 @@ class Product extends Model
     use HasFactory;
 
     protected $fillable = [
+        'code',
         'name',
         'description',
         'price',
@@ -21,12 +22,25 @@ class Product extends Model
         'image3',
         'status',
         'is_approved',
+        'cost_price',
+        'reorder_min',
+        'reorder_max',
+        'qty_consumed',
+        'qty_damaged',
+        'qty_sold',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
         'stock' => 'integer',
+        'reorder_min' => 'integer',
+        'reorder_max' => 'integer',
+        'qty_consumed' => 'integer',
+        'qty_damaged' => 'integer',
+        'qty_sold' => 'integer',
         'status' => 'boolean',
+        'is_approved' => 'boolean',
     ];
 
     public function orders(): HasMany

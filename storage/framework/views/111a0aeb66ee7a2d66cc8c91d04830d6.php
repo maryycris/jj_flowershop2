@@ -1,5 +1,4 @@
-@extends('layouts.clerk_app')
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
 /* Composition dropdown styles */
 .composition-dropdown {
@@ -31,8 +30,8 @@
     background-color: #f8f9fa;
 }
 </style>
-@endpush
-@section('content')
+<?php $__env->stopPush(); ?>
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid py-4" style="background: #f6faf6; min-height: 100vh;">
     <!-- Promoted Products Carousel -->
     <div class="mx-auto mb-4" style="max-width: 900px;">
@@ -44,15 +43,15 @@
             </div>
             <div id="promotedCarousel" class="carousel slide" data-bs-ride="carousel">
                 <div class="carousel-inner">
-                    @foreach($promotedProducts as $i => $product)
-                    <div class="carousel-item @if($i === 0) active @endif text-center">
-                        @if($product->image)
-                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" style="height: 180px; object-fit: cover; border-radius: 12px;">
-                        @endif
-                        <div class="mt-2 fw-bold">{{ $product->name }}</div>
-                        <div class="text-success">₱{{ number_format($product->price, 2) }}</div>
+                    <?php $__currentLoopData = $promotedProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <div class="carousel-item <?php if($i === 0): ?> active <?php endif; ?> text-center">
+                        <?php if($product->image): ?>
+                            <img src="<?php echo e(asset('storage/' . $product->image)); ?>" alt="<?php echo e($product->name); ?>" style="height: 180px; object-fit: cover; border-radius: 12px;">
+                        <?php endif; ?>
+                        <div class="mt-2 fw-bold"><?php echo e($product->name); ?></div>
+                        <div class="text-success">₱<?php echo e(number_format($product->price, 2)); ?></div>
                     </div>
-                    @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
             </div>
         </div>
@@ -62,49 +61,49 @@
     <div class="mx-auto mb-3" style="max-width: 900px;">
         <div class="card">
             <div class="card-body">
-                <form method="GET" action="{{ route('clerk.product_catalog.index') }}" class="row g-3">
+                <form method="GET" action="<?php echo e(route('clerk.product_catalog.index')); ?>" class="row g-3">
                     <div class="col-md-4">
                         <label for="category" class="form-label">Category</label>
                         <select name="category" id="category" class="form-select">
                             <option value="">All Categories</option>
-                            <option value="Fresh Flowers" {{ request('category') == 'Fresh Flowers' ? 'selected' : '' }}>Fresh Flowers</option>
-                            <option value="Dried Flowers" {{ request('category') == 'Dried Flowers' ? 'selected' : '' }}>Dried Flowers</option>
-                            <option value="Artificial Flowers" {{ request('category') == 'Artificial Flowers' ? 'selected' : '' }}>Artificial Flowers</option>
-                            <option value="Floral Supplies" {{ request('category') == 'Floral Supplies' ? 'selected' : '' }}>Floral Supplies</option>
-                            <option value="Packaging Materials" {{ request('category') == 'Packaging Materials' ? 'selected' : '' }}>Packaging Materials</option>
-                            <option value="Materials, Tools, and Equipment" {{ request('category') == 'Materials, Tools, and Equipment' ? 'selected' : '' }}>Materials, Tools, and Equipment</option>
-                            <option value="Office Supplies" {{ request('category') == 'Office Supplies' ? 'selected' : '' }}>Office Supplies</option>
-                            <option value="Other Offers" {{ request('category') == 'Other Offers' ? 'selected' : '' }}>Other Offers</option>
+                            <option value="Fresh Flowers" <?php echo e(request('category') == 'Fresh Flowers' ? 'selected' : ''); ?>>Fresh Flowers</option>
+                            <option value="Dried Flowers" <?php echo e(request('category') == 'Dried Flowers' ? 'selected' : ''); ?>>Dried Flowers</option>
+                            <option value="Artificial Flowers" <?php echo e(request('category') == 'Artificial Flowers' ? 'selected' : ''); ?>>Artificial Flowers</option>
+                            <option value="Floral Supplies" <?php echo e(request('category') == 'Floral Supplies' ? 'selected' : ''); ?>>Floral Supplies</option>
+                            <option value="Packaging Materials" <?php echo e(request('category') == 'Packaging Materials' ? 'selected' : ''); ?>>Packaging Materials</option>
+                            <option value="Materials, Tools, and Equipment" <?php echo e(request('category') == 'Materials, Tools, and Equipment' ? 'selected' : ''); ?>>Materials, Tools, and Equipment</option>
+                            <option value="Office Supplies" <?php echo e(request('category') == 'Office Supplies' ? 'selected' : ''); ?>>Office Supplies</option>
+                            <option value="Other Offers" <?php echo e(request('category') == 'Other Offers' ? 'selected' : ''); ?>>Other Offers</option>
                         </select>
                     </div>
                     <div class="col-md-3">
                         <label for="price_min" class="form-label">Min Price</label>
-                        <input type="number" name="price_min" id="price_min" class="form-control" value="{{ request('price_min') }}" placeholder="0.00" step="0.01">
+                        <input type="number" name="price_min" id="price_min" class="form-control" value="<?php echo e(request('price_min')); ?>" placeholder="0.00" step="0.01">
                     </div>
                     <div class="col-md-3">
                         <label for="price_max" class="form-label">Max Price</label>
-                        <input type="number" name="price_max" id="price_max" class="form-control" value="{{ request('price_max') }}" placeholder="9999.99" step="0.01">
+                        <input type="number" name="price_max" id="price_max" class="form-control" value="<?php echo e(request('price_max')); ?>" placeholder="9999.99" step="0.01">
                     </div>
                     <div class="col-md-2">
                         <label for="sort" class="form-label">Sort By</label>
                         <select name="sort" id="sort" class="form-select">
-                            <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>Name A-Z</option>
-                            <option value="name_desc" {{ request('sort') == 'name_desc' ? 'selected' : '' }}>Name Z-A</option>
-                            <option value="price_asc" {{ request('sort') == 'price_asc' ? 'selected' : '' }}>Price Low-High</option>
-                            <option value="price_desc" {{ request('sort') == 'price_desc' ? 'selected' : '' }}>Price High-Low</option>
-                            <option value="newest" {{ request('sort') == 'newest' ? 'selected' : '' }}>Newest First</option>
-                            <option value="oldest" {{ request('sort') == 'oldest' ? 'selected' : '' }}>Oldest First</option>
+                            <option value="name_asc" <?php echo e(request('sort') == 'name_asc' ? 'selected' : ''); ?>>Name A-Z</option>
+                            <option value="name_desc" <?php echo e(request('sort') == 'name_desc' ? 'selected' : ''); ?>>Name Z-A</option>
+                            <option value="price_asc" <?php echo e(request('sort') == 'price_asc' ? 'selected' : ''); ?>>Price Low-High</option>
+                            <option value="price_desc" <?php echo e(request('sort') == 'price_desc' ? 'selected' : ''); ?>>Price High-Low</option>
+                            <option value="newest" <?php echo e(request('sort') == 'newest' ? 'selected' : ''); ?>>Newest First</option>
+                            <option value="oldest" <?php echo e(request('sort') == 'oldest' ? 'selected' : ''); ?>>Oldest First</option>
                         </select>
                     </div>
                     <div class="col-12">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-funnel"></i> Apply Filters
                         </button>
-                        <a href="{{ route('clerk.product_catalog.index') }}" class="btn btn-outline-secondary">
+                        <a href="<?php echo e(route('clerk.product_catalog.index')); ?>" class="btn btn-outline-secondary">
                             <i class="bi bi-x-circle"></i> Clear Filters
                         </a>
                         <span class="ms-3 text-muted">
-                            Showing {{ $products->count() }} product(s)
+                            Showing <?php echo e($products->count()); ?> product(s)
                         </span>
                     </div>
                 </form>
@@ -116,11 +115,11 @@
     <div class="mx-auto" style="max-width: 900px;">
         <div class="bg-white rounded-4 shadow-sm p-4">
             <div class="mb-3 fw-bold fs-5">
-                @if(request('category'))
-                    {{ request('category') }} Products
-                @else
+                <?php if(request('category')): ?>
+                    <?php echo e(request('category')); ?> Products
+                <?php else: ?>
                     All Products
-                @endif
+                <?php endif; ?>
             </div>
             <div class="row g-3 product-grid">
                 <!-- Add New Product Card -->
@@ -129,31 +128,31 @@
                         <i class="fas fa-plus fa-3x text-muted"></i>
                     </div>
                 </div>
-                @forelse($products as $product)
+                <?php $__empty_1 = true; $__currentLoopData = $products; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                 <div class="col-6 col-md-4 col-lg-3">
                     <div class="card product-card h-100">
-                        <img src="{{ $product->image ? asset('storage/' . $product->image) : '/images/logo.png' }}" class="card-img-top product-image" alt="{{ $product->name }}">
+                        <img src="<?php echo e($product->image ? asset('storage/' . $product->image) : '/images/logo.png'); ?>" class="card-img-top product-image" alt="<?php echo e($product->name); ?>">
                         <div class="card-body text-center">
-                            <h6 class="card-title mb-1">{{ $product->name }}</h6>
-                            <p class="card-text product-price">₱{{ number_format($product->price, 2) }}</p>
+                            <h6 class="card-title mb-1"><?php echo e($product->name); ?></h6>
+                            <p class="card-text product-price">₱<?php echo e(number_format($product->price, 2)); ?></p>
                             <div class="d-flex justify-content-center gap-2 mt-2">
-                                <button class="btn btn-light btn-icon edit-product-btn" title="Edit" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product='{{ json_encode($product) }}'><i class="bi bi-pencil-square"></i></button>
-                                <button class="btn btn-light btn-icon manage-images-btn" title="Images" data-bs-toggle="modal" data-bs-target="#manageImagesModal" data-product='{{ json_encode($product) }}'><i class="bi bi-images"></i></button>
-                                <form action="/clerk/product_catalog/{{ $product->id }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this product and its images?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <input type="hidden" name="id" value="{{ $product->id }}">
+                                <button class="btn btn-light btn-icon edit-product-btn" title="Edit" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product='<?php echo e(json_encode($product)); ?>'><i class="bi bi-pencil-square"></i></button>
+                                <button class="btn btn-light btn-icon manage-images-btn" title="Images" data-bs-toggle="modal" data-bs-target="#manageImagesModal" data-product='<?php echo e(json_encode($product)); ?>'><i class="bi bi-images"></i></button>
+                                <form action="/clerk/product_catalog/<?php echo e($product->id); ?>" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this product and its images?');">
+                                    <?php echo csrf_field(); ?>
+                                    <?php echo method_field('DELETE'); ?>
+                                    <input type="hidden" name="id" value="<?php echo e($product->id); ?>">
                                     <button type="submit" class="btn btn-light btn-icon text-danger" title="Delete"><i class="bi bi-trash3"></i></button>
                                 </form>
                             </div>
                         </div>
                     </div>
                 </div>
-                @empty
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                 <div class="col-12">
                     <p class="text-center">No products found.</p>
                 </div>
-                @endforelse
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -166,8 +165,8 @@
                     <h5 class="modal-title" id="addProductModalLabel">Add New Product</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="{{ route('clerk.product_catalog.store') }}" method="POST" enctype="multipart/form-data">
-                    @csrf
+                <form action="<?php echo e(route('clerk.product_catalog.store')); ?>" method="POST" enctype="multipart/form-data">
+                    <?php echo csrf_field(); ?>
                     <div class="modal-body">
                         <div class="mb-3 text-center">
                             <label for="product_image" class="btn btn-outline-secondary">
@@ -279,18 +278,17 @@
                                     <div class="col-md-2">
                                         <input type="number" class="form-control composition-quantity" name="compositions[0][quantity]" placeholder="Qty" step="0.01" min="0" required>
                                     </div>
-                    <div class="col-md-3">
-                        <select class="form-select composition-unit" name="compositions[0][unit]" required>
-                            <option value="">Unit</option>
-                            <option value="pieces">Pieces</option>
-                            <option value="stems">Stems</option>
-                            <option value="bunches">Bunches</option>
-                            <option value="meters">Meters</option>
-                            <option value="grams">Grams</option>
-                            <option value="sheets">Sheets</option>
-                            <option value="rolls">Rolls</option>
-                        </select>
-                    </div>
+                                    <div class="col-md-3">
+                                        <select class="form-select composition-unit" name="compositions[0][unit]" required>
+                                            <option value="">Unit</option>
+                                            <option value="Pieces">Pieces</option>
+                                            <option value="Meters">Meters</option>
+                                            <option value="Grams">Grams</option>
+                                            <option value="Kilograms">Kilograms</option>
+                                            <option value="Liters">Liters</option>
+                                            <option value="Units">Units</option>
+                                        </select>
+                                    </div>
                                     <div class="col-md-2">
                                         <button type="button" class="btn btn-danger btn-sm remove-composition" style="display: none;">
                                             <i class="bi bi-x"></i>
@@ -299,7 +297,7 @@
                                 </div>
                             </div>
                             <button type="button" class="btn btn-success btn-sm" id="add-composition">
-                                <i class="bi bi-plus"></i> Add Component
+                                <i class="bi bi-plus"></i> Add Categories
                             </button>
                             <button type="button" class="btn btn-info btn-sm ms-2" id="test-dropdown">
                                 <i class="bi bi-bug"></i> Test Dropdown
@@ -330,8 +328,8 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="editProductForm" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    @method('PUT')
+                    <?php echo csrf_field(); ?>
+                    <?php echo method_field('PUT'); ?>
                     <div class="modal-body">
                         <div class="mb-3 text-center">
                             <label for="edit_product_image" class="btn btn-outline-secondary">
@@ -380,8 +378,8 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="manageImagesForm" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    @method('PUT')
+                    <?php echo csrf_field(); ?>
+                    <?php echo method_field('PUT'); ?>
                     <input type="hidden" name="delete_image" id="delete_image_flag" value="0">
                     <div class="modal-body">
                         <div class="text-center mb-3">
@@ -409,9 +407,9 @@
         </div>
     </div>
 </div>
-@endsection 
+<?php $__env->stopSection(); ?> 
 
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
     body { background: #f6faf6; }
     .product-card {
@@ -472,9 +470,9 @@
         border-bottom: none !important;
     }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Image preview for Add Product Modal
@@ -513,7 +511,7 @@
             // show current image if any
             var currentImg = document.getElementById('edit_current_image');
             if (product.image) {
-                currentImg.src = '{{ asset('storage') }}' + '/' + product.image;
+                currentImg.src = '<?php echo e(asset('storage')); ?>' + '/' + product.image;
                 currentImg.style.display = 'block';
             } else {
                 currentImg.src = '';
@@ -530,7 +528,7 @@
             var newImagePreview = document.getElementById('new_image_preview');
 
             if (product.image) {
-                currentImagePreview.src = '{{ asset('storage/') }}' + '/' + product.image;
+                currentImagePreview.src = '<?php echo e(asset('storage/')); ?>' + '/' + product.image;
                 currentImagePreview.style.display = 'block';
                 newImagePreview.style.display = 'none';
             } else {
@@ -577,10 +575,10 @@
         let allInventoryItems = [];
         
         // Load inventory items on page load
-        @php
+        <?php
             $inventoryItems = \App\Services\InventoryService::getAvailableInventoryItems();
-        @endphp
-        allInventoryItems = @json($inventoryItems);
+        ?>
+        allInventoryItems = <?php echo json_encode($inventoryItems, 15, 512) ?>;
         
         console.log('=== INVENTORY ITEMS LOADED ===');
         console.log('Total items:', allInventoryItems.length);
@@ -741,13 +739,12 @@
                     <div class="col-md-3">
                         <select class="form-select composition-unit" name="compositions[${compositionIndex}][unit]" required>
                             <option value="">Unit</option>
-                            <option value="pieces">Pieces</option>
-                            <option value="stems">Stems</option>
-                            <option value="bunches">Bunches</option>
-                            <option value="meters">Meters</option>
-                            <option value="grams">Grams</option>
-                            <option value="sheets">Sheets</option>
-                            <option value="rolls">Rolls</option>
+                            <option value="Pieces">Pieces</option>
+                            <option value="Meters">Meters</option>
+                            <option value="Grams">Grams</option>
+                            <option value="Kilograms">Kilograms</option>
+                            <option value="Liters">Liters</option>
+                            <option value="Units">Units</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -991,47 +988,39 @@
             let categoryItems = [];
             if (category === 'Fresh Flowers') {
                 categoryItems = [
-                    {id: 1, name: 'Red roses', stock: 50, unit: 'stems'},
-                    {id: 2, name: 'White roses', stock: 30, unit: 'stems'},
-                    {id: 3, name: 'Pink roses', stock: 25, unit: 'stems'},
-                    {id: 4, name: 'Sunflower', stock: 15, unit: 'stems'},
-                    {id: 5, name: 'Carnation', stock: 20, unit: 'stems'},
-                    {id: 6, name: 'Tulips', stock: 18, unit: 'stems'},
-                    {id: 7, name: 'Aster', stock: 12, unit: 'stems'},
-                    {id: 8, name: 'Gypsophila', stock: 8, unit: 'bunches'},
-                    {id: 9, name: 'Eucalyptus', stock: 22, unit: 'stems'},
-                    {id: 10, name: 'Lily', stock: 14, unit: 'stems'},
-                    {id: 11, name: 'Baby\'s breath', stock: 16, unit: 'bunches'},
-                    {id: 12, name: 'Chrysanthemum', stock: 20, unit: 'stems'}
+                    {id: 1, name: 'Red roses', stock: 50},
+                    {id: 2, name: 'White roses', stock: 30},
+                    {id: 3, name: 'Pink roses', stock: 25},
+                    {id: 4, name: 'Sunflower', stock: 15},
+                    {id: 5, name: 'Carnation', stock: 20},
+                    {id: 6, name: 'Tulips', stock: 18},
+                    {id: 7, name: 'Aster', stock: 12},
+                    {id: 8, name: 'Gypsophila', stock: 8},
+                    {id: 9, name: 'Eucalyptus', stock: 22},
+                    {id: 10, name: 'Lily', stock: 14}
                 ];
             } else if (category === 'Dried Flowers') {
                 categoryItems = [
-                    {id: 13, name: 'Fossilized Roses', stock: 10, unit: 'pieces'},
-                    {id: 14, name: 'Preserve Roses', stock: 12, unit: 'pieces'},
-                    {id: 15, name: 'Gypsophila (Dried)', stock: 8, unit: 'bunches'},
-                    {id: 16, name: 'Eucalyptus (Dried)', stock: 15, unit: 'stems'},
-                    {id: 17, name: 'Bunny tails', stock: 6, unit: 'bunches'},
-                    {id: 18, name: 'Trigo grass', stock: 9, unit: 'stems'},
-                    {id: 19, name: 'Palm Spear Anahaw', stock: 5, unit: 'pieces'}
+                    {id: 11, name: 'Fossilized Roses', stock: 10},
+                    {id: 12, name: 'Preserve Roses', stock: 12},
+                    {id: 13, name: 'Gypsophila (Dried)', stock: 8},
+                    {id: 14, name: 'Eucalyptus (Dried)', stock: 15},
+                    {id: 15, name: 'Bunny tails', stock: 6},
+                    {id: 16, name: 'Trigo grass', stock: 9}
                 ];
             } else if (category === 'Artificial Flowers') {
                 categoryItems = [
-                    {id: 20, name: 'Tulip flower (Artificial)', stock: 20, unit: 'pieces'},
-                    {id: 21, name: 'Rose flower (Artificial)', stock: 25, unit: 'pieces'},
-                    {id: 22, name: 'Satin Ribbon flower', stock: 15, unit: 'pieces'}
+                    {id: 17, name: 'Tulip flower (Artificial)', stock: 20},
+                    {id: 18, name: 'Rose flower (Artificial)', stock: 25},
+                    {id: 19, name: 'Satin Ribbon flower', stock: 15}
                 ];
             } else if (category === 'Floral Supplies') {
                 categoryItems = [
-                    {id: 23, name: 'Floral foam', stock: 30, unit: 'pieces'},
-                    {id: 24, name: 'Glitter Ribbon (gold)', stock: 12, unit: 'meters'},
-                    {id: 25, name: 'Glitter Ribbon (silver)', stock: 10, unit: 'meters'},
-                    {id: 26, name: '2 cm satin ribbon (red)', stock: 25, unit: 'meters'},
-                    {id: 27, name: '2 cm satin ribbon (blue)', stock: 20, unit: 'meters'},
-                    {id: 28, name: '2 cm satin ribbon (white)', stock: 18, unit: 'meters'},
-                    {id: 29, name: '2.5 cm satin ribbon (pink)', stock: 15, unit: 'meters'},
-                    {id: 30, name: '4cm satin ribbon (green)', stock: 12, unit: 'meters'},
-                    {id: 31, name: 'Metal heart shape stick', stock: 8, unit: 'pieces'},
-                    {id: 32, name: 'Quick dry floral supply (black)', stock: 6, unit: 'pieces'}
+                    {id: 20, name: 'Floral foam', stock: 30},
+                    {id: 21, name: 'Glitter Ribbon (gold)', stock: 12},
+                    {id: 22, name: 'Glitter Ribbon (silver)', stock: 10},
+                    {id: 23, name: '2 cm satin ribbon (red)', stock: 25},
+                    {id: 24, name: '2 cm satin ribbon (blue)', stock: 20}
                 ];
             }
             
@@ -1080,4 +1069,5 @@
             }
         });
 </script>
-@endpush 
+<?php $__env->stopPush(); ?> 
+<?php echo $__env->make('layouts.clerk_app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\JJ_Flowershop_Capstone\resources\views/clerk/product_catalog/index.blade.php ENDPATH**/ ?>
