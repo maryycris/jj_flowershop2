@@ -12,9 +12,14 @@
         body {
             background: #f6fbf2;
             font-family: 'Montserrat', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
         }
         html {
             scroll-behavior: smooth;
+            margin: 0;
+            padding: 0;
+            height: 100%;
         }
         
         /* Fade-in Animation Styles */
@@ -154,16 +159,40 @@
         #products .products-content { position: relative; z-index: 1; margin-top: 10px; }
         #products { padding-top: 5px; padding-bottom: 60px; }
         #reviews { background-image: none; position: relative; overflow: hidden; }
-        #reviews .reviews-bg { position: absolute; top: -60px; left: 0; right: 0; height: 668px; background-image: url('/images/reviewbg.jpg'); background-size: cover; background-position: center top; z-index: 0; filter: blur(4px) opacity(0.85); transform: translateY(-80px) scale(1.10); }
+        #reviews .reviews-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-image: url('/images/reviewbg.jpg'); background-size: cover; background-position: center center; background-repeat: no-repeat; z-index: 0; filter: blur(2px) opacity(0.9); }
         #reviews.scroll-offset { scroll-margin-top: 76px; }
         #reviews .reviews-content { position: relative; z-index: 2; }
         /* Only on this page: bring footer to the front */
-        #reviews + footer { position: relative; z-index: 10; margin-top: 0; }
-        footer { position: static; z-index: 10; margin-top: 0; }
+        #reviews + footer { position: relative; z-index: 1; margin-top: 0; }
+        footer { position: static; z-index: 1; margin-top: 0; }
         /* Ensure social media icons are at the very bottom */
         .footer-icons { margin-top: 20px; }
         /* Ensure footer is visible and in front */
-        footer { background: #8ACB88 !important; position: relative; z-index: 10; }
+        footer { 
+            background: #8ACB88 !important; 
+            position: fixed; 
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 10; 
+            margin: 0 !important; 
+            padding: 0 !important;
+        }
+        /* Remove any extra space below footer */
+        body { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            min-height: 100vh;
+        }
+        html { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            height: 100%;
+        }
+        /* Ensure no space after footer */
+        * {
+            box-sizing: border-box;
+        }
         .content-box {
             background: rgba(115, 174, 113, 0.85);
             color: #fff;
@@ -505,21 +534,21 @@
         </div>
     </div>
     <style>
-        .review-card{background:#fff; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.08); padding:18px 20px; min-height:200px; width:280px; transition: transform 7.25s ease, filter 1.25s ease, opacity 2.25s ease}
-        .review-set{display:flex; justify-content:center; gap:24px; align-items:flex-start; min-height: 260px;}
+        .review-card{background:#fff; border-radius:12px; box-shadow:0 10px 28px rgba(0,0,0,0.10); padding:22px 25px; min-height:240px; width:320px; transition: transform 7.25s ease, filter 1.25s ease, opacity 2.25s ease}
+        .review-set{display:flex; justify-content:center; gap:28px; align-items:center; min-height: 60vh; padding: 40px 0;}
         .review-card.role-center{filter:none; opacity:1; order:2; transform: translateY(20px)}
         .review-card.role-left{filter: blur(2px); opacity:0.65; order:1;}
         .review-card.role-right{filter: blur(2px); opacity:0.65; order:3;}
-        .review-name{font-weight:600; color:#333; margin-top:10px; font-size:.95rem}
-        .review-stars{color:#1a8c5a; font-size:1.2rem; margin-bottom:10px}
-        .review-text{color:#444; font-size:.95rem}
+        .review-name{font-weight:600; color:#333; margin-top:12px; font-size:1.0rem}
+        .review-stars{color:#1a8c5a; font-size:1.3rem; margin-bottom:12px}
+        .review-text{color:#444; font-size:1.0rem; line-height:1.4}
         #reviewsCarousel{position:relative}
         #reviewsCarousel .carousel-control-prev, #reviewsCarousel .carousel-control-next{width:auto; top:50%; transform:translateY(-50%); bottom:auto; opacity:1}
         #reviewsCarousel .carousel-control-prev{left:18%; right:auto}
         #reviewsCarousel .carousel-control-next{right:18%; left:auto}
         #reviewsCarousel .ctrl{background:#fff; border:1px solid #dfe8df; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#1a8c5a; box-shadow:0 4px 12px rgba(0,0,0,0.08)}
     </style>
-    <div class="row mt-4 justify-content-center">
+    <div class="row mt-4 justify-content-center" style="min-height: 60vh; display: flex; align-items: center;">
         <div class="col-12 d-flex justify-content-center">
             <div id="reviewsCarousel" class="carousel slide" data-bs-ride="false" style="max-width:1200px; position:relative;">
                 <div class="carousel-inner">
@@ -588,20 +617,11 @@
   });
 </script>
 <!-- Footer -->
-<footer style="background:#8ACB88; color:#fff; padding:24px 0 0 0;">
+<footer style="background:#8ACB88; color:#fff; margin:0; padding:0;">
     <div class="container">
         <div class="row">
             <div class="col-12 text-center">
-                <div class="footer-content" style="padding-bottom: 20px;">
-                    <h5 style="color: #fff; margin-bottom: 15px;">J & J Flower Shop</h5>
-                    <p style="color: #e6f5e6; margin-bottom: 10px;">Est. 2023 - Your trusted flower shop in Cebu</p>
-                    <p style="color: #e6f5e6; font-size: 0.9rem;">© <?php echo e(date('Y')); ?> J & J Flower Shop. All rights reserved.</p>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-12 text-center">
-                <div class="footer-icons" style="font-size:1.3rem; padding: 20px 0 30px 0; border-top: 1px solid rgba(255,255,255,0.2);">
+                <div class="footer-icons" style="font-size:1.3rem; padding: 0px 0 12px 0;">
                     <a href="https://www.facebook.com/profile.php?id=100089623153779" target="_blank" style="color:#1877F3;"><i class="bi bi-facebook"></i></a>
                     <a href="https://www.instagram.com/jjflowershop_" target="_blank" style="color:#E1306C;"><i class="bi bi-instagram"></i></a>
                     <a href="https://wa.me/639674184857" target="_blank" style="color:#25D366;"><i class="bi bi-whatsapp"></i></a>

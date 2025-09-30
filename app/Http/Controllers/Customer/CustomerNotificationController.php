@@ -13,6 +13,12 @@ class CustomerNotificationController extends Controller
         return view('customer.notifications.index', compact('notifications'));
     }
 
+    public function list()
+    {
+        $notifications = auth()->user()->notifications()->latest()->get();
+        return response()->json($notifications);
+    }
+
     public function markAllAsRead()
     {
         auth()->user()->unreadNotifications->markAsRead();

@@ -20,14 +20,48 @@ class CheckoutController extends Controller
         
         // Check if this is a "Buy now" flow (product_id and quantity provided)
         $productId = $request->input('product_id');
+        $catalogProductId = $request->input('catalog_product_id');
         $quantity = $request->input('quantity', 1);
         
         if ($productId) {
-            // "Buy now" flow - create a temporary cart item for checkout
+            // "Buy now" flow with regular product ID
             $product = \App\Models\Product::find($productId);
             if (!$product) {
                 return redirect()->route('customer.products.index')->with('error', 'Product not found.');
             }
+        } elseif ($catalogProductId) {
+            // "Buy now" flow with catalog product ID - convert to regular product
+            $catalog = \App\Models\CatalogProduct::find($catalogProductId);
+            if (!$catalog) {
+                return redirect()->route('customer.dashboard')->with('error', 'Product not found.');
+            }
+            
+            // Find existing product or create new one
+            $product = \App\Models\Product::where('name', $catalog->name)
+                ->where('price', $catalog->price)
+                ->where('category', $catalog->category)
+                ->first();
+                
+            if (!$product) {
+                $product = new \App\Models\Product([
+                    'code' => null,
+                    'name' => $catalog->name,
+                    'description' => $catalog->description,
+                    'price' => $catalog->price,
+                    'stock' => 0,
+                    'category' => $catalog->category,
+                    'image' => $catalog->image,
+                    'image2' => $catalog->image2,
+                    'image3' => $catalog->image3,
+                    'status' => true,
+                    'is_approved' => true,
+                ]);
+                $product->save();
+            }
+            $productId = $product->id;
+        }
+        
+        if ($productId) {
             
             // Create a temporary cart item object for the checkout process
             $tempCartItem = new \stdClass();
@@ -117,14 +151,48 @@ class CheckoutController extends Controller
         
         // Check if this is a "Buy now" flow (product_id and quantity provided)
         $productId = $request->input('product_id');
+        $catalogProductId = $request->input('catalog_product_id');
         $quantity = $request->input('quantity', 1);
         
         if ($productId) {
-            // "Buy now" flow - create a temporary cart item for checkout
+            // "Buy now" flow with regular product ID
             $product = \App\Models\Product::find($productId);
             if (!$product) {
                 return redirect()->route('customer.products.index')->with('error', 'Product not found.');
             }
+        } elseif ($catalogProductId) {
+            // "Buy now" flow with catalog product ID - convert to regular product
+            $catalog = \App\Models\CatalogProduct::find($catalogProductId);
+            if (!$catalog) {
+                return redirect()->route('customer.dashboard')->with('error', 'Product not found.');
+            }
+            
+            // Find existing product or create new one
+            $product = \App\Models\Product::where('name', $catalog->name)
+                ->where('price', $catalog->price)
+                ->where('category', $catalog->category)
+                ->first();
+                
+            if (!$product) {
+                $product = new \App\Models\Product([
+                    'code' => null,
+                    'name' => $catalog->name,
+                    'description' => $catalog->description,
+                    'price' => $catalog->price,
+                    'stock' => 0,
+                    'category' => $catalog->category,
+                    'image' => $catalog->image,
+                    'image2' => $catalog->image2,
+                    'image3' => $catalog->image3,
+                    'status' => true,
+                    'is_approved' => true,
+                ]);
+                $product->save();
+            }
+            $productId = $product->id;
+        }
+        
+        if ($productId) {
             
             // Create a temporary cart item object for the checkout process
             $tempCartItem = new \stdClass();
@@ -183,14 +251,48 @@ class CheckoutController extends Controller
         
         // Check if this is a "Buy now" flow (product_id and quantity provided)
         $productId = $request->input('product_id');
+        $catalogProductId = $request->input('catalog_product_id');
         $quantity = $request->input('quantity', 1);
         
         if ($productId) {
-            // "Buy now" flow - create a temporary cart item for checkout
+            // "Buy now" flow with regular product ID
             $product = \App\Models\Product::find($productId);
             if (!$product) {
                 return redirect()->route('customer.products.index')->with('error', 'Product not found.');
             }
+        } elseif ($catalogProductId) {
+            // "Buy now" flow with catalog product ID - convert to regular product
+            $catalog = \App\Models\CatalogProduct::find($catalogProductId);
+            if (!$catalog) {
+                return redirect()->route('customer.dashboard')->with('error', 'Product not found.');
+            }
+            
+            // Find existing product or create new one
+            $product = \App\Models\Product::where('name', $catalog->name)
+                ->where('price', $catalog->price)
+                ->where('category', $catalog->category)
+                ->first();
+                
+            if (!$product) {
+                $product = new \App\Models\Product([
+                    'code' => null,
+                    'name' => $catalog->name,
+                    'description' => $catalog->description,
+                    'price' => $catalog->price,
+                    'stock' => 0,
+                    'category' => $catalog->category,
+                    'image' => $catalog->image,
+                    'image2' => $catalog->image2,
+                    'image3' => $catalog->image3,
+                    'status' => true,
+                    'is_approved' => true,
+                ]);
+                $product->save();
+            }
+            $productId = $product->id;
+        }
+        
+        if ($productId) {
             
             // Create a temporary cart item object for the checkout process
             $tempCartItem = new \stdClass();

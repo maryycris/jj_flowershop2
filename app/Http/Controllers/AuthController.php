@@ -172,13 +172,8 @@ class AuthController extends Controller
             $firstName = $nameParts[0] ?? '';
             $lastName = $nameParts[1] ?? '';
             
-            // Try to get phone number from Google (if available)
+            // Phone number not available from Google social login
             $phoneNumber = null;
-            try {
-                $phoneNumber = $socialUser->getPhoneNumber();
-            } catch (\Exception $e) {
-                // Phone number not available or permission not granted
-            }
             
             // Create new user for social login
             $user = new User([

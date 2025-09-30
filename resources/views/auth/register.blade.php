@@ -105,8 +105,8 @@
         <h2 class="text-center text-success mb-2" style="font-weight: 700;">JJ Flowershop</h2>
         <p class="text-center text-muted mb-2">Register to create an account</p>
         <div class="alert alert-info text-center mb-3" style="font-size: 0.9rem;">
-            <strong>Choose your registration method:</strong><br>
-            Fill out the form below OR use social login for faster registration
+            <strong>Create your account:</strong><br>
+            Fill out the form below to get started
         </div>
         <form method="POST" action="{{ url('/register') }}">
             @csrf
@@ -131,22 +131,6 @@
                     <span class="text-danger" role="alert">{{ $message }}</span>
                 @enderror
             </div>
-            <!-- Divider -->
-            <div class="text-center mb-3">
-                <hr>
-                <span class="text-muted" style="background: white; padding: 0 15px; font-size: 0.9rem;">OR</span>
-            </div>
-            
-            <!-- Social Login Buttons -->
-            <div class="mb-3">
-                <a href="{{ url('auth/facebook') }}" class="btn btn-primary btn-sm w-100 mb-2" style="background-color: #1877F3; border-color: #1877F3;">
-                    <i class="bi bi-facebook"></i> Register with Facebook
-                </a>
-                <a href="{{ url('auth/google') }}" class="btn btn-danger btn-sm w-100" style="background-color: #EA4335; border-color: #EA4335;">
-                    <i class="fab fa-google"></i> Register with Google
-                </a>
-            </div>
-            <!-- Verification channel selection removed since we only have email now -->
             <div class="mb-2">
                 <label for="password" class="form-label visually-hidden">Password</label>
                 <input type="password" name="password" id="password" class="form-control form-control-sm" placeholder="Password" required>

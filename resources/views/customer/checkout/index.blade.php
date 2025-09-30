@@ -1,12 +1,8 @@
 @extends('layouts.customer_app')
 
 @section('content')
-<div class="py-4" style="background: #f4faf4; min-height: 100vh;">
-    <div class="mb-3">
-        <a href="{{ url('/cart') }}" class="btn btn-outline-success">
-            &larr; Back
-        </a>
-    </div>
+<div class="pt-2 pb-4" style="background: #f4faf4; min-height: 100vh;">
+    <div class="container" style="max-width: 1400px;">
     <form action="{{ route('customer.checkout.payment_method') }}" method="GET" id="checkoutForm">
         @csrf
         <input type="hidden" name="recipient_type" id="recipientType" value="someone">
@@ -17,14 +13,23 @@
             <input type="hidden" name="product_id" value="{{ request('product_id') }}">
             <input type="hidden" name="quantity" value="{{ request('quantity', 1) }}">
         @endif
+        @if(request('catalog_product_id'))
+            <input type="hidden" name="catalog_product_id" value="{{ request('catalog_product_id') }}">
+            <input type="hidden" name="quantity" value="{{ request('quantity', 1) }}">
+        @endif
         @if(request('selected_items'))
             @foreach(request('selected_items') as $itemId)
                 <input type="hidden" name="selected_items[]" value="{{ $itemId }}">
             @endforeach
         @endif
-        <div class="row justify-content-center">
-            <div class="col-lg-7">
-                <div class="bg-white rounded-3 p-4 mb-4" style="box-shadow: none;">
+        <div class="row justify-content-center mt-2">
+            <div class="col-12 col-lg-8 col-xl-6" style="max-width: 1200px;">
+                <div class="bg-white rounded-3 p-3 mb-4 scrollable-content" style="box-shadow: none; max-height: 85vh; overflow-y: auto;">
+                    <div class="mb-3">
+                        <a href="{{ url('/cart') }}" class="btn btn-outline-success">
+                            &larr; Back
+                        </a>
+                    </div>
                     <div class="mb-4" style="font-weight: 600; font-size: 1.15rem;">Sender Information:</div>
                     <div class="row mb-3">
                         <div class="col-md-6 mb-3">
@@ -111,8 +116,8 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-5">
-                <div class="bg-white rounded-3 p-4 mb-4" style="box-shadow: none;">
+            <div class="col-12 col-lg-4 col-xl-4">
+                <div class="bg-white rounded-3 p-3 mb-4" style="box-shadow: none;">
                     <div class="mb-3" style="font-weight: 600; font-size: 1.15rem;">Purchase Summary:</div>
                     @foreach($cartItems as $item)
                     <div class="d-flex align-items-center mb-3">
@@ -120,10 +125,8 @@
                         <div class="flex-grow-1 ms-2">
                             <div style="font-weight: 500;">{{ $item->product->name }}</div>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <button class="btn btn-outline-success btn-sm quantity-btn" type="button" data-action="decrement">-</button>
-                            <input type="text" class="form-control form-control-sm text-center quantity-input" value="{{ $item->quantity }}" readonly style="width: 40px;">
-                            <button class="btn btn-outline-success btn-sm quantity-btn" type="button" data-action="increment">+</button>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-success" style="font-size: 0.9rem; padding: 8px 12px;">{{ $item->quantity }}</span>
                         </div>
                         <div class="ms-3" style="font-weight: 500; font-size: 1.08rem;">₱{{ number_format($item->quantity * $item->product->price, 2) }}</div>
                     </div>
@@ -313,4 +316,34 @@ document.getElementById('applyPromoBtn').onclick = function() {
     setTimeout(() => this.classList.remove('active'), 300);
 };
 </script>
-@endpush 
+@endpush
+
+<style>
+/* Custom scrollbar styling for the left content area */
+.scrollable-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.scrollable-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+    background: #8ACB88;
+    border-radius: 4px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb:hover {
+    background: #7bb47b;
+}
+
+/* For Firefox */
+.scrollable-content {
+    scrollbar-width: thin;
+    scrollbar-color: #8ACB88 #f1f1f1;
+}
+</style>
+    </div>
+</div>
+@endsection 

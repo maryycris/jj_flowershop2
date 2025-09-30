@@ -3,24 +3,34 @@
 
     <!-- Promoted Products Carousel -->
     <div class="mx-auto mb-3" style="max-width: 1000px;">
-        <div class="bg-white rounded-3 p-3 position-relative shadow-sm">
-            <div class="d-flex align-items-center justify-content-between mb-1">
-                <button class="btn btn-link text-success p-0" data-bs-target="#promotedCarousel" data-bs-slide="prev"><i class="bi bi-chevron-left" style="font-size: 1.5rem;"></i></button>
-                <h5 class="mb-0 fw-bold text-center flex-grow-1" style="font-size: 1.1rem; color: #385E42;">Promoted Products</h5>
-                <button class="btn btn-link text-success p-0" data-bs-target="#promotedCarousel" data-bs-slide="next"><i class="bi bi-chevron-right" style="font-size: 1.5rem;"></i></button>
-            </div>
-            <div id="promotedCarousel" class="carousel slide mt-1" data-bs-ride="carousel">
+        <div class="bg-white rounded-3 p-2 position-relative shadow-sm">
+            <div id="promotedCarousel" class="carousel slide" data-bs-ride="carousel">
+                <button class="btn btn-link text-success p-0 position-absolute" data-bs-target="#promotedCarousel" data-bs-slide="prev" style="left: 8px; top: 50%; transform: translateY(-50%); z-index: 10;"><i class="bi bi-chevron-left" style="font-size: 1.5rem;"></i></button>
+                <button class="btn btn-link text-success p-0 position-absolute" data-bs-target="#promotedCarousel" data-bs-slide="next" style="right: 8px; top: 50%; transform: translateY(-50%); z-index: 10;"><i class="bi bi-chevron-right" style="font-size: 1.5rem;"></i></button>
                 <div class="carousel-inner">
-                    <?php $__currentLoopData = $promotedProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <div class="carousel-item <?php if($i === 0): ?> active <?php endif; ?> text-center">
-                        <img src="<?php echo e(asset('storage/' . $product->image)); ?>" alt="<?php echo e($product->name); ?>" style="height: 150px; object-fit: cover; border-radius: 8px;">
-                        <div class="mt-1 fw-bold" style="font-size: 1rem;"><?php echo e($product->name); ?></div>
-                        <div class="text-success" style="font-size: 0.95rem;">₱<?php echo e(number_format($product->price, 2)); ?></div>
-                    </div>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    <?php
+                        $banners = \App\Models\PromotedBanner::active()->take(5)->get();
+                    ?>
+                    <?php if($banners->count()): ?>
+                        <?php $__currentLoopData = $banners; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <div class="carousel-item <?php if($i === 0): ?> active <?php endif; ?> text-center">
+                            <a href="<?php echo e($b->link_url ?? '#'); ?>" <?php if($b->link_url): ?> target="_self" <?php endif; ?>>
+                                <img src="<?php echo e(asset('storage/' . $b->image)); ?>" alt="<?php echo e($b->title ?? 'Banner'); ?>" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;">
+                            </a>
+                        </div>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    <?php else: ?>
+                        <?php $__currentLoopData = $promotedProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <div class="carousel-item <?php if($i === 0): ?> active <?php endif; ?> text-center">
+                            <img src="<?php echo e(asset('storage/' . $product->image)); ?>" alt="<?php echo e($product->name); ?>" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;">
+                            <div class="mt-1 fw-bold" style="font-size: 1rem;"><?php echo e($product->name); ?></div>
+                            <div class="text-success" style="font-size: 0.95rem;">₱<?php echo e(number_format($product->price, 2)); ?></div>
+                        </div>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    <?php endif; ?>
                 </div>
-                </div>
-                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Category Tabs -->
@@ -39,6 +49,9 @@
 
         <!-- Products Section -->
         <div class="mb-1 fw-bold fs-5" style="color: #385E42; padding-left: 15px;"><?php echo e($currentCategory); ?></div>
+        
+        <!-- Horizontal Line Separator -->
+        <hr class="my-2" style="border: 2px solid #1f3b2a; border-radius: 1px; margin-left: 15px; margin-right: 15px;">
         <div class="row g-2 product-grid" style="padding-left: 15px; padding-right: 15px;">
                 <?php $__empty_1 = true; $__currentLoopData = $products; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                 <div class="col-6 col-md-4 col-lg-3">
@@ -92,9 +105,11 @@
         content: '';
         position: absolute;
         bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 40px;
+        left: 0;
+        right: 0;
+        margin-left: auto;
+        margin-right: auto;
+        width: 100%;
         height: 3px;
         background: #27ae60;
         border-radius: 2px;

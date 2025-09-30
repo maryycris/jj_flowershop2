@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\CatalogProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
@@ -11,51 +12,92 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::query();
+        // Only load approved products for the main display
+        // Pending products will be loaded via AJAX
+        $query = CatalogProduct::where('is_approved', true);
         
-        // Filter by category
-        if ($request->has('category') && $request->category !== '') {
-            $query->where('category', $request->category);
+        // Filter by category - only Bouquets, Packages, Gifts
+        if ($request->has('category') && $request->category !== 'all') {
+            $categoryMapping = [
+                'bouquets' => 'Bouquets',
+                'packages' => 'Packages', 
+                'gifts' => 'Gifts'
+            ];
+            
+            if (isset($categoryMapping[$request->category])) {
+                $query->where('category', $categoryMapping[$request->category]);
+            }
         }
         
-        // Filter by price range
-        if ($request->has('price_min') && $request->price_min !== '' && $request->price_min !== null) {
-            $query->where('price', '>=', $request->price_min);
-        }
-        
-        if ($request->has('price_max') && $request->price_max !== '' && $request->price_max !== null) {
-            $query->where('price', '<=', $request->price_max);
-        }
-        
-        // Sort products
-        $sort = $request->get('sort', 'newest');
-        switch ($sort) {
-            case 'name_asc':
-                $query->orderBy('name', 'asc');
-                break;
-            case 'name_desc':
-                $query->orderBy('name', 'desc');
-                break;
-            case 'price_asc':
-                $query->orderBy('price', 'asc');
-                break;
-            case 'price_desc':
-                $query->orderBy('price', 'desc');
-                break;
-            case 'oldest':
-                $query->orderBy('created_at', 'asc');
-                break;
-            case 'newest':
-            default:
-                $query->orderBy('created_at', 'desc');
-                break;
-        }
-        
-        $products = $query->get();
-        $categories = Product::select('category')->distinct()->pluck('category');
-        $promotedProducts = Product::orderBy('created_at', 'desc')->take(3)->get();
+        // Get approved products ordered by newest first
+        $products = $query->orderBy('created_at', 'desc')->get();
+        $categories = ['Bouquets', 'Packages', 'Gifts']; // Only these 3 categories for catalog
+        $promotedProducts = CatalogProduct::where('is_approved', true)->orderBy('created_at', 'desc')->take(3)->get();
 
         return view('admin.products.index', compact('products', 'categories', 'promotedProducts'));
+    }
+
+    /**
+     * Get available categories from inventory
+     */
+    public function getCategories()
+    {
+        $categories = Product::select('category')
+            ->where('category', 'NOT LIKE', '%Office Supplies%')
+            ->where('status', true)
+            ->distinct()
+            ->orderBy('category')
+            ->pluck('category');
+        
+        return response()->json($categories);
+    }
+
+    /**
+     * Get inventory items by category for product composition
+     */
+    public function getInventoryByCategory($category = null)
+    {
+        $query = Product::where('category', 'NOT LIKE', '%Office Supplies%')
+            ->where('status', true);
+            // Removed ->where('is_approved', true) to include non-approved items
+        
+        if ($category) {
+            $query->where('category', $category);
+        }
+        
+        $items = $query->orderBy('name')
+            ->get()
+            ->map(function($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'category' => $product->category,
+                    'stock' => $product->stock ?? 0,
+                    'price' => $product->price ?? 0,
+                    'unit' => $this->getDefaultUnit($product->category),
+                    'is_approved' => $product->is_approved
+                ];
+            });
+        
+        return response()->json($items);
+    }
+    
+    /**
+     * Get default unit for category
+     */
+    private function getDefaultUnit($category)
+    {
+        switch ($category) {
+            case 'Fresh Flowers':
+            case 'Dried Flowers':
+            case 'Artificial Flowers':
+                return 'stems';
+            case 'Floral Supplies':
+            case 'Packaging Materials':
+                return 'pieces';
+            default:
+                return 'pieces';
+        }
     }
 
     public function show(Product $product)
@@ -65,45 +107,52 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'category' => 'required|string|max:255',
-            'image' => 'required|image|max:2048', // Assuming primary image is required for creation
-            'description' => 'nullable|string',
-            'compositions' => 'nullable|array',
-            'compositions.*.component_name' => 'required_with:compositions|string|max:255',
-            'compositions.*.quantity' => 'required_with:compositions|numeric|min:1',
-            'compositions.*.unit' => 'required_with:compositions|string|max:50',
-        ]);
+        // Debug: Log the incoming request data
+        \Log::info('Product store request data:', $request->all());
+        
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'price' => 'required|numeric|min:0',
+                'category' => 'required|string|in:Bouquets,Packages,Gifts',
+                'image' => 'required|image|max:2048',
+                'description' => 'nullable|string',
+                'compositions' => 'nullable|array',
+                'compositions.*.component_id' => 'required_with:compositions|integer|exists:products,id',
+                'compositions.*.component_name' => 'required_with:compositions|string|max:255',
+                'compositions.*.quantity' => 'required_with:compositions|numeric|min:1',
+                'compositions.*.unit' => 'required_with:compositions|string|max:50',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation failed:', $e->errors());
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        }
 
         $productData = [
             'name' => $validated['name'],
             'price' => $validated['price'],
             'category' => $validated['category'],
             'description' => $validated['description'] ?? null,
-            'status' => true, // Default to active
+            'status' => true,
+            'is_approved' => true, // Admin products are auto-approved
+            'created_by' => auth()->id(), // Track who created the product
+            'approved_by' => auth()->id(), // Admin auto-approves their own products
+            'approved_at' => now(),
         ];
 
         if ($request->hasFile('image')) {
-            $productData['image'] = $request->file('image')->store('products', 'public');
+            $productData['image'] = $request->file('image')->store('catalog_products', 'public');
         }
 
-        // Set approval status based on user role
-        $user = auth()->user();
-        if ($user && $user->hasRole('admin')) {
-            $productData['is_approved'] = true;
-        } else {
-            $productData['is_approved'] = false;
-        }
+        $catalogProduct = CatalogProduct::create($productData);
+        \Log::info('Catalog product created:', ['id' => $catalogProduct->id, 'name' => $catalogProduct->name]);
 
-        $product = Product::create($productData);
-
-        // Save product compositions
+        // Save product compositions (materials from inventory)
         if ($request->has('compositions') && is_array($request->compositions)) {
             foreach ($request->compositions as $composition) {
-                if (!empty($composition['component_name']) && !empty($composition['quantity'])) {
-                    $product->compositions()->create([
+                if (!empty($composition['component_id']) && !empty($composition['component_name']) && !empty($composition['quantity'])) {
+                    $catalogProduct->compositions()->create([
+                        'component_id' => $composition['component_id'],
                         'component_name' => $composition['component_name'],
                         'quantity' => $composition['quantity'],
                         'unit' => $composition['unit'],
@@ -111,21 +160,10 @@ class ProductController extends Controller
                     ]);
                 }
             }
+            \Log::info('Compositions saved for product:', ['product_id' => $catalogProduct->id, 'compositions_count' => count($request->compositions)]);
         }
 
-        // Notify all admins if a clerk added the product
-        if ($user && $user->hasRole('clerk')) {
-            $admins = \App\Models\User::where('role', 'admin')->get();
-            foreach ($admins as $admin) {
-                $admin->notify(new \App\Notifications\ProductApprovalNotification($product, $user, 'added'));
-            }
-        }
-
-        // Redirect to the correct page based on user role
-        if (request()->routeIs('clerk.product_catalog.store')) {
-            return Redirect::route('clerk.product_catalog.index')->with('success', 'Product added successfully.');
-        }
-        return Redirect::route('admin.products.index')->with('success', 'Product added successfully.');
+        return Redirect::route('admin.products.index')->with('success', 'Product added successfully to catalog.');
     }
 
     public function edit(Product $product)
@@ -133,13 +171,12 @@ class ProductController extends Controller
         return view('admin.products.edit', compact('product'));
     }
 
-    public function update(Request $request, Product $product)
+    public function update(Request $request, CatalogProduct $product)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'category' => 'required|string|max:255',
-            // Image fields are handled by updateImages method or are optional for direct update
+            'category' => 'required|string|in:Bouquets,Packages,Gifts',
         ]);
 
         $product->update($validated);
@@ -147,7 +184,7 @@ class ProductController extends Controller
         return Redirect::route('admin.products.index')->with('success', 'Product updated successfully.');
     }
 
-    public function destroy(Product $product)
+    public function destroy(CatalogProduct $product)
     {
         // Delete all associated images from storage
         if ($product->image) {
@@ -165,38 +202,27 @@ class ProductController extends Controller
         return Redirect::route('admin.products.index')->with('success', 'Product deleted successfully.');
     }
 
-    public function updateImages(Request $request, Product $product)
+    public function updateImages(Request $request, CatalogProduct $product)
     {
-        // Debug: Log what's being received
-        \Log::info('UpdateImages called for product: ' . $product->id);
-        \Log::info('Request has file: ' . ($request->hasFile('image') ? 'YES' : 'NO'));
-        \Log::info('Request all data: ' . json_encode($request->all()));
-        
         $request->validate([
             'image' => 'nullable|image|max:2048',
         ]);
 
         if ($request->hasFile('image')) {
-            \Log::info('Processing file upload...');
             // Delete old image if exists
             if ($product->image) {
                 Storage::disk('public')->delete($product->image);
-                \Log::info('Deleted old image: ' . $product->image);
             }
-            $newImagePath = $request->file('image')->store('products', 'public');
+            $newImagePath = $request->file('image')->store('catalog_products', 'public');
             $product->image = $newImagePath;
-            \Log::info('New image saved to: ' . $newImagePath);
-        } else {
-            \Log::info('No file uploaded');
         }
 
         $product->save();
-        \Log::info('Product saved successfully');
 
         return Redirect::back()->with('success', 'Product image updated successfully.');
     }
 
-    public function deleteImage(Product $product)
+    public function deleteImage(CatalogProduct $product)
     {
         if ($product->image) {
             Storage::disk('public')->delete($product->image);

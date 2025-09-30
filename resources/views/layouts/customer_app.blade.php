@@ -197,36 +197,48 @@
         <!-- New Top Navigation Bar for Customer (standardized for all customer pages) -->
         <nav class="customer-top-navbar" style="background: #8ACB88; color: #fff; padding: 0 6.0vw; width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw);">
             <div class="container-fluid px-4 pt-2 pb-1">
-                <div class="d-flex align-items-center justify-content-between border-bottom pb-1">
-                    <div class="d-flex align-items-center justify-content-center gap-5" style="padding: 0 4.2vw;">
-                        <div class="d-flex align-items-center justify-content-center gap-5 pb-1" style="margin-left: 175px;">
-                            <a href="{{ route('customer.dashboard') }}" class="nav-link text-white d-flex align-items-center gap-2 @if(request()->routeIs('customer.dashboard')) active @endif" style="font-size: 0.9rem;"><i class="bi bi-house-door"></i> Home</a>
-                            
-                            <a href="{{ route('customer.products.bouquet-customize') }}" class="nav-link text-white d-flex align-items-center gap-2 @if(request()->routeIs('customer.products.bouquet-customize')) active @endif" style="font-size: 0.9rem;"><i class="bi bi-brush"></i> Customize</a>
-                            <a href="{{ route('customer.events.book') }}" class="nav-link text-white d-flex align-items-center gap-2 @if(request()->routeIs('customer.events.book')) active @endif" style="font-size: 0.9rem;"><i class="bi bi-calendar-event"></i> Book Event</a>
-                            <a href="{{ route('customer.notifications.index') }}" class="nav-link text-white d-flex align-items-center gap-2 position-relative @if(request()->routeIs('customer.notifications.index')) active @endif" style="font-size: 0.9rem;">
-                                <i class="bi bi-bell"></i> Notifications
-                                @if(isset($unreadCount) && $unreadCount > 0)
-                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">{{ $unreadCount }}</span>
-                                @endif
-                            </a>
-                            
-                            <div class="dropdown">
-                                <button class="nav-link text-white d-flex align-items-center gap-1 btn btn-link p-0" type="button" id="customerUserDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.9rem; background: none; border: none;">
-                                    <i class="bi bi-person-circle" style="font-size: 0.9rem;"></i> {{ Auth::user()->name ?? "customer's name" }}
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end smooth-dropdown" aria-labelledby="customerUserDropdown">
-                                    <li><a class="dropdown-item" href="{{ route('customer.account.index') }}"><i class="bi bi-person"></i> MY ACCOUNT</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li>
-                                        <form method="POST" action="{{ route('logout') }}">
-                                            @csrf
-                                            <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> LOGOUT</button>
-                                        </form>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
+                <div class="d-flex align-items-center justify-content-center border-bottom pb-1" style="gap: 3rem;">
+                    <!-- Home link -->
+                    <a href="{{ route('customer.dashboard') }}" class="nav-link text-white d-flex align-items-center gap-2 @if(request()->routeIs('customer.dashboard')) active @endif" style="font-size: 0.9rem;"><i class="bi bi-house-door"></i> Home</a>
+                    
+                    <!-- Customize link -->
+                    <a href="{{ route('customer.products.bouquet-customize') }}" class="nav-link text-white d-flex align-items-center gap-2 @if(request()->routeIs('customer.products.bouquet-customize')) active @endif" style="font-size: 0.9rem;"><i class="bi bi-brush"></i> Customize</a>
+                    
+                    <!-- Notifications link -->
+                    <a href="{{ route('customer.notifications.index') }}" class="nav-link text-white d-flex align-items-center gap-2 position-relative @if(request()->routeIs('customer.notifications.index')) active @endif" style="font-size: 0.9rem;">
+                        <i class="bi bi-bell"></i> Notifications
+                        @if(isset($unreadCount) && $unreadCount > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">{{ $unreadCount }}</span>
+                        @endif
+                    </a>
+                    
+                    <!-- Customer name dropdown with profile picture -->
+                    <div class="dropdown">
+                        <button class="nav-link text-white d-flex align-items-center gap-2 btn btn-link p-0" type="button" id="customerUserDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.9rem; background: none; border: none;">
+                            @php
+                                $profileSrc = null;
+                                if (Auth::check()) {
+                                    $pp = Auth::user()->profile_picture ?? null;
+                                    if ($pp) {
+                                        $profileSrc = asset('storage/' . ltrim($pp, '/'));
+                                    }
+                                }
+                                if (!$profileSrc) {
+                                    $profileSrc = asset('images/default-avatar.png');
+                                }
+                            @endphp
+                            <img src="{{ $profileSrc }}" alt="Profile" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.6); background:#fff;" onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.png') }}';"> {{ Auth::user()->name ?? "customer's name" }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end smooth-dropdown" aria-labelledby="customerUserDropdown">
+                            <li><a class="dropdown-item" href="{{ route('customer.account.index') }}"><i class="bi bi-person"></i> MY ACCOUNT</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> LOGOUT</button>
+                                </form>
+                            </li>
+                        </ul>
                     </div>
                 </div>
                 <div class="d-flex align-items-center justify-content-between mt-2">
@@ -234,12 +246,39 @@
                         <img src="/images/logo.png" alt="JJ Flower Shop" style="height: 48px; background: transparent;" class="me-2">
                         <div class="fw-bold" style="font-size: 1.3rem; line-height: 1;">J ' J FLOWER<br><span style="font-size: 0.9rem; font-weight: 400;">SHOP <span class="fs-6">Est. 2023</span></span></div>
                     </div>
-                    <form class="flex-grow-1 mx-4" style="max-width: 500px;">
+                    @if(request()->routeIs('customer.dashboard') || request()->routeIs('customer.products.*'))
+                    <div class="flex-grow-1 mx-4" style="max-width: 500px; position: relative;">
                         <div class="input-group">
-                            <input type="text" class="form-control" placeholder="Search" aria-label="Search">
-                            <button class="btn btn-light" type="submit"><i class="bi bi-funnel"></i></button>
+                            <input id="globalSearchInput" type="text" class="form-control" placeholder="Search products..." aria-label="Search">
+                            <button id="globalFilterBtn" class="btn btn-light" type="button" title="Filter"><i class="bi bi-funnel"></i></button>
                         </div>
-                    </form>
+                        <!-- Filter Panel -->
+                        <div id="globalFilterPanel" class="card p-3" style="display:none; position:absolute; top: 44px; left:0; right:0; z-index:1060; box-shadow:0 8px 20px rgba(0,0,0,.1);">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label mb-1">Category</label>
+                                    <select id="globalFilterCategory" class="form-select form-select-sm">
+                                        <option value="all">All</option>
+                                        <option value="bouquets">Bouquets</option>
+                                        <option value="packages">Packages</option>
+                                        <option value="gifts">Gifts</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label mb-1">Min Price</label>
+                                    <input id="globalFilterMin" type="number" min="0" class="form-control form-control-sm" placeholder="0">
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label mb-1">Max Price</label>
+                                    <input id="globalFilterMax" type="number" min="0" class="form-control form-control-sm" placeholder="9999">
+                                </div>
+                                <div class="col-12 col-md-2 d-grid">
+                                    <button id="globalFilterApply" class="btn btn-success btn-sm">Apply</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
                     <div class="d-flex align-items-center gap-4">
                         <a href="{{ route('customer.favorites') }}" class="icon-btn text-white position-relative" title="Add to Favorites" style="font-size: 1.5rem;"><i class="bi bi-heart"></i></a>
                         <a href="{{ route('customer.cart.index') }}" class="icon-btn text-white position-relative"><i class="bi bi-cart" style="font-size: 1.5rem;"></i></a>
@@ -298,6 +337,86 @@
                     }
                 });
             }, 2000);
+
+            // Simple client-side search & filter for product grids on customer pages
+            const searchInput = document.getElementById('globalSearchInput');
+            const filterBtn = document.getElementById('globalFilterBtn');
+            const filterPanel = document.getElementById('globalFilterPanel');
+            const filterApply = document.getElementById('globalFilterApply');
+            const filterCategory = document.getElementById('globalFilterCategory');
+            const filterMin = document.getElementById('globalFilterMin');
+            const filterMax = document.getElementById('globalFilterMax');
+
+            function getProductCards() {
+                // Works on dashboard and product index grids
+                return Array.from(document.querySelectorAll('.product-grid .card'));
+            }
+
+            function normalize(text) { return (text || '').toString().toLowerCase(); }
+
+            function getCardData(card) {
+                const titleEl = card.querySelector('.card-title, h6');
+                const priceEl = card.querySelector('.product-price, .card-text');
+                const title = titleEl ? titleEl.textContent.trim() : '';
+                // extract numeric price
+                const priceText = priceEl ? priceEl.textContent.replace(/[^0-9.]/g, '') : '';
+                const price = parseFloat(priceText || '0') || 0;
+                return { title, price };
+            }
+
+            function applyFilters() {
+                const q = normalize(searchInput ? searchInput.value : '');
+                const cat = filterCategory ? filterCategory.value : 'all';
+                const min = filterMin && filterMin.value ? parseFloat(filterMin.value) : null;
+                const max = filterMax && filterMax.value ? parseFloat(filterMax.value) : null;
+
+                const cards = getProductCards();
+                cards.forEach(card => {
+                    const { title, price } = getCardData(card);
+
+                    // category check based on current page URL
+                    let inCategory = true;
+                    if (cat && cat !== 'all') {
+                        const urlCat = new URL(window.location.href, window.location.origin).searchParams.get('category') || 'all';
+                        inCategory = (urlCat.toLowerCase() === cat.toLowerCase());
+                    }
+
+                    let match = true;
+                    if (q && !normalize(title).includes(q)) match = false;
+                    if (min !== null && price < min) match = false;
+                    if (max !== null && price > max) match = false;
+                    if (!inCategory) match = false;
+
+                    card.closest('.col-6, .col-md-4, .col-lg-3').style.display = match ? '' : 'none';
+                });
+            }
+
+            if (filterBtn && filterPanel) {
+                filterBtn.addEventListener('click', function() {
+                    filterPanel.style.display = (filterPanel.style.display === 'none' || !filterPanel.style.display) ? 'block' : 'none';
+                });
+                document.addEventListener('click', function(e){
+                    if (filterPanel.style.display === 'block') {
+                        const within = filterPanel.contains(e.target) || filterBtn.contains(e.target);
+                        if (!within) filterPanel.style.display = 'none';
+                    }
+                });
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function(){
+                    // small debounce
+                    clearTimeout(searchInput.__t);
+                    searchInput.__t = setTimeout(applyFilters, 180);
+                });
+            }
+            if (filterApply) {
+                filterApply.addEventListener('click', function(){
+                    applyFilters();
+                    if (filterPanel) filterPanel.style.display = 'none';
+                });
+            }
+        });
         });
     </script>
 </body>

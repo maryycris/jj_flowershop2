@@ -124,6 +124,74 @@
             display: none;
         }
         .clerk-navbar-spacer { height: 28px; width: 100%; }
+        
+        /* Clerk Sidebar Container */
+        .clerk-sidebar-container {
+            background: #F6FBF4;
+            min-width: 220px;
+            max-width: 260px;
+            height: calc(100vh - 108px);
+            position: fixed;
+            top: 108px;
+            left: 0;
+            z-index: 999;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+        
+        .clerk-sidebar-profile {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 0 20px;
+        }
+        
+        .clerk-sidebar-profile-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 10px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid #4CAF50;
+        }
+        
+        .clerk-sidebar-profile-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .clerk-sidebar-profile-icon i {
+            font-size: 3rem;
+            color: #888;
+        }
+        
+        .clerk-sidebar-profile-label {
+            font-size: 1rem;
+            color: #222;
+            font-weight: 500;
+        }
+        
+        .clerk-sidebar-nav {
+            padding: 0 15px;
+        }
+        
+        .clerk-sidebar-nav .nav-item {
+            margin-bottom: 5px;
+        }
+        
+        .clerk-main-content {
+            margin-left: 260px;
+            padding: 20px 4vw;
+        }
+        
+        @media (max-width: 768px) {
+            .clerk-sidebar-container {
+                display: none;
+            }
+            .clerk-main-content {
+                margin-left: 0;
+            }
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -166,21 +234,13 @@
                     <i class="bi bi-brush"></i>
                     <span>Customize</span>
                 </a>
-                <a href="{{ route('clerk.events.index') }}" class="clerk-navbar-link @if(request()->routeIs('clerk.events.*')) active @endif">
-                    <i class="bi bi-calendar-event"></i>
-                    <span>Event</span>
-                </a>
-                <a href="{{ route('clerk.inventory.index') }}" class="clerk-navbar-link @if(request()->routeIs('clerk.inventory.index')) active @endif">
-                    <i class="bi bi-clipboard"></i>
+                <a href="{{ route('clerk.inventory.index') }}" class="clerk-navbar-link @if(request()->routeIs('clerk.inventory.*')) active @endif">
+                    <i class="bi bi-box"></i>
                     <span>Inventory</span>
                 </a>
                 <a href="{{ route('clerk.orders.index') }}" class="clerk-navbar-link @if(request()->routeIs('clerk.orders.*')) active @endif">
                     <i class="bi bi-cart"></i>
                     <span>Sales Orders</span>
-                </a>
-                <a href="{{ route('clerk.invoices.index') }}" class="clerk-navbar-link @if(request()->routeIs('clerk.invoices.*')) active @endif">
-                    <i class="bi bi-file-earmark-text"></i>
-                    <span>Invoices</span>
                 </a>
                 <a href="#" class="clerk-navbar-link">
                     <i class="bi bi-chat"></i>
@@ -188,7 +248,50 @@
                 </a>
             </div>
         </nav>
-        <div class="container-fluid py-4" style="padding-left: 4.0vw; padding-right: 4.0vw;">
+        
+        @if(!(request()->routeIs('clerk.product_catalog.*') || request()->routeIs('clerk.customize.*') || request()->routeIs('clerk.orders.*') || request()->routeIs('clerk.invoices.*') || request()->routeIs('clerk.inventory.*')))
+        <!-- Clerk Sidebar -->
+        <div class="clerk-sidebar-container">
+            <div class="clerk-sidebar-profile">
+                <div class="clerk-sidebar-profile-icon">
+                    @if(auth()->user()->profile_picture)
+                        <img src="{{ asset('storage/' . auth()->user()->profile_picture) }}" alt="Profile Picture">
+                    @else
+                        <i class="bi bi-person-circle"></i>
+                    @endif
+                </div>
+                <div class="clerk-sidebar-profile-label">{{ auth()->user()->name ?? 'Clerk' }}</div>
+            </div>
+            
+            <nav class="clerk-sidebar-nav">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a href="{{ route('clerk.dashboard') }}" class="clerk-sidebar-link @if(request()->routeIs('clerk.dashboard')) active @endif">
+                            <i class="bi bi-house me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('clerk.invoices.index') }}" class="clerk-sidebar-link @if(request()->routeIs('clerk.invoices.*')) active @endif">
+                            <i class="bi bi-file-earmark-text me-2"></i>Invoices
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('clerk.profile.edit') }}" class="clerk-sidebar-link @if(request()->routeIs('clerk.profile.*')) active @endif">
+                            <i class="bi bi-person me-2"></i>Edit Profile
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('clerk.notifications.index') }}" class="clerk-sidebar-link @if(request()->routeIs('clerk.notifications.*')) active @endif">
+                            <i class="bi bi-bell me-2"></i>Notifications
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        @endif
+        
+        <!-- Main Content -->
+        <div class="@if(!(request()->routeIs('clerk.product_catalog.*') || request()->routeIs('clerk.customize.*') || request()->routeIs('clerk.orders.*') || request()->routeIs('clerk.invoices.*') || request()->routeIs('clerk.inventory.*')))clerk-main-content @else container-fluid py-4 @endif" style="@if(!(request()->routeIs('clerk.product_catalog.*') || request()->routeIs('clerk.customize.*') || request()->routeIs('clerk.orders.*') || request()->routeIs('clerk.invoices.*') || request()->routeIs('clerk.inventory.*')))@else padding-left: 4.0vw; padding-right: 4.0vw; @endif">
             @yield('content')
         </div>
     </div>

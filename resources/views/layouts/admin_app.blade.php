@@ -184,7 +184,7 @@
 <div class="navbar-admin-links-row">
     <div class="navbar-admin-links">
         <a href="{{ route('admin.products.index') }}" class="nav-link @if(request()->routeIs('admin.products.*')) active @endif"><i class="bi bi-grid"></i> Product catalog</a>
-        <a href="{{ route('admin.inventory.index') }}" class="nav-link @if(request()->routeIs('admin.inventory.index')) active @endif"><i class="bi bi-clipboard"></i> Inventory</a>
+        <a href="{{ route('admin.inventory.index') }}" class="nav-link @if(request()->routeIs('admin.inventory.*')) active @endif"><i class="bi bi-box"></i> Inventory</a>
         <div class="nav-link dropdown d-inline-block @if(request()->routeIs('admin.orders.*') || request()->routeIs('admin.walkInOrders.*')) active @endif" style="padding: 0;">
             <a href="#" class="dropdown-toggle text-decoration-none text-white" id="salesOrdersDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="padding: 0.5rem 1rem; display: inline-block;">
                 <i class="bi bi-cart"></i> Sales Orders <i class="bi bi-chevron-down ms-1"></i>
@@ -224,13 +224,7 @@
                     <a href="{{ route('admin.analytics') }}" class="sidebar-link @if(request()->routeIs('admin.analytics')) active @endif">Analytics</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.events.index') }}" class="sidebar-link @if(request()->routeIs('admin.events.index')) active @endif">Events</a>
-                </li>
-                <li class="nav-item w-100 mb-1">
                     <a href="{{ route('admin.users.index') }}" class="sidebar-link @if(request()->routeIs('admin.users.*')) active @endif">Manage Accounts</a>
-                </li>
-                <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.inventory.index') }}" class="sidebar-link @if(request()->routeIs('admin.inventory.*')) active @endif">Inventory Reports</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
                     <a href="{{ route('admin.reports.sales') }}" class="sidebar-link @if(request()->routeIs('admin.reports.sales')) active @endif">Sales Report</a>

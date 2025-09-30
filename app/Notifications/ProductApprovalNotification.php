@@ -7,6 +7,7 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\DatabaseMessage;
 use App\Models\Product;
+use App\Models\CatalogProduct;
 use App\Models\User;
 
 class ProductApprovalNotification extends Notification
@@ -21,13 +22,18 @@ class ProductApprovalNotification extends Notification
     /**
      * Create a new notification instance.
      *
-     * @param Product $product
+     * @param Product|CatalogProduct $product
      * @param User $clerk
      * @param array|null $changes
      * @param string $action
      */
-    public function __construct(Product $product, User $clerk, $action = 'added', $changes = null)
+    public function __construct($product, User $clerk, $action = 'added', $changes = null)
     {
+        // Validate that the product is either Product or CatalogProduct
+        if (!($product instanceof Product) && !($product instanceof CatalogProduct)) {
+            throw new \InvalidArgumentException('Product must be an instance of Product or CatalogProduct');
+        }
+        
         $this->product = $product;
         $this->clerk = $clerk;
         $this->action = $action;

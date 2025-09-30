@@ -1,15 +1,15 @@
 @extends('layouts.customer_app')
 
 @section('content')
-<div class="mb-3">
-    <a href="{{ url('/customer/dashboard') }}" class="btn btn-outline-success">
-        &larr; Back
-    </a>
-</div>
 <div class="container py-4" style="background: #f4faf4; min-height: 100vh;">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <div class="bg-white rounded-3 p-4" style="box-shadow: none;">
+            <div class="bg-white rounded-3 p-4 scrollable-content" style="box-shadow: none; max-height: 80vh; overflow-y: auto;">
+                <div class="mb-3">
+                    <a href="{{ url('/customer/dashboard') }}" class="btn btn-outline-success">
+                        &larr; Back
+                    </a>
+                </div>
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                         <input class="form-check-input me-2" type="checkbox" id="selectAllItems">
@@ -347,6 +347,31 @@
     .btn-outline-danger:hover {
         background: #e57373;
         color: #fff;
+    }
+    
+    /* Custom scrollbar styling for the cart content area */
+    .scrollable-content::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .scrollable-content::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .scrollable-content::-webkit-scrollbar-thumb {
+        background: #8ACB88;
+        border-radius: 4px;
+    }
+
+    .scrollable-content::-webkit-scrollbar-thumb:hover {
+        background: #7bb47b;
+    }
+
+    /* For Firefox */
+    .scrollable-content {
+        scrollbar-width: thin;
+        scrollbar-color: #8ACB88 #f1f1f1;
     }
 </style>
 @endpush 

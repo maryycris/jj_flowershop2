@@ -3,7 +3,7 @@
 @section('title', 'Notifications')
 
 @section('content')
-<div class="container-fluid py-4">
+<div class="container-fluid py-4" style="min-height: calc(100vh - 200px);">
     <div class="row justify-content-center">
         <div class="col-12 col-md-10 col-lg-8">
             <!-- Header -->
@@ -65,6 +65,17 @@
     }
     .notification-item .flex-grow-1 {
         min-width: 0;
+    }
+    
+    /* Ensure footer stays at bottom */
+    body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+    
+    main {
+        flex: 1;
     }
 </style>
 @endsection
@@ -162,7 +173,7 @@ function markAsRead(notificationId) {
 }
 
 function markAllAsRead() {
-    fetch('{{ route("customer.notifications.readAll") }}', {
+    fetch('{{ route("customer.notifications.markAllAsRead") }}', {
                     method: 'POST',
                     headers: {
             'X-CSRF-TOKEN': '{{ csrf_token() }}',

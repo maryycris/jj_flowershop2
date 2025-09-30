@@ -32,8 +32,6 @@
               <option value="Artificial Flowers">Artificial Flowers</option>
               <option value="Floral Supplies">Floral Supplies</option>
               <option value="Packaging Materials">Packaging Materials</option>
-              <option value="Materials, Tools, and Equipment">Materials, Tools, and Equipment</option>
-              <option value="Office Supplies">Office Supplies</option>
               <option value="Other Offers">Other Offers</option>
             </select>
                         </div>
@@ -103,7 +101,7 @@
 <?php if($products->count()): ?>
     <!-- Bootstrap Nav Tabs -->
     <ul class="nav nav-tabs mb-3" id="inventoryTabs" role="tablist">
-        <?php $__currentLoopData = ['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Materials, Tools, and Equipment', 'Office Supplies', 'Other Offers']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <?php $__currentLoopData = ['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Other Offers']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <li class="nav-item" role="presentation">
                 <button class="nav-link <?php if($loop->first): ?> active <?php endif; ?>" id="tab-<?php echo e(Str::slug($category)); ?>" data-bs-toggle="tab" data-bs-target="#<?php echo e(Str::slug($category)); ?>" type="button" role="tab" aria-controls="<?php echo e(Str::slug($category)); ?>" aria-selected="<?php echo e($loop->first ? 'true' : 'false'); ?>">
                     <?php echo e($category); ?>
@@ -113,7 +111,7 @@
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </ul>
     <div class="tab-content" id="inventoryTabsContent">
-        <?php $__currentLoopData = ['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Materials, Tools, and Equipment', 'Office Supplies', 'Other Offers']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <?php $__currentLoopData = ['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Other Offers']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <div class="tab-pane fade <?php if($loop->first): ?> show active <?php endif; ?>" id="<?php echo e(Str::slug($category)); ?>" role="tabpanel">
             <div class="table-responsive">
                     <table class="table table-bordered table-striped align-middle">
@@ -186,8 +184,6 @@
                                                           <option value="Artificial Flowers" <?php if($product->category == 'Artificial Flowers'): ?> selected <?php endif; ?>>Artificial Flowers</option>
                                                           <option value="Floral Supplies" <?php if($product->category == 'Floral Supplies'): ?> selected <?php endif; ?>>Floral Supplies</option>
                                                           <option value="Packaging Materials" <?php if($product->category == 'Packaging Materials'): ?> selected <?php endif; ?>>Packaging Materials</option>
-                                                          <option value="Materials, Tools, and Equipment" <?php if($product->category == 'Materials, Tools, and Equipment'): ?> selected <?php endif; ?>>Materials, Tools, and Equipment</option>
-                                                          <option value="Office Supplies" <?php if($product->category == 'Office Supplies'): ?> selected <?php endif; ?>>Office Supplies</option>
                                                           <option value="Other Offers" <?php if($product->category == 'Other Offers'): ?> selected <?php endif; ?>>Other Offers</option>
                                                         </select>
                                                       </div>

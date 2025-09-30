@@ -1,67 +1,150 @@
 <div class="modal fade" id="productModal" tabindex="-1" aria-labelledby="productModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content" style="border-radius: 18px;">
-      <div class="modal-body p-4 d-flex" style="gap: 32px; align-items: flex-start;">
-        <div style="flex: 1; text-align: center;">
-          <img id="modalProductImage" src="" alt="Product" style="max-width: 260px; max-height: 260px; border-radius: 10px; object-fit: cover;">
-          <div class="mt-3" id="modalProductDescription" style="font-size: 1.02rem; color: #444; text-align: left;">Description of the product...</div>
+    <div class="modal-content" style="border-radius: 18px; overflow: hidden;">
+      <div class="modal-body p-4 d-flex flex-column" style="gap: 20px;">
+        <div class="d-flex flex-column flex-lg-row" style="gap: 24px; align-items: flex-start;">
+          <!-- Left: Image + description -->
+          <div class="flex-grow-1" style="min-width: 280px; max-width: 320px;">
+            <div class="d-flex flex-column align-items-center">
+              <img id="modalProductImage" src="" alt="Product" style="width: 100%; max-width: 300px; aspect-ratio: 1/1; border-radius: 12px; object-fit: cover; box-shadow: 0 8px 20px rgba(0,0,0,0.08);">
+              <div class="mt-3 w-100">
+                <label class="form-label fw-semibold mb-2" style="color: #1f2d27; font-size: 0.95rem;">Description</label>
+                <div id="modalProductDescription" class="form-control" style="min-height: 80px; border: 1px solid #d7ead6; background: #f7fff6; border-radius: 8px; font-size: 0.95rem; color: #475057; resize: none; padding: 12px; font-family: inherit;">
+                  Description of the product...
+                </div>
+              </div>
         </div>
-        <div style="flex: 1; min-width: 260px;">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <h3 id="modalProductName" style="font-weight: 600; margin-bottom: 0;">Product Name</h3>
-            <span id="modalProductPrice" style="font-size: 1.3rem; font-weight: 600; color: #222;">₱0.00</span>
           </div>
-          <hr>
+          
+          <!-- Right: Details + Actions -->
+          <div class="flex-grow-1" style="min-width: 280px;">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+              <div>
+                <h3 id="modalProductName" class="mb-1" style="font-weight: 700; color: #1f2d27; font-size: 1.4rem;">Product Name</h3>
+                <div id="modalRatingSummary" class="d-flex align-items-center" style="gap:6px;">
+                  <div class="rating-stars" aria-label="average rating" style="font-size: 0.9rem; color:#f3c04b;"></div>
+                  <small id="modalRatingText" class="text-muted" style="font-size: 0.85rem;">No reviews yet</small>
+                </div>
+              </div>
+              <span id="modalProductPrice" class="badge text-bg-light" style="font-size: 1.1rem; font-weight: 700; color:#1f2d27; background:#eafbe6; border:1px solid #cbe7cb;">₱0.00</span>
+            </div>
+            
+            <hr class="my-2">
+            
           <div class="mb-3">
-            <label class="form-label mb-1" style="font-weight: 500;">Deliver to</label>
-            <div class="input-group" style="border-radius: 25px; overflow: hidden;">
+              <label class="form-label mb-1 fw-semibold" style="font-size: 0.9rem;">Deliver to</label>
+              <div class="input-group rounded-pill overflow-hidden" style="border:1px solid #d7ead6;">
               <span class="input-group-text" style="background: #cbe7cb; border: none;"><i class="fas fa-map-marker-alt"></i></span>
-              <input type="text" class="form-control" id="modalDeliveryLocation" placeholder="Enter delivery address" style="border: none; background: #eafbe6;">
+                <input type="text" class="form-control" id="modalDeliveryLocation" placeholder="Enter delivery address" style="border: none; background: #f7fff6; font-size: 0.9rem;">
               <button class="btn btn-link px-2" type="button" id="clearDeliveryLocation"><i class="fas fa-times"></i></button>
             </div>
           </div>
+            
           <div class="mb-3">
-            <label class="form-label mb-1" style="font-weight: 500;">Quantity</label>
-            <div class="d-flex align-items-center" style="gap: 12px;">
-              <button class="btn btn-outline-success rounded-circle px-0" type="button" id="modalQtyMinus" style="width: 36px; height: 36px; font-size: 1.3rem;">-</button>
-              <input type="text" id="modalProductQty" value="1" readonly style="width: 48px; text-align: center; border: none; background: #f4faf4; font-size: 1.1rem;">
-              <button class="btn btn-outline-success rounded-circle px-0" type="button" id="modalQtyPlus" style="width: 36px; height: 36px; font-size: 1.3rem;">+</button>
+              <label class="form-label mb-1 fw-semibold" style="font-size: 0.9rem;">Quantity</label>
+              <div class="d-flex align-items-center" style="gap: 10px;">
+                <button class="btn btn-outline-success rounded-circle px-0" type="button" id="modalQtyMinus" style="width: 32px; height: 32px; font-size: 1.1rem;">-</button>
+                <input type="text" id="modalProductQty" value="1" readonly style="width: 50px; text-align: center; border: none; background: #f4faf4; font-size: 1rem; border-radius:6px; padding:4px 0;">
+                <button class="btn btn-outline-success rounded-circle px-0" type="button" id="modalQtyPlus" style="width: 32px; height: 32px; font-size: 1.1rem;">+</button>
+              </div>
             </div>
+            
+            <div class="mb-3 d-flex align-items-center justify-content-between">
+              <span class="fw-semibold" style="font-size: 1rem;">Total</span>
+              <span id="modalProductTotal" style="font-size: 1.1rem; font-weight: 700; color: #1f2d27;">₱0.00</span>
+            </div>
+            
+            <div class="d-flex gap-2 mt-3 flex-wrap">
+              <button class="btn btn-outline-success flex-fill" id="modalAddToCartBtn" type="button" style="border-radius: 8px; font-weight: 600; font-size: 0.9rem; padding: 8px 12px;">Add to cart</button>
+              <button class="btn btn-outline-danger" id="modalAddToFavoritesBtn" type="button" title="Add to Favorites" style="border-radius: 8px; font-weight: 600; padding: 8px 12px;"><i class="bi bi-heart"></i></button>
+              <button class="btn btn-success flex-fill" id="modalBuyNowBtn" type="button" style="border-radius: 8px; font-weight: 600; font-size: 0.9rem; padding: 8px 12px;">Buy now</button>
+            </div>
+            
           </div>
-          <div class="mb-3 d-flex align-items-center justify-content-between">
-            <span style="font-size: 1.1rem; font-weight: 500;">Total</span>
-            <span id="modalProductTotal" style="font-size: 1.2rem; font-weight: 600; color: #222;">₱0.00</span>
           </div>
-          <div class="d-flex gap-3 mt-4">
-            <button class="btn btn-outline-success flex-fill" id="modalAddToCartBtn" type="button" style="border-radius: 25px; font-weight: 500;">Add to cart</button>
-            <button class="btn btn-outline-danger" id="modalAddToFavoritesBtn" type="button" title="Add to Favorites" style="border-radius: 25px; font-weight: 500; padding: 0 14px;"><i class="bi bi-heart"></i></button>
-            <button class="btn btn-success flex-fill" id="modalBuyNowBtn" type="button" style="border-radius: 25px; font-weight: 500;">Buy now</button>
+        
+        <!-- Reviews Section -->
+        <div id="modalReviewsSection" class="mt-2" style="background:#ffffff; border:1px solid #eef3ef; border-radius:10px; padding:12px;">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="mb-0 fw-bold" style="color:#1f2d27; font-size: 0.95rem;">Customer Reviews</h6>
+            <small id="modalReviewsCount" class="text-muted" style="font-size: 0.8rem;"></small>
           </div>
-          <?php if(request()->has('event_id')): ?>
-          <div class="d-flex gap-3 mt-3">
-            <button class="btn btn-warning flex-fill" id="modalAddToEventBtn" type="button" style="border-radius: 25px; font-weight: 500;">
-              <i class="fas fa-calendar-plus me-2"></i>Add to Event
-            </button>
+          <div id="modalReviewsList" style="max-height: 160px; overflow:auto;">
+            <div class="text-muted small">Loading reviews…</div>
           </div>
-          <?php endif; ?>
         </div>
       </div>
-      <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
     </div>
   </div>
 </div>
 <style>
-  #productModal .modal-content { box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+  #productModal .modal-content { box-shadow: 0 16px 44px rgba(0,0,0,0.12); }
   #productModal .btn-outline-success { border-color: #7bb47b; color: #7bb47b; }
   #productModal .btn-outline-success:hover { background: #7bb47b; color: #fff; }
   #productModal .btn-success { background: #7bb47b; border-color: #7bb47b; }
   #productModal .btn-success:hover { background: #5a9c5a; border-color: #5a9c5a; }
+  #productModal .review-item { border-bottom: 1px dashed #e7eee8; padding: 10px 0; }
+  #productModal .review-item:last-child { border-bottom: 0; }
+  #productModal .star { color:#d3d7d4; }
+  #productModal .star.filled { color:#f3c04b; }
 </style>
 <script>
-  // This script expects you to set product data and show the modal via JS
   let modalProduct = null;
+  function renderStars(rating) {
+    const full = Math.floor(rating || 0);
+    const hasHalf = (rating - full) >= 0.5;
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+      if (i <= full) { html += '<i class="bi bi-star-fill star filled"></i>'; }
+      else if (i === full + 1 && hasHalf) { html += '<i class="bi bi-star-half star filled"></i>'; }
+      else { html += '<i class="bi bi-star star"></i>'; }
+    }
+    return html;
+  }
+  function setRatingSummary(avg, count) {
+    const stars = document.querySelector('#modalRatingSummary .rating-stars');
+    const text = document.getElementById('modalRatingText');
+    const countEl = document.getElementById('modalReviewsCount');
+    if (stars) stars.innerHTML = renderStars(avg);
+    if (text) text.textContent = (count && count > 0) ? `${(avg||0).toFixed(1)} • ${count} review${count>1?'s':''}` : 'No reviews yet';
+    if (countEl) countEl.textContent = (count && count>0) ? `${count} review${count>1?'s':''}` : '';
+  }
+  function loadProductReviews(productId) {
+    const list = document.getElementById('modalReviewsList');
+    if (list) list.innerHTML = '<div class="text-muted small">Loading reviews…</div>';
+    fetch(`<?php echo e(url('/customer/products')); ?>/${productId}/reviews`)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        const reviews = Array.isArray(data.reviews) ? data.reviews : [];
+        const avg = Number(data.average_rating || 0);
+        setRatingSummary(avg, reviews.length);
+        if (!reviews.length) {
+          list.innerHTML = '<div class="text-muted small">No reviews yet.</div>';
+          return;
+        }
+        list.innerHTML = reviews.map(rv => {
+          const name = rv.user_name || 'Anonymous';
+          const when = rv.created_at ? new Date(rv.created_at).toLocaleDateString() : '';
+          const stars = renderStars(Number(rv.rating || 0));
+          const text = (rv.comment || '').replace(/</g,'&lt;');
+          return `<div class="review-item">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <div class="d-flex align-items-center" style="gap:8px;">
+                        <strong style="color:#1f2d27; font-size:0.95rem;">${name}</strong>
+                        <span class="rating-stars" style="font-size:0.9rem;">${stars}</span>
+                      </div>
+                      <small class="text-muted">${when}</small>
+                    </div>
+                    <div class="mt-1" style="color:#475057; font-size:0.95rem;">${text}</div>
+                  </div>`;
+        }).join('');
+      })
+      .catch(() => {
+        setRatingSummary(0,0);
+        if (list) list.innerHTML = '<div class="text-muted small">No reviews yet.</div>';
+      });
+  }
   function openProductModal(product) {
-    console.log('Product data:', product); // Debug: see what data is being passed
     modalProduct = product;
     document.getElementById('modalProductImage').src = product.image;
     document.getElementById('modalProductName').textContent = product.name;
@@ -70,6 +153,9 @@
     document.getElementById('modalProductQty').value = 1;
     document.getElementById('modalProductTotal').textContent = '₱' + parseFloat(product.price).toFixed(2);
     document.getElementById('modalDeliveryLocation').value = '';
+    setRatingSummary(0,0);
+    if (product.id) { loadProductReviews(product.id); }
+    setFavStateOnOpen();
     var modal = new bootstrap.Modal(document.getElementById('productModal'));
     modal.show();
   }
@@ -94,102 +180,87 @@
       const qty = parseInt(document.getElementById('modalProductQty').value);
       fetch("<?php echo e(route('customer.cart.add')); ?>", {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']').getAttribute('content')
-        },
-        body: JSON.stringify({ product_id: modalProduct.id, quantity: qty })
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']').getAttribute('content') },
+        body: JSON.stringify({ catalog_product_id: modalProduct.id, quantity: qty })
       })
       .then(response => {
-        if (response.redirected) {
-          window.location.href = response.url;
-        } else if (!response.ok) {
-          return response.json().then(errorData => {
-            alert('Failed to add product to cart: ' + (errorData.message || 'Unknown error'));
-            throw new Error('Server error');
-          });
-        } else {
-          alert('Product added to cart!');
-        }
+        if (response.redirected) { window.location.href = response.url; }
+        else if (!response.ok) { return response.json().then(errorData => { alert('Failed to add product to cart: ' + (errorData.message || 'Unknown error')); throw new Error('Server error'); }); }
+        else { alert('Product added to cart!'); }
       })
-      .catch(error => {
-        alert('An error occurred while adding product to cart.');
-      });
+      .catch(() => { alert('An error occurred while adding product to cart.'); });
     };
     document.getElementById('modalBuyNowBtn').onclick = function() {
       if (!modalProduct) return;
       const qty = parseInt(document.getElementById('modalProductQty').value);
-      // Redirect to checkout with product and quantity as query params
-      const url = `<?php echo e(url('/customer/checkout')); ?>?product_id=${modalProduct.id}&quantity=${qty}`;
+      const url = `<?php echo e(url('/customer/checkout')); ?>?catalog_product_id=${modalProduct.id}&quantity=${qty}`;
       window.location.href = url;
     };
-    // Add to Favorites (placeholder: navigates to favorites page)
     const favBtn = document.getElementById('modalAddToFavoritesBtn');
+    // Build API routes from Laravel route() to avoid path mistakes (GLOBAL)
+    window.favRoutes = {
+      index: "<?php echo e(route('customer.favorites.index')); ?>",
+      store: "<?php echo e(route('customer.favorites.store')); ?>",
+      checkTpl: "<?php echo e(route('customer.favorites.check', ['product' => '__ID__'])); ?>",
+      destroyTpl: "<?php echo e(route('customer.favorites.destroy', ['product' => '__ID__'])); ?>"
+    };
+    function getFavs(){
+      try { return JSON.parse(sessionStorage.getItem('jj_favorites') || '[]'); } catch(e) { return []; }
+    }
+    function setFavs(arr){ sessionStorage.setItem('jj_favorites', JSON.stringify(arr)); }
+    function isFav(id){ return getFavs().some(p => String(p.id) === String(id)); }
+    window.updateFavButtonUI = function(favored){
+      if (!favBtn) return;
+      if (favored){
+        favBtn.innerHTML = '<i class="bi bi-heart-fill"></i>';
+        favBtn.classList.remove('btn-outline-danger');
+        favBtn.classList.add('btn-danger');
+        favBtn.title = 'Remove from Favorites';
+      } else {
+        favBtn.innerHTML = '<i class="bi bi-heart"></i>';
+        favBtn.classList.remove('btn-danger');
+        favBtn.classList.add('btn-outline-danger');
+        favBtn.title = 'Add to Favorites';
+      }
+    }
     if (favBtn) {
+      // Toggle on click (optimistic + fast)
       favBtn.onclick = function() {
         if (!modalProduct) return;
-        try {
-          const item = {
-            id: modalProduct.id,
-            name: modalProduct.name,
-            price: modalProduct.price,
-            image: modalProduct.image
-          };
-          const key = 'jj_favorites';
-          const existing = JSON.parse(sessionStorage.getItem(key) || '[]');
-          // prevent duplicates by id
-          const next = existing.filter(p => String(p.id) !== String(item.id));
-          next.push(item);
-          sessionStorage.setItem(key, JSON.stringify(next));
-        } catch (e) { /* ignore storage issues */ }
-        // Visual feedback: fill heart and disable briefly
-        favBtn.innerHTML = '<i class="bi bi-heart-fill"></i>';
-        favBtn.classList.add('btn-danger');
-        favBtn.title = 'Added to Favorites';
-      };
-    }
-    
-    // Add to Event functionality
-    const addToEventBtn = document.getElementById('modalAddToEventBtn');
-    if (addToEventBtn) {
-      addToEventBtn.onclick = function() {
-        if (!modalProduct) return;
-        const qty = parseInt(document.getElementById('modalProductQty').value);
-        const eventId = new URLSearchParams(window.location.search).get('event_id');
-        
-        if (!eventId) {
-          alert('No event selected. Please go back to your event order summary.');
-          return;
-        }
-        
-        fetch(`<?php echo e(url('/customer/events')); ?>/${eventId}/add-product`, {
+        const csrf = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
+        const icon = favBtn.querySelector('i');
+        const wasFilled = icon && icon.classList.contains('bi-heart-fill');
+        const nextFilled = !wasFilled;
+        // instant UI feedback
+        updateFavButtonUI(nextFilled);
+        // prevent double-click spam
+        favBtn.disabled = true;
+
+        const req = wasFilled
+          ? fetch(window.favRoutes.destroyTpl.replace('__ID__', encodeURIComponent(modalProduct.id)), {
+              method: 'DELETE',
+              headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+              credentials: 'same-origin'
+            })
+          : fetch(window.favRoutes.store, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']').getAttribute('content')
-          },
-          body: JSON.stringify({ 
-            product_id: modalProduct.id, 
-            quantity: qty 
-          })
-        })
-        .then(response => {
-          if (response.ok) {
-            alert('Product added to event successfully!');
-            // Close modal and redirect back to order summary
-            const modal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
-            modal.hide();
-            window.location.href = `<?php echo e(url('/customer/events')); ?>/${eventId}/order-summary`;
-          } else {
-            return response.json().then(errorData => {
-              alert('Failed to add product to event: ' + (errorData.message || 'Unknown error'));
+              headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+              body: JSON.stringify({ product_id: modalProduct.id }),
+              credentials: 'same-origin'
             });
-          }
-        })
-        .catch(error => {
-          alert('An error occurred while adding product to event.');
-        });
+
+        req.then(res => {
+            if (!res.ok) throw new Error('request_failed');
+          })
+          .catch(() => {
+            // revert UI on failure and resync from server
+            updateFavButtonUI(wasFilled);
+            setFavStateOnOpen();
+          })
+          .finally(() => { favBtn.disabled = false; });
       };
+      favBtn.setAttribute('role', 'button');
+      favBtn.style.cursor = 'pointer';
     }
     function updateModalTotal() {
       if (!modalProduct) return;
@@ -198,4 +269,15 @@
       document.getElementById('modalProductTotal').textContent = '₱' + total.toFixed(2);
     }
   });
-</script> <?php /**PATH C:\xampp\htdocs\JJ_Flowershop_Capstone\resources\views/customer/products/modal.blade.php ENDPATH**/ ?>
+  // When opening, also set heart state based on current favorites
+  function setFavStateOnOpen(){
+    const favBtn = document.getElementById('modalAddToFavoritesBtn');
+    if (!modalProduct || !favBtn) return;
+    const checkUrl = (window.favRoutes ? window.favRoutes.checkTpl : '').replace('__ID__', encodeURIComponent(modalProduct.id));
+    fetch(checkUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(state => window.updateFavButtonUI && window.updateFavButtonUI(!!state.favored))
+      .catch(() => window.updateFavButtonUI && window.updateFavButtonUI(false));
+  }
+</script> 
+<?php /**PATH C:\xampp\htdocs\JJ_Flowershop_Capstone\resources\views/customer/products/modal.blade.php ENDPATH**/ ?>

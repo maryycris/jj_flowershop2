@@ -104,7 +104,7 @@
 @if($products->count())
     <!-- Bootstrap Nav Tabs -->
     <ul class="nav nav-tabs mb-3" id="inventoryTabs" role="tablist">
-        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Materials, Tools, and Equipment', 'Office Supplies', 'Other Offers'] as $category)
+        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Other Offers'] as $category)
             <li class="nav-item" role="presentation">
                 <button class="nav-link @if($loop->first) active @endif" id="tab-{{ Str::slug($category) }}" data-bs-toggle="tab" data-bs-target="#{{ Str::slug($category) }}" type="button" role="tab" aria-controls="{{ Str::slug($category) }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}">
                     {{ $category }}
@@ -113,7 +113,7 @@
         @endforeach
     </ul>
     <div class="tab-content" id="inventoryTabsContent">
-        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Materials, Tools, and Equipment', 'Office Supplies', 'Other Offers'] as $category)
+        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Other Offers'] as $category)
             <div class="tab-pane fade @if($loop->first) show active @endif" id="{{ Str::slug($category) }}" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table table-bordered table-striped align-middle">

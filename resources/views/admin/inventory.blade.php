@@ -33,8 +33,6 @@
               <option value="Artificial Flowers">Artificial Flowers</option>
               <option value="Floral Supplies">Floral Supplies</option>
               <option value="Packaging Materials">Packaging Materials</option>
-              <option value="Materials, Tools, and Equipment">Materials, Tools, and Equipment</option>
-              <option value="Office Supplies">Office Supplies</option>
               <option value="Other Offers">Other Offers</option>
             </select>
                         </div>
@@ -104,7 +102,7 @@
 @if($products->count())
     <!-- Bootstrap Nav Tabs -->
     <ul class="nav nav-tabs mb-3" id="inventoryTabs" role="tablist">
-        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Materials, Tools, and Equipment', 'Office Supplies', 'Other Offers'] as $category)
+        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Other Offers'] as $category)
             <li class="nav-item" role="presentation">
                 <button class="nav-link @if($loop->first) active @endif" id="tab-{{ Str::slug($category) }}" data-bs-toggle="tab" data-bs-target="#{{ Str::slug($category) }}" type="button" role="tab" aria-controls="{{ Str::slug($category) }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}">
                     {{ $category }}
@@ -113,7 +111,7 @@
         @endforeach
     </ul>
     <div class="tab-content" id="inventoryTabsContent">
-        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Materials, Tools, and Equipment', 'Office Supplies', 'Other Offers'] as $category)
+        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Other Offers'] as $category)
             <div class="tab-pane fade @if($loop->first) show active @endif" id="{{ Str::slug($category) }}" role="tabpanel">
             <div class="table-responsive">
                     <table class="table table-bordered table-striped align-middle">
@@ -186,8 +184,6 @@
                                                           <option value="Artificial Flowers" @if($product->category == 'Artificial Flowers') selected @endif>Artificial Flowers</option>
                                                           <option value="Floral Supplies" @if($product->category == 'Floral Supplies') selected @endif>Floral Supplies</option>
                                                           <option value="Packaging Materials" @if($product->category == 'Packaging Materials') selected @endif>Packaging Materials</option>
-                                                          <option value="Materials, Tools, and Equipment" @if($product->category == 'Materials, Tools, and Equipment') selected @endif>Materials, Tools, and Equipment</option>
-                                                          <option value="Office Supplies" @if($product->category == 'Office Supplies') selected @endif>Office Supplies</option>
                                                           <option value="Other Offers" @if($product->category == 'Other Offers') selected @endif>Other Offers</option>
                                                         </select>
                                                       </div>

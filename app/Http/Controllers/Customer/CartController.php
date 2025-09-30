@@ -26,14 +26,52 @@ class CartController extends Controller
 
     public function addToCart(Request $request)
     {
+        // Accept either a catalog_product_id (preferred from dashboard modal) or a product_id
         $request->validate([
-            'product_id' => 'required|exists:products,id',
             'quantity' => 'required|integer|min:1',
+            'product_id' => 'nullable|integer|exists:products,id',
+            'catalog_product_id' => 'nullable|integer|exists:catalog_products,id',
         ]);
 
+        $quantity = (int) $request->input('quantity');
         $productId = $request->input('product_id');
-        $quantity = $request->input('quantity');
+        $catalogProductId = $request->input('catalog_product_id');
         $user = Auth::user();
+
+        // Resolve to a Product ID if only catalog product is provided.
+        if (!$productId && $catalogProductId) {
+            // Strategy: find an existing Product with same name/price/category as CatalogProduct, else create a shadow Product
+            $catalog = \App\Models\CatalogProduct::find($catalogProductId);
+            if ($catalog) {
+                $existing = \App\Models\Product::where('name', $catalog->name)
+                    ->where('price', $catalog->price)
+                    ->where('category', $catalog->category)
+                    ->first();
+                if ($existing) {
+                    $productId = $existing->id;
+                } else {
+                    $product = new \App\Models\Product([
+                        'code' => null,
+                        'name' => $catalog->name,
+                        'description' => $catalog->description,
+                        'price' => $catalog->price,
+                        'stock' => 0,
+                        'category' => $catalog->category,
+                        'image' => $catalog->image,
+                        'image2' => $catalog->image2,
+                        'image3' => $catalog->image3,
+                        'status' => true,
+                        'is_approved' => true,
+                    ]);
+                    $product->save();
+                    $productId = $product->id;
+                }
+            }
+        }
+
+        if (!$productId) {
+            return response()->json(['message' => 'Invalid product.'], 422);
+        }
 
         $cartItem = CartItem::where('user_id', $user->id)
                               ->where('product_id', $productId)
@@ -52,6 +90,10 @@ class CartController extends Controller
             ]);
         }
 
+        // For fetch requests expecting JSON, return JSON success; otherwise fallback to redirect
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Product added to cart!']);
+        }
         return redirect()->back()->with('success', 'Product added to cart!');
     }
 

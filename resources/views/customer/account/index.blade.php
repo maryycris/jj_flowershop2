@@ -4,45 +4,50 @@
 <style>
     .profile-card {
         background: #fff;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        padding: 32px 32px 24px 32px;
-        max-width: 700px;
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+        padding: 36px 40px 28px 40px;
+        max-width: 760px;
         margin: 20px auto 0 auto;
         position: relative;
+        border: 1px solid #eef3ef;
     }
     .profile-title {
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: #444;
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin-bottom: 4px;
+        color: #2c3e50;
     }
     .profile-section {
         margin-bottom: 18px;
     }
     .profile-label {
-        font-weight: 500;
-        color: #333;
-        min-width: 140px;
+        font-weight: 600;
+        color: #546e5b;
+        min-width: 160px;
         display: inline-block;
     }
     .profile-value {
-        color: #222;
+        color: #1f2d27;
         font-style: normal;
     }
     .edit-details-btn {
         background: #7bb47b;
         color: #fff;
         border: none;
-        border-radius: 4px;
-        padding: 8px 28px;
-        font-weight: 600;
-        transition: background 0.2s;
+        border-radius: 24px;
+        padding: 10px 28px;
+        font-weight: 700;
+        letter-spacing: .2px;
+        transition: transform .15s ease, box-shadow .15s ease;
         display: block;
-        margin: 0 auto;
+        margin: 6px auto 0 auto;
+        box-shadow: 0 6px 14px rgba(122, 179, 122, .25);
     }
     .edit-details-btn:hover {
         background: #5a9c5a;
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(122, 179, 122, .32);
     }
     .profile-image {
         width: 80px;
@@ -71,6 +76,8 @@
         justify-content: space-between;
         margin-bottom: 18px;
     }
+    /* Divider styling */
+    .profile-divider { border: 0; height: 1px; background: linear-gradient(to right, transparent, #e7efe7, transparent); margin: 10px 0 20px; }
 </style>
 <div class="container-fluid">
     <div class="row justify-content-center">
@@ -86,11 +93,11 @@
                         {{ session('reminder') }}
                     </div>
                 @endif
-                <div class="profile-card d-flex align-items-start" style="background: #fff; border-radius: 10px; box-shadow: none; padding: 36px 36px 28px 36px; max-width: 700px; width: 100%; margin: 0 auto;">
+                <div class="profile-card d-flex align-items-start" style="width: 100%; margin: 0 auto;">
                     <!-- Removed profile picture from right side -->
                     <div class="flex-grow-1">
-                        <div class="profile-title mb-2" style="font-size: 1.4rem; font-weight: 600; color: #444;">My Personal Info</div>
-                        <hr>
+                        <div class="profile-title mb-2">My Personal Info</div>
+                        <hr class="profile-divider">
                         <div class="profile-section" style="margin-bottom: 16px;"><span class="profile-label">First Name:</span> <span class="profile-value">{{ Auth::user()->first_name ?? 'N/A' }}</span></div>
                         <div class="profile-section" style="margin-bottom: 16px;"><span class="profile-label">Last Name:</span> <span class="profile-value">{{ Auth::user()->last_name ?? 'N/A' }}</span></div>
                         <div class="profile-section" style="margin-bottom: 16px;"><span class="profile-label">E-mail:</span> <span class="profile-value">{{ Auth::user()->email ?? 'N/A' }}</span></div>

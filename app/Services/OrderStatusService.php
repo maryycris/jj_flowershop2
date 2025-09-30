@@ -198,4 +198,25 @@ class OrderStatusService
                 ->count(),
         ];
     }
+
+    /**
+     * Get customer display status for order
+     */
+    public static function getCustomerDisplayStatus($status)
+    {
+        switch (strtolower($status)) {
+            case 'pending':
+                return 'pending';
+            case 'approved':
+                return 'approved';
+            case 'on_delivery':
+                return 'on_delivery';
+            case 'completed':
+                return 'completed';
+            case 'cancelled':
+                return 'cancelled';
+            default:
+                return 'pending';
+        }
+    }
 }

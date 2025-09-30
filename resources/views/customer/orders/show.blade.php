@@ -1,13 +1,8 @@
 @extends('layouts.customer_app')
 
 @section('content')
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Order Details #{{ $order->id }}</h2>
-        <a href="{{ route('customer.orders.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i> Back to My Orders
-        </a>
-    </div>
+<div class="pt-0 pb-4" style="background: #f4faf4; min-height: 100vh;">
+    <div class="container" style="max-width: 1400px;">
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -23,49 +18,218 @@
         </div>
     @endif
 
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Order Information</h5>
+        <div class="row justify-content-center">
+            <!-- Left Box - Order Details -->
+            <div class="col-12 col-lg-8 col-xl-6" style="max-width: 1200px;">
+                <!-- Header Section for Left Box -->
+                <div class="mb-2">
+                    <div class="rounded-2 p-2" style="background: linear-gradient(135deg, #8ACB88, #7bb47b); box-shadow: 0 2px 10px rgba(0,0,0,0.08); border: none; display: inline-block;">
+                        <h4 class="mb-0" style="color: white; font-weight: 600;">
+                            Order Details #{{ $order->id }}
+                        </h4>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <strong>Order ID:</strong> #{{ $order->id }}
+                
+                <div class="bg-white rounded-3 p-4 mb-4 scrollable-content" style="box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: none; max-height: 85vh; overflow-y: auto;">
+                    
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="me-3">
+                            <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #8ACB88, #7bb47b); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-shopping-bag text-white" style="font-size: 1.5rem;"></i>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <strong>Status:</strong> 
+                        <div>
+                            <h4 class="mb-1" style="color: #2c3e50; font-weight: 700;">Order Information</h4>
+                            <p class="text-muted mb-0">Order #{{ $order->id }} • {{ $order->created_at->format('M d, Y') }}</p>
+                </div>
+                        </div>
+                    
+                    <!-- Order Status Cards -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                                <i class="fas fa-info-circle me-3 text-primary"></i>
+                                <div>
+                                    <small class="text-muted d-block">Order Status</small>
                             @if($order->status === 'pending')
-                                <span class="badge bg-warning">Pending Approval</span>
+                                        <span class="badge bg-warning px-3 py-2">Pending Approval</span>
                             @else
                                 <span class="badge bg-{{ 
                                     $order->status === 'approved' ? 'info' : 
                                     ($order->status === 'processing' ? 'primary' : 
                                     ($order->status === 'completed' ? 'success' : 
                                     ($order->status === 'cancelled' ? 'danger' : 'secondary'))) 
-                                }}">{{ ucfirst($order->status) }}</span>
+                                        }} px-3 py-2">{{ ucfirst($order->status) }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                                <i class="fas fa-credit-card me-3 text-primary"></i>
+                                <div>
+                                    <small class="text-muted d-block">Payment Status</small>
+                                    @if($order->payment_status === 'paid')
+                                        <span class="badge bg-success px-3 py-2">Paid</span>
+                                    @elseif($order->payment_status === 'pending')
+                                        <span class="badge bg-warning px-3 py-2">Pending</span>
+                                    @else
+                                        <span class="badge bg-danger px-3 py-2">Unpaid</span>
                             @endif
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <strong>Order Date:</strong> {{ $order->created_at->format('M d, Y h:i A') }}
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <strong>Total Amount:</strong> ₱{{ number_format($order->total_price, 2) }}
+                    </div>
+                    
+                    <!-- Total Amount & Payment Method -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3" style="background: linear-gradient(135deg, #8ACB88, #7bb47b); border-radius: 8px; color: white;">
+                                <i class="fas fa-dollar-sign me-3"></i>
+                                <div>
+                                    <small class="opacity-75 d-block">Total Amount</small>
+                                    <strong style="font-size: 1.2rem;">₱{{ number_format($order->total_price, 2) }}</strong>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <strong>Payment Status:</strong> 
-                            <span class="badge bg-{{ $order->payment_status === 'paid' ? 'success' : 'warning' }}">{{ ucfirst($order->payment_status) }}</span>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                                <i class="fas fa-wallet me-3 text-primary"></i>
+                                <div>
+                                    <small class="text-muted d-block">Payment Method</small>
+                                    <span class="badge bg-info px-3 py-2">{{ strtoupper($order->payment_method ?? 'N/A') }}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <strong>Payment Method:</strong> 
-                            <span class="badge bg-info">{{ strtoupper($order->payment_method ?? 'N/A') }}</span>
+                    </div>
+
+                    <!-- Products in Order -->
+                    <div class="mb-4">
+                        <h5 class="mb-3" style="color: #2c3e50; font-weight: 600;">
+                            <i class="fas fa-box me-2 text-primary"></i>Products in Order
+                        </h5>
+                        <div class="row g-3">
+                            @foreach ($order->products as $product)
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px; border-left: 4px solid #8ACB88;">
+                                        <img src="{{ asset('storage/' . $product->image) }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;" alt="{{ $product->name }}">
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1" style="color: #2c3e50;">{{ $product->name }}</h6>
+                                            <small class="text-muted">Quantity: {{ $product->pivot->quantity }}</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <strong style="color: #8ACB88; font-size: 1.1rem;">₱{{ number_format($product->price * $product->pivot->quantity, 2) }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
+                    </div>
+
+                    <!-- Delivery Information -->
+                    @if($order->delivery)
+                        <div class="mb-4">
+                            <h5 class="mb-3" style="color: #2c3e50; font-weight: 600;">
+                                <i class="fas fa-truck me-2 text-primary"></i>Delivery Information
+                            </h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                                        <i class="fas fa-map-marker-alt me-3 text-primary"></i>
+                                        <div>
+                                            <small class="text-muted d-block">Delivery Address</small>
+                                            <strong>{{ $order->delivery->delivery_address ?? 'N/A' }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                                        <i class="fas fa-user me-3 text-primary"></i>
+                                        <div>
+                                            <small class="text-muted d-block">Recipient</small>
+                                            <strong>{{ $order->delivery->recipient_name ?? 'N/A' }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                                        <i class="fas fa-calendar me-3 text-primary"></i>
+                                        <div>
+                                            <small class="text-muted d-block">Delivery Date</small>
+                                            <strong>{{ $order->delivery->delivery_date ? date('M d, Y', strtotime($order->delivery->delivery_date)) : 'N/A' }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                                        <i class="fas fa-clock me-3 text-primary"></i>
+                                        <div>
+                                            <small class="text-muted d-block">Delivery Time</small>
+                                            <strong>{{ $order->delivery->delivery_time ?? 'N/A' }}</strong>
+                                        </div>
+                        </div>
+                        </div>
+                        </div>
+                        </div>
+                    @endif
+
+                    <!-- Special Instructions -->
                         @if($order->notes)
-                            <div class="col-md-12 mb-3">
-                                <strong>Special Instructions:</strong> {{ $order->notes }}
+                        <div class="mb-4">
+                            <h5 class="mb-3" style="color: #2c3e50; font-weight: 600;">
+                                <i class="fas fa-sticky-note me-2 text-primary"></i>Special Instructions
+                            </h5>
+                            <div class="p-3" style="background: #f8f9fa; border-radius: 8px; border-left: 4px solid #8ACB88;">
+                                <p class="mb-0">{{ $order->notes }}</p>
+                            </div>
                             </div>
                         @endif
+                </div>
+            </div>
+
+            <!-- Right Box - Actions & Customer Info -->
+            <div class="col-12 col-lg-4 col-xl-4">
+                <!-- Header Section for Right Box -->
+                <div class="d-flex justify-content-end mb-2">
+                    <a href="{{ route('customer.orders.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i> Back to My Orders
+                    </a>
+                </div>
+                
+                <div class="bg-white rounded-3 p-4 mb-4 scrollable-content" style="box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: none; max-height: 85vh; overflow-y: auto;">
+                    
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="me-3">
+                            <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #6c757d, #495057); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-user text-white" style="font-size: 1.5rem;"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="mb-1" style="color: #2c3e50; font-weight: 700;">Customer Information</h4>
+                            <p class="text-muted mb-0">Account Details</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center p-3 mb-3" style="background: #f8f9fa; border-radius: 8px;">
+                            <i class="fas fa-user me-3 text-primary"></i>
+                            <div>
+                                <small class="text-muted d-block">Full Name</small>
+                                <strong>{{ $order->user->name }}</strong>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center p-3 mb-3" style="background: #f8f9fa; border-radius: 8px;">
+                            <i class="fas fa-envelope me-3 text-primary"></i>
+                            <div>
+                                <small class="text-muted d-block">Email Address</small>
+                                <strong>{{ $order->user->email }}</strong>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                            <i class="fas fa-phone me-3 text-primary"></i>
+                            <div>
+                                <small class="text-muted d-block">Phone Number</small>
+                                <strong>{{ $order->user->contact_number ?? 'N/A' }}</strong>
                     </div>
                 </div>
             </div>
@@ -77,13 +241,12 @@
             @endphp
             
             @if($isOnDelivery)
-                <!-- Invoice Options - Only show when order is on delivery or completed -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0">Invoice Options</h5>
-                    </div>
-                    <div class="card-body">
-                        <a href="{{ route('customer.orders.invoice.view', $order->id) }}" class="btn btn-primary me-2" target="_blank">
+                        <div class="mb-4">
+                            <h5 class="mb-3" style="color: #2c3e50; font-weight: 600;">
+                                <i class="fas fa-file-invoice me-2 text-primary"></i>Invoice Options
+                            </h5>
+                            <div class="d-grid gap-2">
+                                <a href="{{ route('customer.orders.invoice.view', $order->id) }}" class="btn btn-primary" target="_blank">
                             <i class="fas fa-eye me-2"></i> View Invoice
                         </a>
                         <a href="{{ route('customer.orders.invoice.download', $order->id) }}" class="btn btn-success">
@@ -92,13 +255,12 @@
                     </div>
                 </div>
             @elseif($isCOD)
-                <!-- Order Slip - Show when COD payment method -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0">Order Slip</h5>
-                    </div>
-                    <div class="card-body">
-                        <a href="{{ route('customer.orders.invoice.view', $order->id) }}" class="btn btn-primary me-2" target="_blank">
+                        <div class="mb-4">
+                            <h5 class="mb-3" style="color: #2c3e50; font-weight: 600;">
+                                <i class="fas fa-receipt me-2 text-primary"></i>Order Slip
+                            </h5>
+                            <div class="d-grid gap-2">
+                                <a href="{{ route('customer.orders.invoice.view', $order->id) }}" class="btn btn-primary" target="_blank">
                             <i class="fas fa-eye me-2"></i> View Order Slip
                         </a>
                         <a href="{{ route('customer.orders.invoice.download', $order->id) }}" class="btn btn-success">
@@ -107,13 +269,12 @@
                     </div>
                 </div>
             @else
-                <!-- Payment Receipt - Show for other payment methods -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0">Payment Receipt</h5>
-                    </div>
-                    <div class="card-body">
-                        <a href="{{ route('customer.orders.invoice.view', $order->id) }}" class="btn btn-primary me-2" target="_blank">
+                        <div class="mb-4">
+                            <h5 class="mb-3" style="color: #2c3e50; font-weight: 600;">
+                                <i class="fas fa-receipt me-2 text-primary"></i>Payment Receipt
+                            </h5>
+                            <div class="d-grid gap-2">
+                                <a href="{{ route('customer.orders.invoice.view', $order->id) }}" class="btn btn-primary" target="_blank">
                             <i class="fas fa-eye me-2"></i> View Receipt
                         </a>
                         <a href="{{ route('customer.orders.invoice.download', $order->id) }}" class="btn btn-success">
@@ -123,88 +284,12 @@
                 </div>
             @endif
 
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Products in Order</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        @foreach ($order->products as $product)
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <img src="{{ asset('storage/' . $product->image) }}" class="img-thumbnail me-3" style="width: 50px; height: 50px; object-fit: cover;" alt="{{ $product->name }}">
-                                    <div>
-                                        <strong>{{ $product->name }}</strong>
-                                        <small class="text-muted d-block">Quantity: {{ $product->pivot->quantity }}</small>
-                                    </div>
-                                </div>
-                                <span>₱{{ number_format($product->price * $product->pivot->quantity, 2) }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
-            </div>
-
-            @if($order->delivery)
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0">Delivery Information</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <strong>Delivery Status:</strong> 
-                                <span class="badge bg-{{ 
-                                    $order->delivery->status === 'pending' ? 'warning' : 
-                                    ($order->delivery->status === 'in_transit' ? 'info' : 
-                                    ($order->delivery->status === 'delivered' ? 'success' : 
-                                    ($order->delivery->status === 'cancelled' ? 'danger' : 'secondary'))) 
-                                }}">{{ ucfirst($order->delivery->status) }}</span>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <strong>Delivery Date:</strong> {{ $order->delivery->delivery_date ? date('M d, Y', strtotime($order->delivery->delivery_date)) : 'N/A' }}
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <strong>Delivery Time:</strong> {{ $order->delivery->delivery_time ?? 'N/A' }}
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <strong>Recipient Name:</strong> {{ $order->delivery->recipient_name ?? 'N/A' }}
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <strong>Recipient Phone:</strong> {{ $order->delivery->recipient_phone ?? 'N/A' }}
-                            </div>
-                            <div class="col-md-12 mb-3">
-                                <strong>Delivery Address:</strong> {{ $order->delivery->delivery_address ?? 'N/A' }}
-                            </div>
-                            @if($order->delivery->notes)
-                                <div class="col-md-12 mb-3">
-                                    <strong>Delivery Notes:</strong> {{ $order->delivery->notes }}
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            @endif
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0">Customer Information</h5>
-                </div>
-                <div class="card-body">
-                    <p class="mb-2"><strong>Name:</strong> {{ $order->user->name }}</p>
-                    <p class="mb-2"><strong>Email:</strong> {{ $order->user->email }}</p>
-                    <p class="mb-0"><strong>Phone:</strong> {{ $order->user->contact_number ?? 'N/A' }}</p>
-                </div>
-            </div>
-
+                    <!-- Upload Payment Proof -->
             @if(in_array($order->payment_method, ['gcash','paymaya']) && $order->payment_status === 'unpaid')
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Upload Payment Proof</h5>
-                </div>
-                <div class="card-body">
+                        <div class="mb-4">
+                            <h5 class="mb-3" style="color: #2c3e50; font-weight: 600;">
+                                <i class="fas fa-upload me-2 text-primary"></i>Upload Payment Proof
+                            </h5>
                     @if($errors->any())
                         <div class="alert alert-danger">
                             <ul class="mb-0">
@@ -231,17 +316,15 @@
                         </div>
                         <button type="submit" class="btn btn-success w-100">Submit Payment Proof</button>
                     </form>
-                </div>
             </div>
             @endif
 
             <!-- Order Actions -->
             @if ($order->status === 'pending' && $order->payment_status !== 'paid')
-                <div class="card shadow-sm">
-                    <div class="card-header bg-danger text-white">
-                        <h5 class="mb-0">Order Actions</h5>
-                    </div>
-                    <div class="card-body">
+                        <div>
+                            <h5 class="mb-3" style="color: #2c3e50; font-weight: 600;">
+                                <i class="fas fa-exclamation-triangle me-2 text-danger"></i>Order Actions
+                            </h5>
                         <p class="text-muted small mb-3">
                             <i class="fas fa-info-circle me-2"></i>
                             You can only cancel orders that are still pending and within 24 hours of placement.
@@ -252,10 +335,40 @@
                                 <i class="fas fa-times me-2"></i>Cancel Order
                             </button>
                         </form>
-                    </div>
                 </div>
             @endif
+                </div>
+            </div>
         </div>
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    /* Custom scrollbar styling for the content areas */
+    .scrollable-content::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .scrollable-content::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .scrollable-content::-webkit-scrollbar-thumb {
+        background: #8ACB88;
+        border-radius: 4px;
+    }
+
+    .scrollable-content::-webkit-scrollbar-thumb:hover {
+        background: #7bb47b;
+    }
+
+    /* For Firefox */
+    .scrollable-content {
+        scrollbar-width: thin;
+        scrollbar-color: #8ACB88 #f1f1f1;
+    }
+</style>
+@endpush

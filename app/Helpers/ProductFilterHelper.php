@@ -3,25 +3,24 @@
 namespace App\Helpers;
 
 use App\Models\Product;
+use App\Models\CatalogProduct;
 
 class ProductFilterHelper
 {
     /**
-     * Get products for customer catalog (approved, active, in stock)
+     * Get products for customer catalog (catalog products from admin)
      */
     public static function getCustomerCatalog($filters = [])
     {
-        $query = Product::query();
+        $query = CatalogProduct::query();
         
-        // Only show products that are:
+        // Only show catalog products that are:
         // 1. Active/approved by admin
-        // 2. In stock (stock > 0)
-        // 3. Not customization components
-        $excludeCategories = ['Wrapper', 'Focal', 'Greeneries', 'Ribbons', 'Fillers'];
+        // 2. Only finished products (bouquets, packages, gifts)
+        $includeCategories = ['Bouquets', 'Packages', 'Gifts'];
         $query->where('status', true)
               ->where('is_approved', true)
-              ->where('stock', '>', 0)
-              ->whereNotIn('category', $excludeCategories);
+              ->whereIn('category', $includeCategories);
         
         // Apply additional filters
         if (isset($filters['category']) && $filters['category'] !== 'all') {

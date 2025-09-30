@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Clerk;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\CatalogProduct;
 use App\Models\Delivery;
 use App\Models\User;
 use App\Models\PendingInventoryChange;
@@ -50,52 +51,49 @@ class ClerkController extends Controller
     }
 
     public function storeProduct(Request $request) {
-        $validated = $request->validate([
-            'code' => 'required|string|max:255|unique:products,code',
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'category' => 'required|string|max:255',
-            'image' => 'required|image|max:2048',
-            'description' => 'nullable|string',
-            'stock' => 'nullable|integer|min:0',
-            'cost_price' => 'nullable|numeric|min:0',
-            'reorder_min' => 'nullable|integer|min:0',
-            'reorder_max' => 'nullable|integer|min:0',
-            'compositions' => 'nullable|array',
-            'compositions.*.component_id' => 'required_with:compositions|integer|exists:products,id',
-            'compositions.*.component_name' => 'required_with:compositions|string|max:255',
-            'compositions.*.quantity' => 'required_with:compositions|numeric|min:0.01',
-            'compositions.*.unit' => 'required_with:compositions|string|max:50',
-        ]);
+        // Debug: Log the incoming request data
+        \Log::info('Clerk product store request data:', $request->all());
+        
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'price' => 'required|numeric|min:0',
+                'category' => 'required|string|in:Bouquets,Packages,Gifts',
+                'image' => 'required|image|max:2048',
+                'description' => 'nullable|string',
+                'compositions' => 'nullable|array',
+                'compositions.*.component_id' => 'required_with:compositions|integer|exists:products,id',
+                'compositions.*.component_name' => 'required_with:compositions|string|max:255',
+                'compositions.*.quantity' => 'required_with:compositions|numeric|min:1',
+                'compositions.*.unit' => 'required_with:compositions|string|max:50',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Clerk validation failed:', $e->errors());
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        }
 
         $productData = [
-            'code' => $validated['code'],
             'name' => $validated['name'],
             'price' => $validated['price'],
             'category' => $validated['category'],
             'description' => $validated['description'] ?? null,
-            'stock' => $validated['stock'] ?? 0,
-            'cost_price' => $validated['cost_price'] ?? 0,
-            'reorder_min' => $validated['reorder_min'] ?? 0,
-            'reorder_max' => $validated['reorder_max'] ?? 0,
-            'qty_consumed' => 0,
-            'qty_damaged' => 0,
-            'qty_sold' => 0,
             'status' => true,
             'is_approved' => false, // Clerk products need admin approval
+            'created_by' => auth()->id(), // Track who created the product
         ];
 
         if ($request->hasFile('image')) {
-            $productData['image'] = $request->file('image')->store('products', 'public');
+            $productData['image'] = $request->file('image')->store('catalog_products', 'public');
         }
 
-        $product = \App\Models\Product::create($productData);
+        $catalogProduct = \App\Models\CatalogProduct::create($productData);
+        \Log::info('Clerk catalog product created:', ['id' => $catalogProduct->id, 'name' => $catalogProduct->name]);
 
-        // Save product compositions (materials needed)
+        // Save product compositions (materials from inventory)
         if ($request->has('compositions') && is_array($request->compositions)) {
             foreach ($request->compositions as $composition) {
                 if (!empty($composition['component_id']) && !empty($composition['component_name']) && !empty($composition['quantity'])) {
-                    $product->compositions()->create([
+                    $catalogProduct->compositions()->create([
                         'component_id' => $composition['component_id'],
                         'component_name' => $composition['component_name'],
                         'quantity' => $composition['quantity'],
@@ -104,12 +102,13 @@ class ClerkController extends Controller
                     ]);
                 }
             }
+            \Log::info('Compositions saved for clerk product:', ['product_id' => $catalogProduct->id, 'compositions_count' => count($request->compositions)]);
         }
 
         // Notify all admins that a clerk added a product
         $admins = \App\Models\User::where('role', 'admin')->get();
         foreach ($admins as $admin) {
-            $admin->notify(new \App\Notifications\ProductApprovalNotification($product, auth()->user(), 'added'));
+            $admin->notify(new \App\Notifications\ProductApprovalNotification($catalogProduct, auth()->user(), 'added'));
         }
 
         return redirect()->route('clerk.product_catalog.index')->with('success', 'Product added successfully! It will be reviewed by an admin before being published.');
@@ -304,55 +303,20 @@ class ClerkController extends Controller
     }
 
     public function productCatalog(Request $request) {
-        $query = \App\Models\Product::query();
+        $query = \App\Models\CatalogProduct::query();
         
-        // Only show FINISHED PRODUCTS that are approved and active (same as customer catalog)
-        // Finished product categories shown in catalog
-        $includeCategories = ['Bouquets', 'Flowers', 'Fresh Flowers', 'Artificial Flowers', 'Gifts', 'Arrangements'];
+        // Only show catalog products that are approved and active (same as customer catalog)
+        // Catalog product categories shown in catalog
+        $includeCategories = ['Bouquets', 'Packages', 'Gifts'];
         $query->where('status', true)
               ->where('is_approved', true)
               ->whereIn('category', $includeCategories);
         
-        // Filter by category
-        if ($request->has('category') && $request->category !== '') {
-            $query->where('category', $request->category);
-        }
-        
-        // Filter by price range
-        if ($request->has('price_min') && $request->price_min !== '' && $request->price_min !== null) {
-            $query->where('price', '>=', $request->price_min);
-        }
-        
-        if ($request->has('price_max') && $request->price_max !== '' && $request->price_max !== null) {
-            $query->where('price', '<=', $request->price_max);
-        }
-        
-        // Sort products
-        $sort = $request->get('sort', 'newest');
-        switch ($sort) {
-            case 'name_asc':
-                $query->orderBy('name', 'asc');
-                break;
-            case 'name_desc':
-                $query->orderBy('name', 'desc');
-                break;
-            case 'price_asc':
-                $query->orderBy('price', 'asc');
-                break;
-            case 'price_desc':
-                $query->orderBy('price', 'desc');
-                break;
-            case 'oldest':
-                $query->orderBy('created_at', 'asc');
-                break;
-            case 'newest':
-            default:
-                $query->orderBy('created_at', 'desc');
-                break;
-        }
+        // Sort products by newest first
+        $query->orderBy('created_at', 'desc');
         
         $products = $query->get();
-        $promotedProducts = \App\Models\Product::where('status', true)
+        $promotedProducts = \App\Models\CatalogProduct::where('status', true)
                                               ->where('is_approved', true)
                                               ->whereIn('category', $includeCategories)
                                               ->orderBy('created_at', 'desc')

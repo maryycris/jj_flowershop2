@@ -3,124 +3,140 @@
 
 <?php $__env->startSection('admin_content'); ?>
 <div class="container-fluid py-4" style="background: #f6faf6; min-height: 100vh;">
-    <!-- Promoted Products Carousel -->
-    <div class="mx-auto mb-4" style="max-width: 900px;">
-        <div class="bg-white rounded-4 shadow-sm p-3 position-relative">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <button class="btn btn-link text-success p-0" data-bs-target="#promotedCarousel" data-bs-slide="prev"><i class="bi bi-chevron-left" style="font-size: 2rem;"></i></button>
-                <h5 class="mb-0 fw-bold text-center flex-grow-1">Promoted Products</h5>
-                <button class="btn btn-link text-success p-0" data-bs-target="#promotedCarousel" data-bs-slide="next"><i class="bi bi-chevron-right" style="font-size: 2rem;"></i></button>
-            </div>
+    <!-- Promoted Banners Carousel (editable in Admin > Promoted Banners) -->
+    <div class="mx-auto mb-4" style="max-width: 1000px;">
+        <div id="promotedCard" class="bg-white rounded-4 shadow-sm p-2 position-relative promoted-clickable">
             <div id="promotedCarousel" class="carousel slide" data-bs-ride="carousel">
+                <button class="btn btn-link text-success p-0 position-absolute" data-bs-target="#promotedCarousel" data-bs-slide="prev" style="left: 8px; top: 50%; transform: translateY(-50%); z-index: 10;"><i class="bi bi-chevron-left" style="font-size: 2rem;"></i></button>
+                <button class="btn btn-link text-success p-0 position-absolute" data-bs-target="#promotedCarousel" data-bs-slide="next" style="right: 8px; top: 50%; transform: translateY(-50%); z-index: 10;"><i class="bi bi-chevron-right" style="font-size: 2rem;"></i></button>
                 <div class="carousel-inner">
-                    <?php $__currentLoopData = $promotedProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <?php
+                        $banners = \App\Models\PromotedBanner::orderBy('sort_order')->get();
+                    ?>
+                    <?php $__empty_1 = true; $__currentLoopData = $banners; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                     <div class="carousel-item <?php if($i === 0): ?> active <?php endif; ?> text-center">
-                        <img src="<?php echo e(asset('storage/' . $product->image)); ?>" alt="<?php echo e($product->name); ?>" style="height: 180px; object-fit: cover; border-radius: 12px;">
-                        <div class="mt-2 fw-bold"><?php echo e($product->name); ?></div>
-                        <div class="text-success">₱<?php echo e(number_format($product->price, 2)); ?></div>
+                        <img src="<?php echo e(asset('storage/' . $b->image)); ?>" alt="<?php echo e($b->title ?? 'Banner'); ?>" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;">
                     </div>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                    <div class="carousel-item active text-center">
+                        <div style="height: 180px;"></div>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Filter Section -->
-    <div class="mx-auto mb-3" style="max-width: 900px;">
-        <div class="card">
-            <div class="card-body">
-                <form method="GET" action="<?php echo e(route('admin.products.index')); ?>" class="row g-3">
-                    <div class="col-md-4">
-                        <label for="category" class="form-label">Category</label>
-                        <select name="category" id="category" class="form-select">
-                            <option value="">All Categories</option>
-                            <option value="Fresh Flowers" <?php echo e(request('category') == 'Fresh Flowers' ? 'selected' : ''); ?>>Fresh Flowers</option>
-                            <option value="Dried Flowers" <?php echo e(request('category') == 'Dried Flowers' ? 'selected' : ''); ?>>Dried Flowers</option>
-                            <option value="Artificial Flowers" <?php echo e(request('category') == 'Artificial Flowers' ? 'selected' : ''); ?>>Artificial Flowers</option>
-                            <option value="Floral Supplies" <?php echo e(request('category') == 'Floral Supplies' ? 'selected' : ''); ?>>Floral Supplies</option>
-                            <option value="Packaging Materials" <?php echo e(request('category') == 'Packaging Materials' ? 'selected' : ''); ?>>Packaging Materials</option>
-                            <option value="Materials, Tools, and Equipment" <?php echo e(request('category') == 'Materials, Tools, and Equipment' ? 'selected' : ''); ?>>Materials, Tools, and Equipment</option>
-                            <option value="Office Supplies" <?php echo e(request('category') == 'Office Supplies' ? 'selected' : ''); ?>>Office Supplies</option>
-                            <option value="Other Offers" <?php echo e(request('category') == 'Other Offers' ? 'selected' : ''); ?>>Other Offers</option>
-                        </select>
+    <!-- Category Tabs -->
+    <div class="mx-auto" style="max-width: 1000px;">
+        <ul class="nav nav-tabs border-0 justify-content-center category-tabs mb-2" id="productTabs" role="tablist" style="background: transparent; border-radius: 8px 8px 0 0; box-shadow: none;">
+            <?php
+                $categories = ['all' => 'All', 'bouquets' => 'Bouquets', 'packages' => 'Packages', 'gifts' => 'Gifts'];
+                $currentCategory = $categories[request('category', 'all')] ?? 'All';
+            ?>
+            <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $label): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link category-tab-link <?php if(request('category', 'all') === $key): ?> active <?php endif; ?>" href="?category=<?php echo e($key); ?>"><?php echo e($label); ?></a>
+            </li>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        </ul>
+
+        <!-- Products to Approve Section -->
+        <div class="bg-white rounded-4 shadow-sm p-4 mb-4">
+            <div class="mb-3 fw-bold fs-5">
+                Products to approve
+                <span class="badge bg-warning text-dark ms-2" id="pendingCount">0</span>
+            </div>
+            <div class="row g-3" id="pendingProductsGrid">
+                <div class="col-12 text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
-                    <div class="col-md-3">
-                        <label for="price_min" class="form-label">Min Price</label>
-                        <input type="number" name="price_min" id="price_min" class="form-control" value="<?php echo e(request('price_min')); ?>" placeholder="0.00" step="0.01">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="price_max" class="form-label">Max Price</label>
-                        <input type="number" name="price_max" id="price_max" class="form-control" value="<?php echo e(request('price_max')); ?>" placeholder="9999.99" step="0.01">
-                    </div>
-                    <div class="col-md-2">
-                        <label for="sort" class="form-label">Sort By</label>
-                        <select name="sort" id="sort" class="form-select">
-                            <option value="name_asc" <?php echo e(request('sort') == 'name_asc' ? 'selected' : ''); ?>>Name A-Z</option>
-                            <option value="name_desc" <?php echo e(request('sort') == 'name_desc' ? 'selected' : ''); ?>>Name Z-A</option>
-                            <option value="price_asc" <?php echo e(request('sort') == 'price_asc' ? 'selected' : ''); ?>>Price Low-High</option>
-                            <option value="price_desc" <?php echo e(request('sort') == 'price_desc' ? 'selected' : ''); ?>>Price High-Low</option>
-                            <option value="newest" <?php echo e(request('sort') == 'newest' ? 'selected' : ''); ?>>Newest First</option>
-                            <option value="oldest" <?php echo e(request('sort') == 'oldest' ? 'selected' : ''); ?>>Oldest First</option>
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-funnel"></i> Apply Filters
-                        </button>
-                        <a href="<?php echo e(route('admin.products.index')); ?>" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle"></i> Clear Filters
-                        </a>
-                        <span class="ms-3 text-muted">
-                            Showing <?php echo e($products->count()); ?> product(s)
-                        </span>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Product Grid Card -->
-    <div class="mx-auto" style="max-width: 900px;">
+        <!-- Product Grid Card -->
         <div class="bg-white rounded-4 shadow-sm p-4">
             <div class="mb-3 fw-bold fs-5">
-                <?php if(request('category')): ?>
-                    <?php echo e(request('category')); ?> Products
-                <?php else: ?>
-                    All Products
-                <?php endif; ?>
+                <?php echo e($currentCategory); ?>
+
             </div>
-            <div class="row g-3 product-grid">
-        <!-- Add New Product Card -->
-                <div class="col-6 col-md-4 col-lg-3">
-            <div class="card product-card add-new-product-card h-100 d-flex justify-content-center align-items-center" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                <i class="fas fa-plus fa-3x text-muted"></i>
-            </div>
-</div>
-        <?php $__empty_1 = true; $__currentLoopData = $products; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-                <div class="col-6 col-md-4 col-lg-3">
-            <div class="card product-card h-100">
-                        <img src="<?php echo e(asset('storage/' . $product->image)); ?>" class="card-img-top product-image" alt="<?php echo e($product->name); ?>">
-                        <div class="card-body text-center">
-                            <h6 class="card-title mb-1"><?php echo e($product->name); ?></h6>
-                            <p class="card-text product-price">₱<?php echo e(number_format($product->price, 2)); ?></p>
-                            <div class="d-flex justify-content-center gap-2 mt-2">
-                        <button class="btn btn-sm btn-info edit-product-btn" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product='<?php echo e(json_encode($product)); ?>'>Edit</button>
-                                <button class="btn btn-sm btn-warning manage-images-btn" data-bs-toggle="modal" data-bs-target="#manageImagesModal" data-product='<?php echo e(json_encode($product)); ?>'>Images</button>
-                        <form action="<?php echo e(route('admin.products.destroy', $product->id)); ?>" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this product and its images?');">
-                    <?php echo csrf_field(); ?>
-                    <?php echo method_field('DELETE'); ?>
-                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                </form>
+            <div class="row g-3 product-grid" id="approvedProductsGrid">
+                <div class="col-12 text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
             </div>
         </div>
-        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-        <div class="col-12">
-                    <p class="text-center">No products found.</p>
-        </div>
-        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Add Banner Modal (from Products page) -->
+<div class="modal fade" id="addBannerFromProductsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Add Banner</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <form action="<?php echo e(url('/admin/promoted-banners')); ?>" method="POST" enctype="multipart/form-data" id="addBannerForm">
+                <?php echo csrf_field(); ?>
+                <div class="modal-body">
+                    <div class="text-center text-muted mb-2">Maximum of 3 images only</div>
+                    <div class="text-center mb-3">
+                        <button type="button" class="btn btn-outline-success" id="triggerBannerUpload">
+                            <i class="bi bi-upload me-2"></i>Upload image
+                        </button>
+                        <input type="file" id="bannerImagesInput" name="images[]" accept="image/*" multiple style="display:none;">
+                    </div>
+                    <div id="bannerPreviews" class="d-flex flex-column gap-2"></div>
+                    <div class="mt-3">
+                        <textarea class="form-control" name="link_url" placeholder="Optional link URL (applied to all)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Banners Modal -->
+<div class="modal fade" id="manageBannersModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Manage Banners</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addBannerFromProductsModal" data-bs-dismiss="modal">
+                        <i class="bi bi-plus me-2"></i>Add New Banner
+                    </button>
+                </div>
+                <div id="existingBanners" class="d-flex flex-column gap-2">
+                    <?php $banners = \App\Models\PromotedBanner::orderBy('sort_order')->get(); ?>
+                    <?php $__empty_1 = true; $__currentLoopData = $banners; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $banner): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                    <div class="position-relative border rounded p-2" data-banner-id="<?php echo e($banner->id); ?>">
+                        <img src="<?php echo e(asset('storage/' . $banner->image)); ?>" class="img-fluid rounded" style="height: 80px; object-fit: cover; width: 100%;">
+                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 remove-existing-banner" data-banner-id="<?php echo e($banner->id); ?>">
+                            <i class="bi bi-x"></i>
+                        </button>
+                        <?php if($banner->title): ?>
+                        <div class="mt-1 small text-muted"><?php echo e($banner->title); ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                    <div class="text-center text-muted py-4">No banners yet. Add your first banner!</div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -153,15 +169,10 @@
                     <div class="mb-3">
                         <label for="product_category" class="form-label">Category</label>
                         <select class="form-select" id="product_category" name="category" required>
-                            <option value="">Select Category</option>
-                            <option value="Fresh Flowers">Fresh Flowers</option>
-                            <option value="Dried Flowers">Dried Flowers</option>
-                            <option value="Artificial Flowers">Artificial Flowers</option>
-                            <option value="Floral Supplies">Floral Supplies</option>
-                            <option value="Packaging Materials">Packaging Materials</option>
-                            <option value="Materials, Tools, and Equipment">Materials, Tools, and Equipment</option>
-                            <option value="Office Supplies">Office Supplies</option>
-                            <option value="Other Offers">Other Offers</option>
+                            <option value="">Select Category...</option>
+                            <option value="Bouquets">Bouquets</option>
+                            <option value="Packages">Packages</option>
+                            <option value="Gifts">Gifts</option>
                         </select>
                     </div>
                     
@@ -169,42 +180,9 @@
                     <div class="mb-3">
                         <label class="form-label">Product Composition (Materials Needed)</label>
                         <div id="composition-container">
-                            <div class="composition-row row mb-2">
-                                <div class="col-4">
-                                    <select class="form-select composition-select" name="compositions[0][component_id]" id="composition-select-0" onchange="updateCompositionName(0)">
-                                        <option value="">Select Material...</option>
-                                        <option value="1" data-name="Red roses" data-stock="50">Red roses (Stock: 50)</option>
-                                        <option value="2" data-name="White roses" data-stock="30">White roses (Stock: 30)</option>
-                                        <option value="3" data-name="Pink roses" data-stock="25">Pink roses (Stock: 25)</option>
-                                        <option value="4" data-name="Sunflower" data-stock="15">Sunflower (Stock: 15)</option>
-                                        <option value="5" data-name="Carnation" data-stock="20">Carnation (Stock: 20)</option>
-                                        <option value="6" data-name="Tulips" data-stock="18">Tulips (Stock: 18)</option>
-                                        <option value="7" data-name="Aster" data-stock="12">Aster (Stock: 12)</option>
-                                        <option value="8" data-name="Gypsophila" data-stock="8">Gypsophila (Stock: 8)</option>
-                                        <option value="9" data-name="Eucalyptus" data-stock="22">Eucalyptus (Stock: 22)</option>
-                                        <option value="10" data-name="Lily" data-stock="14">Lily (Stock: 14)</option>
-                                    </select>
-                                    <input type="hidden" class="composition-component-name" name="compositions[0][component_name]">
-                                </div>
-                                <div class="col-3">
-                                    <input type="number" class="form-control" name="compositions[0][quantity]" placeholder="Qty" min="1" required>
-                                </div>
-                                <div class="col-3">
-                                    <select class="form-select" name="compositions[0][unit]" required>
-                                        <option value="">Unit</option>
-                                        <option value="pieces">Pieces</option>
-                                        <option value="stems">Stems</option>
-                                        <option value="bunches">Bunches</option>
-                                        <option value="grams">Grams</option>
-                                    </select>
-                                </div>
-                                <div class="col-2">
-                                    <button type="button" class="btn btn-sm btn-outline-danger remove-composition">×</button>
-                                </div>
-                            </div>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-success" id="add-composition">
-                            <i class="fas fa-plus"></i> Add Component
+                            <i class="fas fa-plus"></i> Add Category
                         </button>
                     </div>
                     
@@ -245,14 +223,9 @@
                     <div class="mb-3">
                         <label for="edit_product_category" class="form-label">Category</label>
                         <select class="form-select" id="edit_product_category" name="category" required>
-                            <option value="Fresh Flowers">Fresh Flowers</option>
-                            <option value="Dried Flowers">Dried Flowers</option>
-                            <option value="Artificial Flowers">Artificial Flowers</option>
-                            <option value="Floral Supplies">Floral Supplies</option>
-                            <option value="Packaging Materials">Packaging Materials</option>
-                            <option value="Materials, Tools, and Equipment">Materials, Tools, and Equipment</option>
-                            <option value="Office Supplies">Office Supplies</option>
-                            <option value="Other Offers">Other Offers</option>
+                            <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($category); ?>"><?php echo e($category); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                     </div>
                 </div>
@@ -300,12 +273,38 @@
         </div>
     </div>
 </div>
+
+<!-- Product Review Modal -->
+<div class="modal fade" id="reviewProductModal" tabindex="-1" aria-labelledby="reviewProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="reviewProductModalLabel">Review Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="reviewProductContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="disapproveProductBtn">Disapprove</button>
+                <button type="button" class="btn btn-success" id="approveProductBtn">Approve</button>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
 <?php $__env->stopSection(); ?>
 
 <?php $__env->startPush('styles'); ?>
 <style>
     body { background: #f6faf6; }
+    .promoted-clickable { cursor: pointer; }
+    .promoted-clickable:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
     .product-card {
         border: 1px solid #e0e0e0;
         border-radius: 10px;
@@ -340,12 +339,184 @@
     .nav-tabs {
         border-bottom: none !important;
     }
+    
+    /* Category Tabs Styling */
+    .category-tabs .nav-link {
+        border: none !important;
+        color: #7f8c8d !important;
+        font-weight: 500;
+        background: transparent !important;
+        margin: 0 1rem;
+        font-size: 1rem;
+        border-radius: 0;
+        padding: 10px 16px;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    .category-tabs .nav-link.active {
+        color: #27ae60 !important;
+        font-weight: 700;
+    }
+    .category-tabs .nav-link.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 3px;
+        background: #27ae60;
+        border-radius: 2px;
+    }
+    .category-tabs .nav-link:hover {
+        color: #27ae60 !important;
+        background: #f8f9fa !important;
+    }
+    .category-tabs {
+        border-bottom: none !important;
+        padding: 0 1rem;
+    }
+    
+    /* Custom Searchable Dropdown Styling */
+    .searchable-dropdown {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+    }
+    
+    .searchable-dropdown input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+        font-size: 1rem;
+    }
+    
+    .searchable-dropdown input:focus {
+        border-color: #86b7fe;
+        outline: 0;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .searchable-dropdown .dropdown-options {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ced4da;
+        border-top: none;
+        border-radius: 0 0 0.375rem 0.375rem;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+    
+    .searchable-dropdown .dropdown-options.show {
+        display: block;
+    }
+    
+    .searchable-dropdown .dropdown-option {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .searchable-dropdown .dropdown-option:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .searchable-dropdown .dropdown-option:last-child {
+        border-bottom: none;
+    }
 </style>
 <?php $__env->stopPush(); ?>
 
 <?php $__env->startPush('scripts'); ?>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // Open Manage Banners modal when clicking the promoted card (except arrow buttons)
+        const promotedCard = document.getElementById('promotedCard');
+        if (promotedCard) {
+            promotedCard.addEventListener('click', function(e) {
+                const isArrow = e.target.closest('[data-bs-slide]');
+                if (isArrow) return; // let carousel arrows work
+                const modal = new bootstrap.Modal(document.getElementById('manageBannersModal'));
+                modal.show();
+            });
+        }
+        // Add Banner modal logic (multiple images, previews, limit 3)
+        const triggerUpload = document.getElementById('triggerBannerUpload');
+        const fileInput = document.getElementById('bannerImagesInput');
+        const previews = document.getElementById('bannerPreviews');
+        if (triggerUpload && fileInput && previews) {
+            triggerUpload.addEventListener('click', () => fileInput.click());
+            const refreshPreviews = () => {
+                previews.innerHTML = '';
+                const files = Array.from(fileInput.files || []);
+                files.slice(0,3).forEach((file, idx) => {
+                    const url = URL.createObjectURL(file);
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'position-relative';
+                    wrapper.innerHTML = `
+                        <img src="${url}" class="img-fluid rounded border" style="width:100%; height: 64px; object-fit: cover;">
+                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 remove-banner-img" data-index="${idx}">×</button>
+                    `;
+                    previews.appendChild(wrapper);
+                });
+            };
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 3) {
+                    // Keep only first 3
+                    const dt = new DataTransfer();
+                    Array.from(fileInput.files).slice(0,3).forEach(f => dt.items.add(f));
+                    fileInput.files = dt.files;
+                }
+                refreshPreviews();
+            });
+            previews.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-banner-img')) {
+                    const removeIdx = parseInt(e.target.getAttribute('data-index'));
+                    const dt = new DataTransfer();
+                    Array.from(fileInput.files).forEach((f, i) => { if (i !== removeIdx) dt.items.add(f); });
+                    fileInput.files = dt.files;
+                    refreshPreviews();
+                }
+            });
+        }
+        
+        // Handle existing banner deletion
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-existing-banner')) {
+                const bannerId = e.target.closest('.remove-existing-banner').getAttribute('data-banner-id');
+                if (confirm('Are you sure you want to delete this banner?')) {
+                    fetch(`/admin/promoted-banners/${bannerId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Remove banner from UI
+                            e.target.closest('[data-banner-id]').remove();
+                            // Refresh the page to update carousel
+                            window.location.reload();
+                        } else {
+                            alert('Error deleting banner');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error deleting banner');
+                    });
+                }
+            }
+        });
+        
         // Image preview for Add Product Modal
         const productImageInput = document.getElementById('product_image');
         const imagePreview = document.getElementById('image_preview');
@@ -383,13 +554,41 @@
         // Composition fields management
         let compositionIndex = 1;
         
-        document.getElementById('add-composition').addEventListener('click', function() {
+        document.getElementById('add-composition').addEventListener('click', async function() {
+            console.log('Add composition button clicked');
             const container = document.getElementById('composition-container');
             const newRow = document.createElement('div');
             newRow.className = 'composition-row row mb-2';
+            
+            // Load categories dynamically from inventory for material selection
+            console.log('Loading inventory categories...');
+            let categoryOptions = '<option value="">Select Category...</option>';
+            try {
+                const categories = await loadInventoryCategories();
+                console.log('Loaded categories:', categories);
+                categories.forEach(category => {
+                    categoryOptions += `<option value="${category}">${category}</option>`;
+                });
+                console.log('Category options created:', categoryOptions);
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+            
             newRow.innerHTML = `
                 <div class="col-4">
-                    <input type="text" class="form-control" name="compositions[${compositionIndex}][component_name]" placeholder="Flower/Component" required>
+                    <select class="form-select composition-category mb-2" name="compositions[${compositionIndex}][category]" id="composition-category-${compositionIndex}" onchange="updateCompositionMaterials(${compositionIndex})">
+                        ${categoryOptions}
+                    </select>
+                    <div class="searchable-dropdown">
+                        <input type="text" class="form-control composition-search" id="composition-search-${compositionIndex}" placeholder="Search materials..." autocomplete="off">
+                        <select class="form-select composition-select" name="compositions[${compositionIndex}][component_id]" id="composition-select-${compositionIndex}" style="display: none;">
+                            <option value="">Select Material...</option>
+                        </select>
+                        <input type="hidden" class="composition-component-name" name="compositions[${compositionIndex}][component_name]">
+                        <div class="dropdown-options" id="composition-options-${compositionIndex}">
+                            <!-- Options will be populated dynamically -->
+                        </div>
+                    </div>
                 </div>
                 <div class="col-3">
                     <input type="number" class="form-control" name="compositions[${compositionIndex}][quantity]" placeholder="Qty" min="1" required>
@@ -408,6 +607,11 @@
                 </div>
             `;
             container.appendChild(newRow);
+            
+            // Initialize searchable dropdown functionality
+            console.log('Initializing searchable dropdown for index:', compositionIndex);
+            initializeSearchableDropdown(compositionIndex);
+            
             compositionIndex++;
         });
 
@@ -483,6 +687,176 @@
 
     // Product Composition Management for Admin
     let compositionIndex = 1;
+    
+    // Custom Searchable Dropdown Functions
+    function initializeSearchableDropdown(index) {
+        const searchInput = document.getElementById(`composition-search-${index}`);
+        const optionsContainer = document.getElementById(`composition-options-${index}`);
+        const hiddenSelect = document.getElementById(`composition-select-${index}`);
+        const hiddenName = document.querySelector(`#composition-select-${index}`).parentElement.querySelector('.composition-component-name');
+        
+        if (!searchInput || !optionsContainer || !hiddenSelect || !hiddenName) {
+            console.log('Missing elements for searchable dropdown:', {searchInput, optionsContainer, hiddenSelect, hiddenName});
+            return;
+        }
+        
+        // Show/hide dropdown on focus/blur
+        searchInput.addEventListener('focus', () => {
+            optionsContainer.classList.add('show');
+            refreshSearchableDropdown(index);
+        });
+        
+        searchInput.addEventListener('blur', (e) => {
+            // Delay hiding to allow option clicks
+            setTimeout(() => {
+                optionsContainer.classList.remove('show');
+            }, 200);
+        });
+        
+        // Search functionality
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const options = optionsContainer.querySelectorAll('.dropdown-option');
+            
+            options.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        });
+        
+        // Option selection
+        optionsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('dropdown-option')) {
+                const value = e.target.getAttribute('data-value');
+                const name = e.target.getAttribute('data-name');
+                
+                searchInput.value = e.target.textContent;
+                hiddenSelect.value = value;
+                hiddenName.value = name;
+                
+                optionsContainer.classList.remove('show');
+                
+                // Trigger change event
+                updateCompositionName(index);
+            }
+        });
+    }
+    
+    // Load categories from API
+    async function loadCategories() {
+        try {
+            // For catalog products, only use Bouquets, Packages, Gifts
+            const categories = ['Bouquets', 'Packages', 'Gifts'];
+            
+            // Update filter dropdown
+            const filterCategorySelect = document.getElementById('category');
+            if (filterCategorySelect) {
+                // Clear existing options except "All Categories"
+                filterCategorySelect.innerHTML = '<option value="">All Categories</option>';
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    if (new URLSearchParams(window.location.search).get('category') === category) {
+                        option.selected = true;
+                    }
+                    filterCategorySelect.appendChild(option);
+                });
+            }
+            
+            // Update edit product modal category dropdown
+            const editCategorySelect = document.getElementById('edit_product_category');
+            if (editCategorySelect) {
+                editCategorySelect.innerHTML = '';
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    editCategorySelect.appendChild(option);
+                });
+            }
+            
+            return categories;
+        } catch (error) {
+            console.error('Error loading categories:', error);
+            return [];
+        }
+    }
+    
+    // Load inventory categories for material selection
+    async function loadInventoryCategories() {
+        try {
+            console.log('Fetching categories from /admin/api/categories');
+            const response = await fetch('/admin/api/categories');
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const categories = await response.json();
+            console.log('Fetched categories:', categories);
+            return categories;
+        } catch (error) {
+            console.error('Error loading inventory categories:', error);
+            return [];
+        }
+    }
+    
+    // Load inventory items by category
+    async function loadInventoryByCategory(category) {
+        try {
+            const url = category ? `/admin/api/inventory/${encodeURIComponent(category)}` : '/admin/api/inventory';
+            console.log('Fetching inventory items from:', url);
+            const response = await fetch(url);
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const items = await response.json();
+            console.log('Fetched items:', items);
+            return items;
+        } catch (error) {
+            console.error('Error loading inventory items:', error);
+            return [];
+        }
+    }
+    
+    async function refreshSearchableDropdown(index) {
+        const optionsContainer = document.getElementById(`composition-options-${index}`);
+        const categorySelect = document.getElementById(`composition-category-${index}`);
+        const category = categorySelect.value;
+        
+        // Clear existing options
+        if (optionsContainer) {
+            optionsContainer.innerHTML = '';
+        }
+        
+        if (!category) {
+            return;
+        }
+        
+        // Load materials for selected category from inventory API
+        try {
+            const categoryItems = await loadInventoryByCategory(category);
+            
+            // Add new options
+            if (optionsContainer) {
+                categoryItems.forEach(item => {
+                    const option = document.createElement('div');
+                    option.className = 'dropdown-option';
+                    option.setAttribute('data-value', item.id);
+                    option.setAttribute('data-name', item.name);
+                    option.textContent = item.name + ' (Stock: ' + item.stock + ')';
+                    optionsContainer.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading inventory items for category:', category, error);
+        }
+    }
 
     // Simple function to update composition name when select changes
     function updateCompositionName(index) {
@@ -498,137 +872,387 @@
         }
     }
 
-    // Update composition dropdowns when category changes
-    function updateCompositionDropdowns() {
-        const category = document.getElementById('product_category').value;
-        console.log('Category changed to:', category);
+
+    // Function to update materials when category is selected in composition rows
+    async function updateCompositionMaterials(index) {
+        console.log('updateCompositionMaterials called for index:', index);
+        const categorySelect = document.getElementById('composition-category-' + index);
+        const materialSelect = document.getElementById('composition-select-' + index);
+        const searchInput = document.getElementById('composition-search-' + index);
+        const optionsContainer = document.getElementById('composition-options-' + index);
+        const category = categorySelect.value;
         
-        // Hardcoded data for testing
-        let categoryItems = [];
-            if (category === 'Fresh Flowers') {
-                categoryItems = [
-                    {id: 1, name: 'Red roses', stock: 50, unit: 'stems'},
-                    {id: 2, name: 'White roses', stock: 30, unit: 'stems'},
-                    {id: 3, name: 'Pink roses', stock: 25, unit: 'stems'},
-                    {id: 4, name: 'Sunflower', stock: 15, unit: 'stems'},
-                    {id: 5, name: 'Carnation', stock: 20, unit: 'stems'},
-                    {id: 6, name: 'Tulips', stock: 18, unit: 'stems'},
-                    {id: 7, name: 'Aster', stock: 12, unit: 'stems'},
-                    {id: 8, name: 'Gypsophila', stock: 8, unit: 'bunches'},
-                    {id: 9, name: 'Eucalyptus', stock: 22, unit: 'stems'},
-                    {id: 10, name: 'Lily', stock: 14, unit: 'stems'},
-                    {id: 11, name: 'Baby\'s breath', stock: 16, unit: 'bunches'},
-                    {id: 12, name: 'Chrysanthemum', stock: 20, unit: 'stems'}
-                ];
-            } else if (category === 'Dried Flowers') {
-                categoryItems = [
-                    {id: 13, name: 'Fossilized Roses', stock: 10, unit: 'pieces'},
-                    {id: 14, name: 'Preserve Roses', stock: 12, unit: 'pieces'},
-                    {id: 15, name: 'Gypsophila (Dried)', stock: 8, unit: 'bunches'},
-                    {id: 16, name: 'Eucalyptus (Dried)', stock: 15, unit: 'stems'},
-                    {id: 17, name: 'Bunny tails', stock: 6, unit: 'bunches'},
-                    {id: 18, name: 'Trigo grass', stock: 9, unit: 'stems'},
-                    {id: 19, name: 'Palm Spear Anahaw', stock: 5, unit: 'pieces'}
-                ];
-            } else if (category === 'Artificial Flowers') {
-                categoryItems = [
-                    {id: 20, name: 'Tulip flower (Artificial)', stock: 20, unit: 'pieces'},
-                    {id: 21, name: 'Rose flower (Artificial)', stock: 25, unit: 'pieces'},
-                    {id: 22, name: 'Satin Ribbon flower', stock: 15, unit: 'pieces'}
-                ];
-            } else if (category === 'Floral Supplies') {
-                categoryItems = [
-                    {id: 23, name: 'Floral foam', stock: 30, unit: 'pieces'},
-                    {id: 24, name: 'Glitter Ribbon (gold)', stock: 12, unit: 'meters'},
-                    {id: 25, name: 'Glitter Ribbon (silver)', stock: 10, unit: 'meters'},
-                    {id: 26, name: '2 cm satin ribbon (red)', stock: 25, unit: 'meters'},
-                    {id: 27, name: '2 cm satin ribbon (blue)', stock: 20, unit: 'meters'},
-                    {id: 28, name: '2 cm satin ribbon (white)', stock: 18, unit: 'meters'},
-                    {id: 29, name: '2.5 cm satin ribbon (pink)', stock: 15, unit: 'meters'},
-                    {id: 30, name: '4cm satin ribbon (green)', stock: 12, unit: 'meters'},
-                    {id: 31, name: 'Metal heart shape stick', stock: 8, unit: 'pieces'},
-                    {id: 32, name: 'Quick dry floral supply (black)', stock: 6, unit: 'pieces'}
-                ];
-            }
-        
-        console.log('Items for category', category, ':', categoryItems);
-        
-        // Update all composition selects
-        document.querySelectorAll('.composition-select').forEach((select, index) => {
-            // Clear existing options except first
-            select.innerHTML = '<option value="">Select Material...</option>';
-            
-            // Add new options
-            categoryItems.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.setAttribute('data-name', item.name);
-                option.setAttribute('data-stock', item.stock);
-                option.textContent = item.name + ' (Stock: ' + item.stock + ')';
-                select.appendChild(option);
-            });
+        console.log('Category selected:', category);
+        console.log('Elements found:', {
+            categorySelect: !!categorySelect,
+            materialSelect: !!materialSelect,
+            searchInput: !!searchInput,
+            optionsContainer: !!optionsContainer
         });
+        
+        // Clear existing options
+        if (materialSelect) {
+            materialSelect.innerHTML = '<option value="">Select Material...</option>';
+        }
+        if (optionsContainer) {
+            optionsContainer.innerHTML = '';
+        }
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        
+        if (!category) {
+            console.log('No category selected');
+            return;
+        }
+        
+        // Load materials for selected category from inventory API
+        try {
+            console.log('Loading materials for category:', category);
+            const categoryItems = await loadInventoryByCategory(category);
+            console.log('Loaded items:', categoryItems);
+            
+            // Add new options to select dropdown
+            if (materialSelect) {
+                console.log('Adding options to select dropdown...');
+                categoryItems.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.setAttribute('data-name', item.name);
+                    option.setAttribute('data-stock', item.stock);
+                    option.textContent = item.name + ' (Stock: ' + item.stock + ')';
+                    materialSelect.appendChild(option);
+                });
+                console.log('Select dropdown now has', materialSelect.options.length, 'options');
+            }
+            
+            // Add new options to searchable dropdown
+            if (optionsContainer) {
+                console.log('Adding options to searchable dropdown...');
+                categoryItems.forEach(item => {
+                    const option = document.createElement('div');
+                    option.className = 'dropdown-option';
+                    option.setAttribute('data-value', item.id);
+                    option.setAttribute('data-name', item.name);
+                    option.textContent = item.name + ' (Stock: ' + item.stock + ')';
+                    optionsContainer.appendChild(option);
+                });
+                console.log('Searchable dropdown now has', optionsContainer.children.length, 'options');
+            }
+            
+            console.log('Materials loaded successfully');
+        } catch (error) {
+            console.error('Error loading materials for category:', category, error);
+        }
     }
+
 
     // Make functions global
     window.updateCompositionName = updateCompositionName;
-    window.updateCompositionDropdowns = updateCompositionDropdowns;
+    window.updateCompositionMaterials = updateCompositionMaterials;
+    window.loadInventoryCategories = loadInventoryCategories;
+    window.loadInventoryByCategory = loadInventoryByCategory;
 
-    // Add event listener for category changes
-    document.addEventListener('DOMContentLoaded', function() {
-        const categorySelect = document.getElementById('product_category');
-        if (categorySelect) {
-            categorySelect.addEventListener('change', function() {
-                updateCompositionDropdowns();
-            });
-        }
-
-        // Add composition row functionality
-        const addCompositionBtn = document.getElementById('add-composition');
-        if (addCompositionBtn) {
-            addCompositionBtn.addEventListener('click', function() {
-                const container = document.getElementById('composition-container');
-                const newRow = document.createElement('div');
-                newRow.className = 'composition-row row mb-2';
-                newRow.innerHTML = `
-                    <div class="col-4">
-                        <select class="form-select composition-select" name="compositions[${compositionIndex}][component_id]" id="composition-select-${compositionIndex}" onchange="updateCompositionName(${compositionIndex})">
-                            <option value="">Select Material...</option>
-                        </select>
-                        <input type="hidden" class="composition-component-name" name="compositions[${compositionIndex}][component_name]">
-                    </div>
-                    <div class="col-3">
-                        <input type="number" class="form-control" name="compositions[${compositionIndex}][quantity]" placeholder="Qty" min="1" required>
-                    </div>
-                    <div class="col-3">
-                        <select class="form-select" name="compositions[${compositionIndex}][unit]" required>
-                            <option value="">Unit</option>
-                            <option value="pieces">Pieces</option>
-                            <option value="stems">Stems</option>
-                            <option value="bunches">Bunches</option>
-                            <option value="grams">Grams</option>
-                        </select>
-                    </div>
-                    <div class="col-2">
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-composition">×</button>
-                    </div>
-                `;
-                container.appendChild(newRow);
-                
-                // Populate the new select with current category items
-                updateCompositionDropdowns();
-                
-                compositionIndex++;
-            });
-        }
-
+    // Initialize page on load
+    document.addEventListener('DOMContentLoaded', async function() {
+        console.log('Admin products page loaded, initializing...');
+        
+        // Load categories on page load
+        await loadCategories();
+        
+        // Load pending and approved products
+        console.log('Loading products...');
+        await loadPendingProducts();
+        await loadApprovedProducts();
+        
         // Remove composition row functionality
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('remove-composition')) {
                 e.target.closest('.composition-row').remove();
             }
         });
+        
+        // Product approval event listeners
+        setupApprovalEventListeners();
+        
+        console.log('Admin products page initialization complete');
     });
+
+    // Load pending products
+    async function loadPendingProducts() {
+        try {
+            console.log('Loading pending products...');
+            console.log('Fetching from URL:', '/admin/api/products/pending');
+            const response = await fetch('/admin/api/products/pending', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const products = await response.json();
+            console.log('Pending products loaded:', products);
+            
+            const grid = document.getElementById('pendingProductsGrid');
+            const count = document.getElementById('pendingCount');
+            
+            count.textContent = products.length;
+            
+            if (products.length === 0) {
+                grid.innerHTML = '<div class="col-12 text-center py-4"><p class="text-muted">No products pending approval</p></div>';
+                return;
+            }
+            
+            grid.innerHTML = products.map(product => `
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="card product-card h-100">
+                        <img src="/storage/${product.image}" class="card-img-top product-image" alt="${product.name}">
+                        <div class="card-body text-center">
+                            <h6 class="card-title mb-1">${product.name}</h6>
+                            <p class="card-text product-price">₱${parseFloat(product.price).toFixed(2)}</p>
+                            <div class="d-flex justify-content-center gap-2 mt-2">
+                                <button class="btn btn-sm btn-success approve-product-btn" data-product-id="${product.id}">Approve</button>
+                                <button class="btn btn-sm btn-warning review-product-btn" data-product-id="${product.id}">Review</button>
+                                <button class="btn btn-sm btn-danger disapprove-product-btn" data-product-id="${product.id}">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            console.error('Error loading pending products:', error);
+            document.getElementById('pendingProductsGrid').innerHTML = '<div class="col-12 text-center py-4"><p class="text-danger">Error loading products: ' + error.message + '</p></div>';
+        }
+    }
+
+    // Load approved products
+    async function loadApprovedProducts() {
+        try {
+            const category = new URLSearchParams(window.location.search).get('category') || 'all';
+            console.log('Loading approved products for category:', category);
+            const url = `/admin/api/products/approved?category=${category}`;
+            console.log('Fetching from URL:', url);
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+            console.log('Approved products response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const products = await response.json();
+            console.log('Approved products loaded:', products);
+            
+            const grid = document.getElementById('approvedProductsGrid');
+            
+            // Add Product card HTML
+            const addProductCard = `
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="card product-card add-new-product-card h-100 d-flex justify-content-center align-items-center" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                        <i class="fas fa-plus fa-3x text-muted"></i>
+                    </div>
+                </div>
+            `;
+            
+            grid.innerHTML = addProductCard + products.map(product => `
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="card product-card h-100">
+                        <img src="/storage/${product.image}" class="card-img-top product-image" alt="${product.name}">
+                        <div class="card-body text-center">
+                            <h6 class="card-title mb-1">${product.name}</h6>
+                            <p class="card-text product-price">₱${parseFloat(product.price).toFixed(2)}</p>
+                            <div class="d-flex justify-content-center gap-2 mt-2">
+                                <button class="btn btn-sm btn-info edit-product-btn" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product='${JSON.stringify(product)}'>Edit</button>
+                                <button class="btn btn-sm btn-warning manage-images-btn" data-bs-toggle="modal" data-bs-target="#manageImagesModal" data-product='${JSON.stringify(product)}'>Images</button>
+                                <form action="/admin/products/${product.id}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this product and its images?');">
+                                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]').getAttribute('content')}">
+                                    <input type="hidden" name="_method" value="DELETE">
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            console.error('Error loading approved products:', error);
+            document.getElementById('approvedProductsGrid').innerHTML = '<div class="col-12 text-center py-4"><p class="text-danger">Error loading products: ' + error.message + '</p></div>';
+        }
+    }
+
+    // Setup approval event listeners
+    function setupApprovalEventListeners() {
+        // Approve product
+        document.addEventListener('click', async function(e) {
+            if (e.target.classList.contains('approve-product-btn')) {
+                const productId = e.target.getAttribute('data-product-id');
+                await approveProduct(productId);
+            }
+        });
+
+        // Disapprove product
+        document.addEventListener('click', async function(e) {
+            if (e.target.classList.contains('disapprove-product-btn')) {
+                const productId = e.target.getAttribute('data-product-id');
+                if (confirm('Are you sure you want to disapprove and delete this product?')) {
+                    await disapproveProduct(productId);
+                }
+            }
+        });
+
+        // Review product
+        document.addEventListener('click', async function(e) {
+            if (e.target.classList.contains('review-product-btn')) {
+                const productId = e.target.getAttribute('data-product-id');
+                await reviewProduct(productId);
+            }
+        });
+
+        // Approve from modal
+        document.getElementById('approveProductBtn').addEventListener('click', async function() {
+            const productId = this.getAttribute('data-product-id');
+            await approveProduct(productId);
+        });
+
+        // Disapprove from modal
+        document.getElementById('disapproveProductBtn').addEventListener('click', async function() {
+            const productId = this.getAttribute('data-product-id');
+            if (confirm('Are you sure you want to disapprove and delete this product?')) {
+                await disapproveProduct(productId);
+            }
+        });
+    }
+
+    // Approve product
+    async function approveProduct(productId) {
+        try {
+            const response = await fetch(`/admin/api/products/${productId}/approve`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Product approved successfully!');
+                await loadPendingProducts();
+                await loadApprovedProducts();
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error approving product:', error);
+            alert('Error approving product');
+        }
+    }
+
+    // Disapprove product
+    async function disapproveProduct(productId) {
+        try {
+            const response = await fetch(`/admin/api/products/${productId}/disapprove`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Product disapproved and deleted successfully!');
+                await loadPendingProducts();
+                await loadApprovedProducts();
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error disapproving product:', error);
+            alert('Error disapproving product');
+        }
+    }
+
+    // Review product
+    async function reviewProduct(productId) {
+        try {
+            const response = await fetch(`/admin/api/products/${productId}/details`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const product = result.product;
+                const modal = new bootstrap.Modal(document.getElementById('reviewProductModal'));
+                
+                // Set product ID for approve/disapprove buttons
+                document.getElementById('approveProductBtn').setAttribute('data-product-id', productId);
+                document.getElementById('disapproveProductBtn').setAttribute('data-product-id', productId);
+                
+                // Populate modal content
+                document.getElementById('reviewProductContent').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-4">
+                            <img src="/storage/${product.image}" class="img-fluid rounded" alt="${product.name}">
+                        </div>
+                        <div class="col-md-8">
+                            <h5>${product.name}</h5>
+                            <p class="text-muted">${product.category}</p>
+                            <p class="h4 text-success">₱${parseFloat(product.price).toFixed(2)}</p>
+                            <p class="mt-3">${product.description || 'No description provided'}</p>
+                            
+                            <h6 class="mt-4">Product Composition:</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Material</th>
+                                            <th>Quantity</th>
+                                            <th>Unit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${product.compositions.map(comp => `
+                                            <tr>
+                                                <td>${comp.component_name}</td>
+                                                <td>${comp.quantity}</td>
+                                                <td>${comp.unit}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                modal.show();
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error reviewing product:', error);
+            alert('Error loading product details');
+        }
+    }
 </script>
 <?php $__env->stopPush(); ?>
 
