@@ -27,7 +27,39 @@ class OrderController extends Controller
     {
         // Check if the request is from a customer middleware and adjust the query accordingly
         if ($request->routeIs('customer.*')) {
-            $orders = Auth::user()->orders()->with('products')->latest()->paginate(10);
+            $query = Auth::user()->orders()->with('products');
+            
+            // Handle search by product name
+            if ($request->has('search') && !empty($request->search)) {
+                $searchTerm = $request->search;
+                $query->whereHas('products', function($q) use ($searchTerm) {
+                    $q->where('name', 'like', "%{$searchTerm}%");
+                });
+            }
+            
+            // Handle status filtering
+            if ($request->has('status') && $request->status !== 'all') {
+                $status = $request->status;
+                switch ($status) {
+                    case 'to_pay':
+                        $query->where('status', 'pending');
+                        break;
+                    case 'to_ship':
+                        $query->where('status', 'approved');
+                        break;
+                    case 'to_receive':
+                        $query->where('status', 'on_delivery');
+                        break;
+                    case 'to_review':
+                        $query->where('status', 'completed');
+                        break;
+                    default:
+                        // For 'all' or any other status, show all orders
+                        break;
+                }
+            }
+            
+            $orders = $query->latest()->paginate(10);
             return view('customer.orders.index', compact('orders'));
         } else {
             $type = $request->input('type', 'online');
@@ -294,10 +326,10 @@ class OrderController extends Controller
      */
     public function validateOrder(Order $order)
     {
-        $oldStatus = $order->status;
-
-        // Use OrderStatusService to handle payment completion
-        \App\Services\OrderStatusService::handlePaymentCompleted($order);
+        $orderStatusService = new \App\Services\OrderStatusService();
+        
+        // Approve the order (moves to Approved Orders)
+        $orderStatusService->approveOrder($order, auth()->id());
 
         // Update payment proof status
         $latestProof = $order->paymentProofs()->latest()->first();
@@ -309,7 +341,7 @@ class OrderController extends Controller
         // Send notification to customer
         $order->user->notify(new OrderPaymentValidatedNotification($order));
 
-        return back()->with('success', 'Order validated successfully. Payment marked as paid and customer will be notified. Status updated to "To Ship".');
+        return back()->with('success', 'Order validated successfully. Order moved to Approved Orders. Ready for driver assignment.');
     }
 
     /**
@@ -459,30 +491,42 @@ class OrderController extends Controller
             'delivery_date' => 'required|date',
         ]);
 
-        // Use OrderStatusService to handle delivery assignment if it exists
-        if (class_exists('\App\Services\OrderStatusService')) {
-            \App\Services\OrderStatusService::handleDeliveryAssigned($order);
+        $orderStatusService = new \App\Services\OrderStatusService();
+        
+        // Use OrderStatusService to assign driver (moves to On Delivery)
+        if ($orderStatusService->assignDriver($order, $request->driver_id, auth()->id())) {
+            // Create or update delivery record
+            $delivery = $order->delivery;
+            if (!$delivery) {
+                $delivery = new \App\Models\Delivery();
+                $delivery->order_id = $order->id;
+            }
+            $delivery->driver_id = $request->driver_id;
+            $delivery->delivery_date = $request->delivery_date;
+            $delivery->status = 'on_delivery';
+            $delivery->recipient_name = $order->user->name;
+            $delivery->recipient_phone = $order->user->contact_number ?? 'N/A';
+            $delivery->delivery_address = $order->delivery_address ?? 'N/A';
+            $delivery->save();
+
+            return redirect()->back()->with('success', 'Driver assigned successfully. Order moved to On Delivery.');
+        } else {
+            return redirect()->back()->with('error', 'Failed to assign driver. Please try again.');
         }
+    }
 
-        // Create or update delivery record
-        $delivery = $order->delivery;
-        if (!$delivery) {
-            $delivery = new \App\Models\Delivery();
-            $delivery->order_id = $order->id;
+    /**
+     * Mark order as received by customer (completes the order)
+     */
+    public function markReceived(Order $order)
+    {
+        $orderStatusService = new \App\Services\OrderStatusService();
+        
+        if ($orderStatusService->completeOrder($order, auth()->id())) {
+            return redirect()->back()->with('success', 'Order marked as received. Order completed successfully.');
+        } else {
+            return redirect()->back()->with('error', 'Failed to mark order as received. Please try again.');
         }
-        $delivery->driver_id = $request->driver_id;
-        $delivery->delivery_date = $request->delivery_date;
-        $delivery->status = 'pending';
-        $delivery->recipient_name = $order->user->name;
-        $delivery->recipient_phone = $order->user->contact_number ?? 'N/A';
-        $delivery->delivery_address = $order->delivery_address ?? 'N/A';
-        $delivery->save();
-
-        // Update order status (standardized)
-        $order->status = 'out_for_delivery';
-        $order->save();
-
-        return redirect()->back()->with('success', 'Order assigned for delivery. Status updated to "Out for Delivery".');
     }
 
     /**

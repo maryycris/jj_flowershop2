@@ -22,7 +22,7 @@
                 </div>
                 <div class="col-md-6">
                     <h5>Delivery Information:</h5>
-                    <p><strong>Address:</strong> <?php echo e($order->delivery->delivery_address ?? 'N/A'); ?></p>
+                    <p><strong>Address:</strong> <?php echo e($order->delivery ? $order->delivery->delivery_address : 'N/A'); ?></p>
                     <p><strong>Date:</strong> <?php echo e($order->delivery ? \Carbon\Carbon::parse($order->delivery->delivery_date)->format('M d, Y') : 'N/A'); ?></p>
                 </div>
             </div>
@@ -43,44 +43,44 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label fw-bold">Recipient Name</label>
-                            <input type="text" class="form-control" name="recipient_name" value="<?php echo e($order->delivery->recipient_name ?? ''); ?>" required>
+                            <input type="text" class="form-control" name="recipient_name" value="<?php echo e($order->delivery ? $order->delivery->recipient_name : ''); ?>" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Recipient Phone</label>
-                            <input type="text" class="form-control" name="recipient_phone" value="<?php echo e($order->delivery->recipient_phone ?? ''); ?>" required>
+                            <input type="text" class="form-control" name="recipient_phone" value="<?php echo e($order->delivery ? $order->delivery->recipient_phone : ''); ?>" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Relationship to Recipient</label>
-                            <input type="text" class="form-control" value="<?php echo e(ucfirst($order->delivery->recipient_relationship ?? 'Not specified')); ?>" readonly>
+                            <input type="text" class="form-control" value="<?php echo e($order->delivery ? ucfirst($order->delivery->recipient_relationship ?? 'Not specified') : 'Not specified'); ?>" readonly>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label fw-bold">Delivery Address</label>
-                            <textarea class="form-control" name="delivery_address" rows="3" required><?php echo e($order->delivery->delivery_address ?? ''); ?></textarea>
+                            <textarea class="form-control" name="delivery_address" rows="3" required><?php echo e($order->delivery ? $order->delivery->delivery_address : ''); ?></textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Special Instructions</label>
-                            <textarea class="form-control" name="special_instructions" rows="2" placeholder="Any special delivery instructions..."><?php echo e($order->delivery->special_instructions ?? ''); ?></textarea>
+                            <textarea class="form-control" name="special_instructions" rows="2" placeholder="Any special delivery instructions..."><?php echo e($order->delivery ? $order->delivery->special_instructions : ''); ?></textarea>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Enhanced Recipient Information Display -->
-                <?php if($order->delivery->delivery_message || $order->delivery->recipient_relationship): ?>
+                <?php if($order->delivery && ($order->delivery->delivery_message || $order->delivery->recipient_relationship)): ?>
                 <div class="row mt-3">
                     <div class="col-12">
                         <div class="alert alert-info">
                             <h6 class="fw-bold mb-2">
                                 <i class="fas fa-info-circle me-2"></i>Additional Recipient Information
                             </h6>
-                            <?php if($order->delivery->delivery_message): ?>
+                            <?php if($order->delivery && $order->delivery->delivery_message): ?>
                                 <div class="mb-2">
                                     <strong>Delivery Message:</strong>
                                     <p class="mb-0 mt-1"><?php echo e($order->delivery->delivery_message); ?></p>
                                 </div>
                             <?php endif; ?>
-                            <?php if($order->delivery->recipient_relationship): ?>
+                            <?php if($order->delivery && $order->delivery->recipient_relationship): ?>
                                 <div>
                                     <strong>Relationship:</strong> <?php echo e(ucfirst($order->delivery->recipient_relationship)); ?>
 
@@ -308,7 +308,7 @@
                 $subtotal = $order->products->sum(function($product) {
                     return $product->pivot->quantity * $product->price;
                 });
-                $shippingFee = $order->delivery->shipping_fee ?? 0;
+                $shippingFee = $order->delivery ? $order->delivery->shipping_fee : 0;
                 if ($shippingFee == 0 && $order->total_price > $subtotal) {
                     $shippingFee = $order->total_price - $subtotal;
                 }

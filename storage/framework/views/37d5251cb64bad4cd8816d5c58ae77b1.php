@@ -16,6 +16,10 @@
             <input type="hidden" name="product_id" value="<?php echo e(request('product_id')); ?>">
             <input type="hidden" name="quantity" value="<?php echo e(request('quantity', 1)); ?>">
         <?php endif; ?>
+        <?php if(request('catalog_product_id')): ?>
+            <input type="hidden" name="catalog_product_id" value="<?php echo e(request('catalog_product_id')); ?>">
+            <input type="hidden" name="quantity" value="<?php echo e(request('quantity', 1)); ?>">
+        <?php endif; ?>
         <?php if(request('selected_items')): ?>
             <?php $__currentLoopData = request('selected_items'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $itemId): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                 <input type="hidden" name="selected_items[]" value="<?php echo e($itemId); ?>">

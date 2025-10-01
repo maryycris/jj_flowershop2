@@ -1,22 +1,20 @@
-@extends('layouts.driver_mobile')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="text-center mb-4">
     <!-- Banner/UI Reference -->
     <img src="/images/rider_UI.png" alt="Driver UI Reference" style="max-width: 100%; border-radius: 15px; margin-bottom: 24px; box-shadow: 0 4px 16px #dbe7db;">
-    <h4 class="fw-bold mt-3" style="color: #356e35; letter-spacing: 1px;">Welcome, {{ Auth::user()->name ?? 'Driver' }}!</h4>
+    <h4 class="fw-bold mt-3" style="color: #356e35; letter-spacing: 1px;">Welcome, <?php echo e(Auth::user()->name ?? 'Driver'); ?>!</h4>
     <p class="text-muted">Your delivery dashboard is ready.</p>
 </div>
 <div class="card shadow-lg mb-4" style="border: none; border-radius: 16px; background: #f7faf7;">
     <div class="card-body text-center">
         <div style="font-size: 2.3rem; color: #2a7e2a;"><i class="bi bi-truck"></i></div>
         <h5 class="card-title mt-2 mb-2" style="color: #3a5d37; font-weight: 600;">Today's Deliveries</h5>
-        <p class="display-5 fw-bold mb-1" style="color: #216f21;">{{ isset($toDeliver) ? $toDeliver->count() : 0 }}</p>
+        <p class="display-5 fw-bold mb-1" style="color: #216f21;"><?php echo e(isset($toDeliver) ? $toDeliver->count() : 0); ?></p>
         <div class="small text-muted mb-0">Deliveries assigned to you today</div>
     </div>
 </div>
 
-@if(isset($toDeliver) && $toDeliver->count() > 0)
+<?php if(isset($toDeliver) && $toDeliver->count() > 0): ?>
 <div class="card shadow-lg mb-4" style="border: none; border-radius: 16px;">
     <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #dee2e6;">
         <h6 class="mb-0" style="color: #3a5d37; font-weight: 600;">
@@ -24,34 +22,38 @@
         </h6>
     </div>
     <div class="card-body p-0">
-        @foreach($toDeliver as $order)
+        <?php $__currentLoopData = $toDeliver; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $order): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
         <div class="border-bottom p-3" style="border-color: #e9ecef !important;">
             <div class="d-flex justify-content-between align-items-start">
                 <div class="flex-grow-1">
                     <h6 class="mb-1" style="color: #2c3e50; font-weight: 600;">
-                        Order #{{ $order->id }}
+                        Order #<?php echo e($order->id); ?>
+
                     </h6>
                     <p class="mb-1 text-muted small">
-                        <i class="bi bi-person me-1"></i>{{ $order->user->name ?? 'N/A' }}
+                        <i class="bi bi-person me-1"></i><?php echo e($order->user->name ?? 'N/A'); ?>
+
                     </p>
                     <p class="mb-1 text-muted small">
-                        <i class="bi bi-geo-alt me-1"></i>{{ $order->delivery->delivery_address ?? 'Address not specified' }}
+                        <i class="bi bi-geo-alt me-1"></i><?php echo e($order->delivery->delivery_address ?? 'Address not specified'); ?>
+
                     </p>
                     <p class="mb-0 text-muted small">
-                        <i class="bi bi-currency-dollar me-1"></i>₱{{ number_format($order->total_price, 2) }}
+                        <i class="bi bi-currency-dollar me-1"></i>₱<?php echo e(number_format($order->total_price, 2)); ?>
+
                     </p>
                 </div>
                 <div class="text-end">
                     <span class="badge bg-info text-white mb-2">On Delivery</span>
                     <br>
-                    <small class="text-muted">{{ $order->created_at->format('M d, Y') }}</small>
+                    <small class="text-muted"><?php echo e($order->created_at->format('M d, Y')); ?></small>
                 </div>
             </div>
         </div>
-        @endforeach
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </div>
 </div>
-@else
+<?php else: ?>
 <div class="card shadow-lg mb-4" style="border: none; border-radius: 16px; background: #f8f9fa;">
     <div class="card-body text-center">
         <div style="font-size: 2rem; color: #6c757d;"><i class="bi bi-inbox"></i></div>
@@ -59,15 +61,17 @@
         <p class="small text-muted mb-0">You have no orders assigned to you at the moment.</p>
     </div>
 </div>
-@endif
+<?php endif; ?>
 <ul class="list-group mb-4">
     <li class="list-group-item d-flex justify-content-between align-items-center" style="font-size: 1.08rem;">
         <span class="fw-semibold"><i class="bi bi-truck me-2"></i>Go to your Orders</span>
-        <a href="{{ route('driver.orders.index') }}" class="btn btn-success btn-sm px-3"><i class="bi bi-chevron-right"></i></a>
+        <a href="<?php echo e(route('driver.orders.index')); ?>" class="btn btn-success btn-sm px-3"><i class="bi bi-chevron-right"></i></a>
     </li>
     <li class="list-group-item d-flex justify-content-between align-items-center">
         <span class="fw-semibold"><i class="bi bi-person me-2"></i>Account/Profile</span>
-        <a href="{{ route('driver.profile') }}" class="btn btn-outline-success btn-sm px-3"><i class="bi bi-chevron-right"></i></a>
+        <a href="<?php echo e(route('driver.profile')); ?>" class="btn btn-outline-success btn-sm px-3"><i class="bi bi-chevron-right"></i></a>
     </li>
 </ul>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.driver_mobile', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\JJ_Flowershop_Capstone\resources\views/driver/dashboard.blade.php ENDPATH**/ ?>

@@ -27,6 +27,11 @@ class OrderFlowController extends Controller
 
     public function onlineValidateConfirm(Request $request, Order $order)
     {
+        // If this is a GET request, redirect to the done page (for page refreshes)
+        if ($request->isMethod('get')) {
+            return redirect()->route('clerk.orders.online.done', $order->id);
+        }
+        
         $orderStatusService = new OrderStatusService();
         $invoiceService = new InvoiceService();
         
@@ -36,36 +41,25 @@ class OrderFlowController extends Controller
         // Generate invoice after validation
         $invoiceService->generateInvoice($order, auth()->id());
         
-        // Get available drivers (users with role 'driver' or similar)
-        $drivers = \App\Models\User::where('role', 'driver')->get();
+        // Don't auto-assign driver - let clerk manually assign
         
-        // If no drivers found, get any available users as fallback
-        if ($drivers->isEmpty()) {
-            $drivers = \App\Models\User::where('id', '!=', auth()->id())->take(5)->get();
-        }
-        
-        // Auto-assign the first available driver
-        if ($drivers->isNotEmpty()) {
-            $driver = $drivers->first();
-            $orderStatusService->assignDriver($order, $driver->id, auth()->id());
-        }
-        
-        // Get invoice data for display
-        $invoiceData = $invoiceService->getInvoiceData($order);
-        
-        $view = auth()->user()->role === 'admin' ? 'admin.orders.online.done' : 'clerk.orders.online.done';
-        return view($view, compact('order', 'invoiceData'));
+        // Redirect to the done page instead of returning view directly
+        return redirect()->route('clerk.orders.online.done', $order->id)
+            ->with('success', 'Order validated successfully! Please assign a driver for delivery.');
     }
 
 
     public function onlineDone(Request $request, Order $order)
     {
-        // mark as ready/done per UI; keep simple status update
-        $order->status = 'done';
-        $order->save();
-        $order->load('user', 'products', 'delivery');
+        // Load relationships
+        $order->load('user', 'products', 'delivery', 'assignedDriver');
+        
+        // Get invoice data for display
+        $invoiceService = new InvoiceService();
+        $invoiceData = $invoiceService->getInvoiceData($order);
+        
         $view = auth()->user()->role === 'admin' ? 'admin.orders.online.done' : 'clerk.orders.online.done';
-        return view($view, compact('order'));
+        return view($view, compact('order', 'invoiceData'));
     }
 
     // Walk-in Orders Flow

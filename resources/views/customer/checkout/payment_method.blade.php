@@ -18,6 +18,10 @@
             <input type="hidden" name="product_id" value="{{ request('product_id') }}">
             <input type="hidden" name="quantity" value="{{ request('quantity', 1) }}">
         @endif
+        @if(request('catalog_product_id'))
+            <input type="hidden" name="catalog_product_id" value="{{ request('catalog_product_id') }}">
+            <input type="hidden" name="quantity" value="{{ request('quantity', 1) }}">
+        @endif
         @if(request('selected_items'))
             @foreach(request('selected_items') as $itemId)
                 <input type="hidden" name="selected_items[]" value="{{ $itemId }}">

@@ -70,6 +70,9 @@
             </div>
 
             <!-- Driver Assignment Card -->
+            @php
+                $drivers = \App\Models\Driver::with('user')->where('is_active', true)->get();
+            @endphp
             @if($order->assigned_driver_id)
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-info text-white">
@@ -82,15 +85,39 @@
                     <div class="row">
                         <div class="col-md-6">
                             <h6>Assigned Driver</h6>
-                            <p><strong>Name:</strong> {{ $order->assignedDriver->name ?? 'N/A' }}</p>
-                            <p><strong>Contact:</strong> {{ $order->assignedDriver->contact_number ?? 'N/A' }}</p>
+                            @if($order->assignedDriver)
+                                <p><strong>Name:</strong> {{ $order->assignedDriver->name ?? 'N/A' }}</p>
+                                <p><strong>Contact:</strong> {{ $order->assignedDriver->contact_number ?? 'N/A' }}</p>
+                                @if($order->assignedDriver->driver)
+                                    <p><strong>Vehicle:</strong> {{ $order->assignedDriver->driver->vehicle_type ?? 'N/A' }} ({{ $order->assignedDriver->driver->vehicle_plate ?? 'N/A' }})</p>
+                                    <p><strong>License:</strong> {{ $order->assignedDriver->driver->license_number ?? 'N/A' }}</p>
+                                @endif
+                            @else
+                                <p class="text-muted">Driver information not available</p>
+                            @endif
+                            <button class="btn btn-outline-primary btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#assignDriverModal">
+                                <i class="fas fa-exchange-alt me-1"></i> Change Driver
+                            </button>
                         </div>
                         <div class="col-md-6">
                             <h6>Delivery Status</h6>
                             <p><strong>Status:</strong> 
-                                <span class="badge bg-info">On Delivery</span>
+                                @if($order->order_status === 'on_delivery')
+                                    <span class="badge bg-info">On Delivery</span>
+                                @elseif($order->order_status === 'approved')
+                                    <span class="badge bg-warning">Ready for Delivery</span>
+                                @else
+                                    <span class="badge bg-secondary">{{ ucfirst($order->order_status) }}</span>
+                                @endif
                             </p>
-                            <p><strong>Assigned:</strong> {{ $order->on_delivery_at ? \Carbon\Carbon::parse($order->on_delivery_at)->format('M d, Y g:i A') : 'N/A' }}</p>
+                            <p><strong>Assigned:</strong> {{ $order->on_delivery_at ? \Carbon\Carbon::parse($order->on_delivery_at)->format('M d, Y g:i A') : 'Not assigned yet' }}</p>
+                            @if($order->assignedDriver && $order->assignedDriver->driver)
+                                <p><strong>Driver Status:</strong> 
+                                    <span class="badge {{ $order->assignedDriver->driver->getAvailabilityBadgeClass() }}">
+                                        {{ $order->assignedDriver->driver->getAvailabilityText() }}
+                                    </span>
+                                </p>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -104,7 +131,10 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <p class="mb-0">No driver was automatically assigned. Please manually assign a driver for delivery.</p>
+                    <p class="mb-2">No driver has been assigned yet. Please select an available driver for delivery.</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assignDriverModal">
+                        <i class="fas fa-plus me-1"></i> Assign Driver
+                    </button>
                 </div>
             </div>
             @endif
@@ -126,6 +156,122 @@
         </div>
     </div>
 </div>
+<!-- Assign Driver Modal -->
+<div class="modal fade" id="assignDriverModal" tabindex="-1" aria-labelledby="assignDriverModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignDriverModalLabel">Assign Driver</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ route('clerk.orders.assignDelivery', $order->id) }}">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="driver_id" class="form-label">Select Driver</label>
+                        <select id="driver_id" name="driver_id" class="form-select" required>
+                            <option value="" selected disabled>Choose a driver...</option>
+                            @foreach($drivers as $driver)
+                                <option value="{{ $driver->user_id }}" 
+                                        data-availability="{{ $driver->availability_status }}"
+                                        data-vehicle="{{ $driver->vehicle_type }}"
+                                        data-license="{{ $driver->license_number }}"
+                                        data-deliveries="{{ $driver->current_deliveries_today }}/{{ $driver->max_deliveries_per_day }}"
+                                        data-work-hours="{{ $driver->work_start_time->format('H:i') }} - {{ $driver->work_end_time->format('H:i') }}"
+                                        {{ !$driver->isAvailable() ? 'disabled' : '' }}>
+                                    {{ $driver->user->name }} 
+                                    ({{ $driver->getAvailabilityText() }})
+                                    @if(!$driver->isAvailable())
+                                        - Not Available
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    
+                    <!-- Driver Information Display -->
+                    <div id="driverInfo" class="mt-3" style="display: none;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">Driver Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Contact:</strong> <span id="driverContact">{{ $drivers->first()->user->contact_number ?? 'N/A' }}</span></p>
+                                        <p><strong>Vehicle:</strong> <span id="driverVehicle">N/A</span></p>
+                                        <p><strong>License:</strong> <span id="driverLicense">N/A</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Status:</strong> <span id="driverStatus" class="badge">N/A</span></p>
+                                        <p><strong>Deliveries Today:</strong> <span id="driverDeliveries">N/A</span></p>
+                                        <p><strong>Work Hours:</strong> <span id="driverWorkHours">N/A</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success" id="assignBtn" disabled>Assign Driver</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const driverSelect = document.getElementById('driver_id');
+    const driverInfo = document.getElementById('driverInfo');
+    const assignBtn = document.getElementById('assignBtn');
+    
+    driverSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (selectedOption.value) {
+            // Show driver information
+            driverInfo.style.display = 'block';
+            
+            // Update driver details
+            document.getElementById('driverContact').textContent = selectedOption.textContent.split(' (')[0];
+            document.getElementById('driverVehicle').textContent = selectedOption.dataset.vehicle || 'N/A';
+            document.getElementById('driverLicense').textContent = selectedOption.dataset.license || 'N/A';
+            document.getElementById('driverDeliveries').textContent = selectedOption.dataset.deliveries || 'N/A';
+            document.getElementById('driverWorkHours').textContent = selectedOption.dataset.workHours || 'N/A';
+            
+            // Update status badge
+            const statusSpan = document.getElementById('driverStatus');
+            const availability = selectedOption.dataset.availability;
+            statusSpan.textContent = availability.charAt(0).toUpperCase() + availability.slice(1).replace('_', ' ');
+            statusSpan.className = 'badge ' + getStatusClass(availability);
+            
+            // Enable/disable assign button based on availability
+            if (availability === 'available') {
+                assignBtn.disabled = false;
+                assignBtn.textContent = 'Assign Driver';
+            } else {
+                assignBtn.disabled = true;
+                assignBtn.textContent = 'Driver Not Available';
+            }
+        } else {
+            driverInfo.style.display = 'none';
+            assignBtn.disabled = true;
+        }
+    });
+    
+    function getStatusClass(status) {
+        switch(status) {
+            case 'available': return 'bg-success';
+            case 'busy': return 'bg-warning';
+            case 'off_duty': return 'bg-secondary';
+            case 'on_delivery': return 'bg-info';
+            default: return 'bg-secondary';
+        }
+    }
+});
+</script>
 @endsection
 
 

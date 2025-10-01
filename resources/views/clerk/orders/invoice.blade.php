@@ -20,7 +20,37 @@
                 <div class="col-md-6 text-md-end">
                     <h3>Invoice #{{ $order->id }}</h3>
                     <p class="mb-0"><strong>Date:</strong> {{ $order->created_at->format('M d, Y') }}</p>
-                    <p><strong>Status:</strong> {{ ucfirst($order->status) }}</p>
+                    <p><strong>Status:</strong> 
+                        @php
+                            $statusClass = 'bg-warning text-dark';
+                            $statusText = ucfirst($order->status);
+                            
+                            if ($order->order_status) {
+                                switch($order->order_status) {
+                                    case 'approved':
+                                        $statusClass = 'bg-success';
+                                        $statusText = 'Approved';
+                                        break;
+                                    case 'on_delivery':
+                                        $statusClass = 'bg-info';
+                                        $statusText = 'On Delivery';
+                                        break;
+                                    case 'completed':
+                                        $statusClass = 'bg-primary';
+                                        $statusText = 'Completed';
+                                        break;
+                                    case 'cancelled':
+                                        $statusClass = 'bg-danger';
+                                        $statusText = 'Cancelled';
+                                        break;
+                                    default:
+                                        $statusText = ucfirst($order->order_status);
+                                        break;
+                                }
+                            }
+                        @endphp
+                        <span class="badge {{ $statusClass }}">{{ $statusText }}</span>
+                    </p>
                 </div>
             </div>
             

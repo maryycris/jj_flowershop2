@@ -1,4 +1,4 @@
-@extends('layouts.clerk_app')
+@extends('layouts.admin_app')
 @section('content')
 <div class="container-fluid py-3">
     <div class="row justify-content-center">
@@ -31,7 +31,7 @@
                                     </div>
                                     <div class="card-footer d-flex justify-content-between p-2">
                                         <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}">Edit</button>
-                                        <form method="POST" action="{{ route('clerk.customize.destroy',$item->id) }}" onsubmit="return confirm('Delete this item?')">
+                                        <form method="POST" action="{{ route('admin.customize.destroy',$item->id) }}" onsubmit="return confirm('Delete this item?')">
                                             @csrf @method('DELETE')
                                             <button class="btn btn-outline-danger btn-sm">Delete</button>
                                         </form>
@@ -42,7 +42,7 @@
                             <!-- Edit Modal -->
                             <div class="modal fade" id="editModal{{ $item->id }}" tabindex="-1">
                               <div class="modal-dialog">
-                                <form class="modal-content" method="POST" action="{{ route('clerk.customize.update',$item->id) }}" enctype="multipart/form-data">
+                                <form class="modal-content" method="POST" action="{{ route('admin.customize.update',$item->id) }}" enctype="multipart/form-data">
                                   @csrf @method('PUT')
                                   <div class="modal-header"><h5 class="modal-title">Edit {{ $cat }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                                   <div class="modal-body">
@@ -73,7 +73,7 @@
 <!-- Add Modal (shared) -->
 <div class="modal fade" id="addModal" tabindex="-1">
   <div class="modal-dialog">
-    <form class="modal-content" method="POST" action="{{ route('clerk.customize.store') }}" enctype="multipart/form-data">
+    <form class="modal-content" method="POST" action="{{ route('admin.customize.store') }}" enctype="multipart/form-data">
       @csrf
       <div class="modal-header"><h5 class="modal-title">Add Item</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
@@ -103,5 +103,3 @@ document.getElementById('addModal')?.addEventListener('show.bs.modal', function 
 </script>
 @endpush
 @endsection
-
-

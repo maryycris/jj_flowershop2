@@ -9,7 +9,7 @@
                         <div class="ms-2 small text-muted"><?php echo e(sprintf('%05d', $order->id)); ?></div>
                         <div class="ms-2 small text-muted">OUT / 0001</div>
                         <div class="ms-auto d-flex align-items-center gap-2">
-                            <button type="button" class="btn btn-light d-flex align-items-center" style="border:1px solid #e6e6e6;">
+                            <button type="button" class="btn btn-light d-flex align-items-center" style="border:1px solid #e6e6e6;" onclick="showMoves()">
                                 <i class="bi bi-list me-1"></i>
                                 Moves
                             </button>
@@ -21,8 +21,8 @@
                         <button type="button" class="btn btn-light" onclick="window.print()">Print</button>
                             <a href="<?php echo e(route('clerk.orders.index')); ?>" class="btn btn-outline-secondary">Cancel</a>
                         <div class="ms-auto d-flex align-items-center gap-2">
-                            <span class="btn btn-sm btn-success disabled">Ready</span>
-                            <span class="btn btn-sm btn-light disabled">Done</span>
+                            <button type="button" class="btn btn-sm btn-success" id="readyBtn" onclick="markAsReady()">Ready</button>
+                            <button type="button" class="btn btn-sm btn-light" id="doneBtn" onclick="markAsDone()" style="display: none;">Done</button>
                         </div>
                     </div>
 
@@ -66,11 +66,20 @@
                                                 $demand = (int) ($product->pivot->quantity ?? 0);
                                                 $stockAvailable = (int) ($product->stock ?? 0);
                                                 $quantityToProvide = max(0, min($demand, $stockAvailable));
+                                                $isInsufficientStock = $stockAvailable < $demand;
                                             ?>
-                                            <tr>
+                                            <tr class="<?php echo e($isInsufficientStock ? 'table-warning' : ''); ?>">
                                                 <td><?php echo e($product->name); ?></td>
                                                 <td><?php echo e($demand); ?></td>
-                                                <td><?php echo e($quantityToProvide); ?></td>
+                                                <td>
+                                                    <span class="<?php echo e($isInsufficientStock ? 'text-warning' : ''); ?>">
+                                                        <?php echo e($quantityToProvide); ?>
+
+                                                        <?php if($isInsufficientStock): ?>
+                                                            <small class="text-muted">(Insufficient stock: <?php echo e($stockAvailable); ?> available)</small>
+                                                        <?php endif; ?>
+                                                    </span>
+                                                </td>
                                             </tr>
                                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </tbody>
@@ -94,9 +103,9 @@
                     <small>This will validate the order and assign a driver for delivery.</small>
                 </div>
                 <div class="d-flex justify-content-center gap-3">
-                    <form method="POST" action="<?php echo e(route('clerk.orders.online.validate.confirm', $order)); ?>" class="m-0">
+                    <form method="POST" action="<?php echo e(route('clerk.orders.online.validate.confirm', $order)); ?>" class="m-0" id="validateForm">
                         <?php echo csrf_field(); ?>
-                        <button type="submit" class="btn btn-success">Confirm</button>
+                        <button type="submit" class="btn btn-success" onclick="showValidateAlert()">Confirm</button>
                     </form>
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                 </div>
@@ -104,6 +113,204 @@
         </div>
     </div>
 </div>
+
+<!-- Moves Modal -->
+<div class="modal fade" id="movesModal" tabindex="-1" aria-labelledby="movesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="movesModalLabel">Order History & Moves</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="timeline">
+                    <?php if($order->statusHistories): ?>
+                        <?php $__currentLoopData = $order->statusHistories->sortBy('created_at'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $history): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <div class="timeline-item mb-3">
+                                <div class="d-flex">
+                                    <div class="timeline-marker bg-primary rounded-circle me-3" style="width: 12px; height: 12px; margin-top: 6px;"></div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-semibold"><?php echo e(ucfirst($history->status)); ?></div>
+                                        <div class="text-muted small"><?php echo e($history->created_at->format('M d, Y g:i A')); ?></div>
+                                        <?php if($history->notes): ?>
+                                            <div class="text-muted small"><?php echo e($history->notes); ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    <?php else: ?>
+                        <div class="text-muted">No history available for this order.</div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ready Confirmation Modal -->
+<div class="modal fade" id="readyModal" tabindex="-1" aria-labelledby="readyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="mb-3 fw-semibold" id="readyModalLabel">Mark Order as Ready?</div>
+                <div class="mb-3 text-muted">
+                    <small>This will mark the order as ready for delivery and assign a driver.</small>
+                </div>
+                <div class="d-flex justify-content-center gap-3">
+                    <form method="POST" action="<?php echo e(route('clerk.orders.mark-ready', $order)); ?>" class="m-0" id="readyForm">
+                        <?php echo csrf_field(); ?>
+                        <button type="submit" class="btn btn-success" onclick="showReadyAlert()">Confirm Ready</button>
+                    </form>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Done Confirmation Modal -->
+<div class="modal fade" id="doneModal" tabindex="-1" aria-labelledby="doneModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="mb-3 fw-semibold" id="doneModalLabel">Complete Order Processing?</div>
+                <div class="mb-3 text-muted">
+                    <small>This will complete the order processing and mark it as done.</small>
+                </div>
+                <div class="d-flex justify-content-center gap-3">
+                    <form method="POST" action="<?php echo e(route('clerk.orders.mark-done', $order)); ?>" class="m-0" id="doneForm">
+                        <?php echo csrf_field(); ?>
+                        <button type="submit" class="btn btn-primary" onclick="showDoneAlert()">Complete</button>
+                    </form>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function showMoves() {
+    const movesModal = new bootstrap.Modal(document.getElementById('movesModal'));
+    movesModal.show();
+}
+
+function markAsReady() {
+    const readyModal = new bootstrap.Modal(document.getElementById('readyModal'));
+    readyModal.show();
+}
+
+function markAsDone() {
+    const doneModal = new bootstrap.Modal(document.getElementById('doneModal'));
+    doneModal.show();
+}
+
+function showValidateAlert() {
+    event.preventDefault(); // Prevent form submission
+    
+    Swal.fire({
+        title: 'Validating Order...',
+        text: 'Order is being validated and moved to Ready status',
+        icon: 'info',
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        timer: 2000,
+        timerProgressBar: true,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    }).then(() => {
+        // Submit the form after the alert
+        document.getElementById('validateForm').submit();
+    });
+}
+
+function showReadyAlert() {
+    event.preventDefault(); // Prevent form submission
+    
+    Swal.fire({
+        title: 'Marking as Ready...',
+        text: 'Order is being marked as ready for delivery',
+        icon: 'success',
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        timer: 2000,
+        timerProgressBar: true,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    }).then(() => {
+        // Submit the form after the alert
+        document.getElementById('readyForm').submit();
+    });
+}
+
+function showDoneAlert() {
+    event.preventDefault(); // Prevent form submission
+    
+    Swal.fire({
+        title: 'Completing Order...',
+        text: 'Order processing is being completed',
+        icon: 'success',
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        timer: 2000,
+        timerProgressBar: true,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    }).then(() => {
+        // Submit the form after the alert
+        document.getElementById('doneForm').submit();
+    });
+}
+
+// Update button states based on order status
+document.addEventListener('DOMContentLoaded', function() {
+    const orderStatus = '<?php echo e($order->order_status ?? $order->status); ?>';
+    const readyBtn = document.getElementById('readyBtn');
+    const doneBtn = document.getElementById('doneBtn');
+    
+    if (orderStatus === 'approved') {
+        readyBtn.style.display = 'inline-block';
+        readyBtn.disabled = false;
+    } else if (orderStatus === 'on_delivery') {
+        readyBtn.style.display = 'none';
+        doneBtn.style.display = 'inline-block';
+        doneBtn.disabled = false;
+    } else if (orderStatus === 'completed') {
+        readyBtn.style.display = 'none';
+        doneBtn.style.display = 'inline-block';
+        doneBtn.disabled = true;
+        doneBtn.textContent = 'Completed';
+    }
+});
+</script>
+
+<style>
+.timeline-item {
+    position: relative;
+}
+
+.timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 18px;
+    bottom: -12px;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.timeline-marker {
+    flex-shrink: 0;
+}
+</style>
 <?php $__env->stopSection(); ?>
 
 

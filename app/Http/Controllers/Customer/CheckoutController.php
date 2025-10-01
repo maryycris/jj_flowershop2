@@ -226,17 +226,24 @@ class CheckoutController extends Controller
         $deliveryAddress = $user->addresses()->where('is_default', true)->first() 
                           ?? $user->addresses()->first();
 
-        // Calculate shipping fee using the updated helper
-        $shippingFee = 30; // Default for Cordova
-        if ($deliveryAddress) {
-            $originAddress = 'Cordova, Cebu'; // Shop location
-            $destinationAddress = $deliveryAddress->street_address . ', ' . 
-                                ($deliveryAddress->barangay ?? '') . ', ' . 
-                                ($deliveryAddress->municipality ?? '') . ', ' . 
-                                ($deliveryAddress->city ?? '') . ', ' . 
-                                ($deliveryAddress->region ?? 'Region VII');
-            
-            $shippingFee = \App\Helpers\ShippingFeeHelper::calculateShippingFee($originAddress, $destinationAddress);
+        // Use shipping fee from URL parameter if available, otherwise calculate
+        $shippingFee = $request->query('shipping_fee');
+        \Log::info('Payment method shipping fee check', ['url_shipping_fee' => $shippingFee, 'type' => gettype($shippingFee)]);
+        if (!$shippingFee || !is_numeric($shippingFee)) {
+            // Calculate shipping fee using the updated helper
+            $shippingFee = 30; // Default for Cordova
+            if ($deliveryAddress) {
+                $originAddress = 'Cordova, Cebu'; // Shop location
+                $destinationAddress = $deliveryAddress->street_address . ', ' . 
+                                    ($deliveryAddress->barangay ?? '') . ', ' . 
+                                    ($deliveryAddress->municipality ?? '') . ', ' . 
+                                    ($deliveryAddress->city ?? '') . ', ' . 
+                                    ($deliveryAddress->region ?? 'Region VII');
+                
+                $shippingFee = \App\Helpers\ShippingFeeHelper::calculateShippingFee($originAddress, $destinationAddress);
+            }
+        } else {
+            $shippingFee = (float) $shippingFee;
         }
 
         return view('customer.checkout.payment_method', compact('cartItems', 'subtotal', 'shippingFee'));
@@ -253,6 +260,14 @@ class CheckoutController extends Controller
         $productId = $request->input('product_id');
         $catalogProductId = $request->input('catalog_product_id');
         $quantity = $request->input('quantity', 1);
+        
+        \Log::info('ProcessOrder - Buy now flow check', [
+            'product_id' => $productId,
+            'catalog_product_id' => $catalogProductId,
+            'quantity' => $quantity,
+            'has_product_id' => !empty($productId),
+            'has_catalog_product_id' => !empty($catalogProductId)
+        ]);
         
         if ($productId) {
             // "Buy now" flow with regular product ID
@@ -302,6 +317,7 @@ class CheckoutController extends Controller
             $tempCartItem->product = $product;
             
             $cartItems = collect([$tempCartItem]);
+            \Log::info('ProcessOrder - Created temp cart item for Buy Now', ['product_id' => $productId, 'quantity' => $quantity]);
         } else {
             // Regular cart flow
         $cartItems = $user->cartItems()->with('product')->get();
@@ -326,12 +342,14 @@ class CheckoutController extends Controller
         });
         // Use shipping_fee from form if present
         $shippingFee = $request->input('shipping_fee');
-        if (!$shippingFee || !is_numeric($shippingFee) || $shippingFee < 30) {
-            $shippingFee = 30; // fallback minimum
+        \Log::info('Shipping fee from request', ['shipping_fee' => $shippingFee, 'type' => gettype($shippingFee)]);
+        if (!$shippingFee || !is_numeric($shippingFee)) {
+            $shippingFee = 30; // fallback minimum only if not provided or invalid
+            \Log::info('Using fallback shipping fee', ['shipping_fee' => $shippingFee]);
         }
         $totalPrice = $subtotal + $shippingFee;
 
-        \Log::info('Calculated totals', ['subtotal' => $subtotal, 'total' => $totalPrice]);
+        \Log::info('Calculated totals', ['subtotal' => $subtotal, 'shipping_fee' => $shippingFee, 'total' => $totalPrice]);
         
         \Log::info('Delivery details before processing', [
             'delivery_address_input' => $request->input('delivery_address'),

@@ -14,17 +14,18 @@ class DriverController extends Controller
     public function dashboard()
     {
         $driver = Auth::user();
-        // Only count deliveries assigned to this driver with status 'Out_for_delivery' for today
-        $toDeliver = $driver->deliveries()
-            ->where('status', 'Out_for_delivery')
-            ->whereDate('delivery_date', now()->toDateString())
-            ->with('order.user')
+        
+        // Get orders assigned to this driver with 'on_delivery' status
+        $toDeliver = \App\Models\Order::where('assigned_driver_id', $driver->id)
+            ->where('order_status', 'on_delivery')
+            ->with(['user', 'products', 'delivery'])
             ->latest()
             ->get();
-        // Completed deliveries
-        $completedDeliveries = $driver->deliveries()
-            ->where('status', 'Completed')
-            ->with('order.user')
+            
+        // Get completed orders assigned to this driver
+        $completedDeliveries = \App\Models\Order::where('assigned_driver_id', $driver->id)
+            ->where('order_status', 'completed')
+            ->with(['user', 'products', 'delivery'])
             ->latest()
             ->get();
 
@@ -34,19 +35,26 @@ class DriverController extends Controller
     public function orders()
     {
         $driver = Auth::user();
-        $deliveries = $driver->deliveries()->with('order.user')->latest()->get();
         
-        return view('driver.orders.index', compact('deliveries'));
+        // Get all orders assigned to this driver
+        $orders = \App\Models\Order::where('assigned_driver_id', $driver->id)
+            ->with(['user', 'products', 'delivery'])
+            ->latest()
+            ->get();
+        
+        return view('driver.orders.index', compact('orders'));
     }
 
-    public function showOrder(Delivery $delivery)
+    public function showOrder($orderId)
     {
-        // Ensure the delivery belongs to the authenticated driver
-        if ($delivery->driver_id !== Auth::id()) {
-            abort(403, 'Unauthorized access to this delivery.');
+        $order = \App\Models\Order::findOrFail($orderId);
+        
+        // Ensure the order is assigned to the authenticated driver
+        if ($order->assigned_driver_id !== Auth::id()) {
+            abort(403, 'Unauthorized access to this order.');
         }
 
-        return view('driver.orders.show', compact('delivery'));
+        return view('driver.orders.show', compact('order'));
     }
 
     public function history()
@@ -118,6 +126,34 @@ class DriverController extends Controller
         $user->save();
 
         return redirect()->route('driver.profile')->with('success', 'Password changed successfully!');
+    }
+
+    public function completeOrder(Request $request, $orderId)
+    {
+        $order = \App\Models\Order::findOrFail($orderId);
+        
+        // Ensure the order is assigned to the authenticated driver
+        if ($order->assigned_driver_id !== Auth::id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        // Ensure the order is in 'on_delivery' status
+        if ($order->order_status !== 'on_delivery') {
+            return response()->json(['success' => false, 'message' => 'Order is not in delivery status'], 400);
+        }
+
+        try {
+            // Use OrderStatusService to complete the order
+            $orderStatusService = new \App\Services\OrderStatusService();
+            
+            if ($orderStatusService->completeOrder($order, Auth::id())) {
+                return response()->json(['success' => true, 'message' => 'Order completed successfully']);
+            } else {
+                return response()->json(['success' => false, 'message' => 'Failed to complete order'], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error completing order: ' . $e->getMessage()], 500);
+        }
     }
 
     public function updateDeliveryStatus(Request $request, Delivery $delivery)

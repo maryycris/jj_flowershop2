@@ -21,14 +21,29 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validationRules = [
             'name' => 'required|string|max:255',
             'sex' => 'required|string|in:M,F',
             'contact_number' => 'required|string|max:20',
             'role' => 'required|string|in:clerk,driver',
             'username' => 'required|string|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-        ]);
+        ];
+
+        // Add driver-specific validation if role is driver
+        if ($request->role === 'driver') {
+            $validationRules = array_merge($validationRules, [
+                'license_number' => 'required|string|max:50|unique:drivers',
+                'vehicle_type' => 'required|string|in:Motorcycle,Car,Van,Truck',
+                'vehicle_plate' => 'required|string|max:20',
+                'work_start_time' => 'required|date_format:H:i',
+                'work_end_time' => 'required|date_format:H:i',
+                'max_deliveries_per_day' => 'required|integer|min:1|max:50',
+            ]);
+        }
+
+        $request->validate($validationRules);
+
         // Generate an internal email since the field was removed from the UI
         $emailBase = strtolower(preg_replace('/[^a-z0-9]+/i', '', $request->username)) ?: 'staff';
         $email = $emailBase . '@internal.local';
@@ -36,7 +51,8 @@ class UserController extends Controller
             $email = $emailBase . '+' . Str::random(4) . '@internal.local';
         }
 
-        User::create([
+        // Create the user
+        $user = User::create([
             'name' => $request->name,
             'email' => $email,
             'sex' => $request->sex,
@@ -45,6 +61,22 @@ class UserController extends Controller
             'username' => $request->username,
             'password' => Hash::make($request->password),
         ]);
+
+        // Create driver profile if role is driver
+        if ($request->role === 'driver') {
+            \App\Models\Driver::create([
+                'user_id' => $user->id,
+                'license_number' => $request->license_number,
+                'vehicle_type' => $request->vehicle_type,
+                'vehicle_plate' => $request->vehicle_plate,
+                'availability_status' => 'available',
+                'work_start_time' => $request->work_start_time,
+                'work_end_time' => $request->work_end_time,
+                'max_deliveries_per_day' => $request->max_deliveries_per_day,
+                'current_deliveries_today' => 0,
+                'is_active' => true
+            ]);
+        }
 
         return Redirect::route('admin.users.index')->with('success', 'User created successfully!');
     }

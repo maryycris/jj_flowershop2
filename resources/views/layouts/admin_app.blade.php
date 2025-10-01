@@ -227,6 +227,9 @@
                     <a href="{{ route('admin.users.index') }}" class="sidebar-link @if(request()->routeIs('admin.users.*')) active @endif">Manage Accounts</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
+                    <a href="{{ route('admin.customize.index') }}" class="sidebar-link @if(request()->routeIs('admin.customize.*')) active @endif">Customize</a>
+                </li>
+                <li class="nav-item w-100 mb-1">
                     <a href="{{ route('admin.reports.sales') }}" class="sidebar-link @if(request()->routeIs('admin.reports.sales')) active @endif">Sales Report</a>
                 </li>
                 <li class="nav-item w-100 mb-1">

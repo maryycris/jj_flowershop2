@@ -49,39 +49,44 @@
                             </thead>
                             <tbody>
                                 @forelse($onlineOrders as $order)
-                                    <tr class="cursor-pointer" onclick="window.location='{{ route('clerk.orders.online.invoice', $order) }}'">
+                                    @php
+                                        $statusClass = 'bg-warning text-dark';
+                                        $statusText = ucfirst($order->status);
+                                        $redirectUrl = route('clerk.orders.online.invoice', $order); // Default
+                                        
+                                        if ($order->order_status) {
+                                            switch($order->order_status) {
+                                                case 'approved':
+                                                    $statusClass = 'bg-success';
+                                                    $statusText = 'Approved';
+                                                    $redirectUrl = route('clerk.orders.online.done', $order);
+                                                    break;
+                                                case 'on_delivery':
+                                                    $statusClass = 'bg-info';
+                                                    $statusText = 'On Delivery';
+                                                    $redirectUrl = route('clerk.orders.online.done', $order);
+                                                    break;
+                                                case 'completed':
+                                                    $statusClass = 'bg-primary';
+                                                    $statusText = 'Completed';
+                                                    $redirectUrl = route('clerk.orders.online.done', $order);
+                                                    break;
+                                                case 'cancelled':
+                                                    $statusClass = 'bg-danger';
+                                                    $statusText = 'Cancelled';
+                                                    $redirectUrl = route('clerk.orders.online.done', $order);
+                                                    break;
+                                                default:
+                                                    $statusClass = 'bg-warning text-dark';
+                                                    $statusText = 'Pending';
+                                            }
+                                        }
+                                    @endphp
+                                    <tr class="cursor-pointer" onclick="window.location='{{ $redirectUrl }}'">
                                         <td>{{ $order->user->name ?? 'N/A' }}</td>
                                         <td>{{ $order->id }}</td>
                                         <td>{{ $order->created_at->format('m/d/Y') }}</td>
                                         <td>
-                                            @php
-                                                $statusClass = 'bg-warning text-dark';
-                                                $statusText = ucfirst($order->status);
-                                                
-                                                if ($order->order_status) {
-                                                    switch($order->order_status) {
-                                                        case 'approved':
-                                                            $statusClass = 'bg-success';
-                                                            $statusText = 'Approved';
-                                                            break;
-                                                        case 'on_delivery':
-                                                            $statusClass = 'bg-info';
-                                                            $statusText = 'On Delivery';
-                                                            break;
-                                                        case 'completed':
-                                                            $statusClass = 'bg-primary';
-                                                            $statusText = 'Completed';
-                                                            break;
-                                                        case 'cancelled':
-                                                            $statusClass = 'bg-danger';
-                                                            $statusText = 'Cancelled';
-                                                            break;
-                                                        default:
-                                                            $statusClass = 'bg-warning text-dark';
-                                                            $statusText = 'Pending';
-                                                    }
-                                                }
-                                            @endphp
                                             <span class="badge {{ $statusClass }}">{{ $statusText }}</span>
                                         </td>
                                         <td>₱{{ number_format($order->total_price, 2) }}</td>
@@ -122,39 +127,44 @@
                             </thead>
                             <tbody>
                                 @forelse($walkInOrders as $order)
-                                    <tr class="cursor-pointer" onclick="window.location='{{ route('clerk.orders.walkin.quotation', $order) }}'">
+                                    @php
+                                        $statusClass = 'bg-secondary';
+                                        $statusText = ucfirst($order->status);
+                                        $redirectUrl = route('clerk.orders.walkin.quotation', $order); // Default
+                                        
+                                        if ($order->order_status) {
+                                            switch($order->order_status) {
+                                                case 'approved':
+                                                    $statusClass = 'bg-success';
+                                                    $statusText = 'Approved';
+                                                    $redirectUrl = route('clerk.orders.walkin.done', $order);
+                                                    break;
+                                                case 'on_delivery':
+                                                    $statusClass = 'bg-info';
+                                                    $statusText = 'On Delivery';
+                                                    $redirectUrl = route('clerk.orders.walkin.done', $order);
+                                                    break;
+                                                case 'completed':
+                                                    $statusClass = 'bg-primary';
+                                                    $statusText = 'Completed';
+                                                    $redirectUrl = route('clerk.orders.walkin.done', $order);
+                                                    break;
+                                                case 'cancelled':
+                                                    $statusClass = 'bg-danger';
+                                                    $statusText = 'Cancelled';
+                                                    $redirectUrl = route('clerk.orders.walkin.done', $order);
+                                                    break;
+                                                default:
+                                                    $statusClass = 'bg-secondary';
+                                                    $statusText = 'Pending';
+                                            }
+                                        }
+                                    @endphp
+                                    <tr class="cursor-pointer" onclick="window.location='{{ $redirectUrl }}'">
                                         <td>{{ $order->user->name ?? 'Walk-in Customer' }}</td>
                                         <td>{{ $order->id }}</td>
                                         <td>{{ $order->created_at->format('m/d/Y') }}</td>
                                         <td>
-                                            @php
-                                                $statusClass = 'bg-secondary';
-                                                $statusText = ucfirst($order->status);
-                                                
-                                                if ($order->order_status) {
-                                                    switch($order->order_status) {
-                                                        case 'approved':
-                                                            $statusClass = 'bg-success';
-                                                            $statusText = 'Approved';
-                                                            break;
-                                                        case 'on_delivery':
-                                                            $statusClass = 'bg-info';
-                                                            $statusText = 'On Delivery';
-                                                            break;
-                                                        case 'completed':
-                                                            $statusClass = 'bg-primary';
-                                                            $statusText = 'Completed';
-                                                            break;
-                                                        case 'cancelled':
-                                                            $statusClass = 'bg-danger';
-                                                            $statusText = 'Cancelled';
-                                                            break;
-                                                        default:
-                                                            $statusClass = 'bg-secondary';
-                                                            $statusText = 'Pending';
-                                                    }
-                                                }
-                                            @endphp
                                             <span class="badge {{ $statusClass }}">{{ $statusText }}</span>
                                         </td>
                                         <td>₱{{ number_format($order->total_price, 2) }}</td>

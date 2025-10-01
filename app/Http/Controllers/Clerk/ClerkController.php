@@ -277,29 +277,20 @@ class ClerkController extends Controller
     public function assignDelivery(Request $request, Order $order)
     {
         $request->validate([
-            'driver_id' => 'required|exists:users,id',
-            'delivery_date' => 'required|date',
+            'driver_id' => 'required|exists:users,id'
         ]);
 
-        // Update order status to out_for_delivery
-        $order->status = 'out_for_delivery';
-        $order->save();
-
-        // Create or update delivery record
-        $delivery = $order->delivery;
-        if (!$delivery) {
-            $delivery = new \App\Models\Delivery();
-            $delivery->order_id = $order->id;
+        try {
+            $orderStatusService = new \App\Services\OrderStatusService();
+            
+            if ($orderStatusService->assignDriver($order, $request->driver_id, auth()->id())) {
+                return redirect()->back()->with('success', 'Driver assigned successfully! Order is now on delivery.');
+            } else {
+                return redirect()->back()->with('error', 'Failed to assign driver. Please try again.');
+            }
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error assigning driver: ' . $e->getMessage());
         }
-        $delivery->driver_id = $request->driver_id;
-        $delivery->delivery_date = $request->delivery_date;
-        $delivery->status = 'out_for_delivery';
-        $delivery->recipient_name = $order->user->name;
-        $delivery->recipient_phone = $order->user->contact_number ?? 'N/A';
-        $delivery->delivery_address = $order->delivery_address ?? 'N/A';
-        $delivery->save();
-
-        return redirect()->route('clerk.orders.index')->with('success', 'Order assigned for delivery. Status updated to "Out for Delivery".');
     }
 
     public function productCatalog(Request $request) {
@@ -477,6 +468,56 @@ class ClerkController extends Controller
                 'success' => false,
                 'message' => 'Error completing order: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Mark order as ready for delivery
+     */
+    public function markReady(Order $order)
+    {
+        try {
+            $orderStatusService = new OrderStatusService();
+            
+            // First approve the order if not already approved
+            if ($order->order_status !== 'approved') {
+                $orderStatusService->approveOrder($order, auth()->id());
+            }
+            
+            // Get available drivers
+            $drivers = User::where('role', 'driver')->get();
+            if ($drivers->isEmpty()) {
+                $drivers = User::where('id', '!=', auth()->id())->take(5)->get();
+            }
+            
+            // Auto-assign driver if available
+            if ($drivers->isNotEmpty()) {
+                $driver = $drivers->first();
+                $orderStatusService->assignDriver($order, $driver->id, auth()->id());
+            }
+            
+            return redirect()->back()->with('success', 'Order marked as ready and driver assigned for delivery.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to mark order as ready: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Mark order as done (completed processing)
+     */
+    public function markDone(Order $order)
+    {
+        try {
+            $orderStatusService = new OrderStatusService();
+            
+            // Complete the order
+            if ($orderStatusService->completeOrder($order, auth()->id())) {
+                return redirect()->back()->with('success', 'Order processing completed successfully.');
+            } else {
+                return redirect()->back()->with('error', 'Failed to complete order processing.');
+            }
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to complete order: ' . $e->getMessage());
         }
     }
 } 

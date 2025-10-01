@@ -124,6 +124,12 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     Route::get('/inventory', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'index'])->name('inventory.index');
     Route::post('/inventory/approve/{id}', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'approve'])->name('inventory.approve');
     Route::post('/inventory/reject/{id}', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'reject'])->name('inventory.reject');
+    
+    // Admin Customize (bouquet components)
+    Route::get('/customize', [\App\Http\Controllers\Admin\CustomizeController::class, 'index'])->name('customize.index');
+    Route::post('/customize', [\App\Http\Controllers\Admin\CustomizeController::class, 'store'])->name('customize.store');
+    Route::put('/customize/{id}', [\App\Http\Controllers\Admin\CustomizeController::class, 'update'])->name('customize.update');
+    Route::delete('/customize/{id}', [\App\Http\Controllers\Admin\CustomizeController::class, 'destroy'])->name('customize.destroy');
     Route::get('/inventory/pending-count', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'getPendingCount'])->name('inventory.pending-count');
     Route::get('/reports/sales', [ReportController::class, 'sales'])->name('reports.sales');
     Route::get('/chatbox', [AdminController::class, 'chatbox'])->name('chatbox');
@@ -218,8 +224,10 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\ClerkMiddleware::class])-
         // Online flow
         Route::get('{order}/online/validate', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'onlineValidate'])->name('online.validate');
         Route::get('{order}/online/invoice', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'onlineInvoice'])->name('online.invoice');
-        Route::post('{order}/online/validate/confirm', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'onlineValidateConfirm'])->name('online.validate.confirm');
-        Route::post('{order}/online/done', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'onlineDone'])->name('online.done');
+        Route::get('{order}/online/validate/confirm', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'onlineValidateConfirm'])->name('online.validate.confirm');
+        Route::post('{order}/online/validate/confirm', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'onlineValidateConfirm'])->name('online.validate.confirm.post');
+        Route::get('{order}/online/done', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'onlineDone'])->name('online.done');
+        Route::post('{order}/online/done', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'onlineDone'])->name('online.done.post');
 
             // Walk-in flow
             Route::get('{order}/walkin/pending', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'walkinPending'])->name('walkin.pending');
@@ -239,11 +247,13 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\ClerkMiddleware::class])-
     // API endpoints for product composition (clerk access to inventory)
     Route::get('/api/categories', [\App\Http\Controllers\ProductController::class, 'getCategories'])->name('api.categories');
     Route::get('/api/inventory/{category?}', [\App\Http\Controllers\ProductController::class, 'getInventoryByCategory'])->name('api.inventory.by_category');
+    
+    // Clerk order approval and delivery assignment
+    Route::post('/orders/{order}/approve', [\App\Http\Controllers\Clerk\ClerkController::class, 'approveOrder'])->name('orders.approve');
+    Route::post('/orders/{order}/assign-delivery', [\App\Http\Controllers\Clerk\ClerkController::class, 'assignDelivery'])->name('orders.assignDelivery');
+    Route::post('/orders/{order}/mark-ready', [\App\Http\Controllers\Clerk\ClerkController::class, 'markReady'])->name('orders.mark-ready');
+    Route::post('/orders/{order}/mark-done', [\App\Http\Controllers\Clerk\ClerkController::class, 'markDone'])->name('orders.mark-done');
 });
-
-// Clerk order approval and delivery assignment
-Route::post('/orders/{order}/approve', [\App\Http\Controllers\Clerk\ClerkController::class, 'approveOrder'])->name('orders.approve');
-Route::post('/orders/{order}/assign-delivery', [\App\Http\Controllers\Clerk\ClerkController::class, 'assignDelivery'])->name('orders.assignDelivery');
 
 // Delivery mark as delivered
 Route::post('/deliveries/{delivery}/delivered', [\App\Http\Controllers\DeliveryController::class, 'markDelivered'])->name('deliveries.markDelivered');
@@ -257,11 +267,14 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\CustomerMiddleware::class
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/orders/{order}/invoice/view', [OrderController::class, 'viewInvoice'])->name('orders.invoice.view');
     Route::get('/orders/{order}/invoice/download', [OrderController::class, 'downloadInvoice'])->name('orders.invoice.download');
+    Route::post('/orders/{order}/mark-received', [OrderController::class, 'markReceived'])->name('orders.mark-received');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/products/bestsellers', [ProductController::class, 'bestsellers'])->name('products.bestsellers');
     Route::get('/products/customize', [ProductController::class, 'customize'])->name('products.customize');
     Route::post('/products/customize', [ProductController::class, 'submitCustomization'])->name('products.customize.submit');
     Route::get('/products/bouquet-customize', [\App\Http\Controllers\Customer\CustomizeController::class, 'index'])->name('products.bouquet-customize');
+    Route::post('/products/bouquet-customize', [\App\Http\Controllers\Customer\CustomizeController::class, 'store'])->name('products.bouquet-customize.store');
+    Route::post('/products/bouquet-customize/add-to-cart', [\App\Http\Controllers\Customer\CustomizeController::class, 'addToCart'])->name('products.bouquet-customize.add-to-cart');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
     Route::get('/cart', [CartController::class, 'index'])->name('customer.cart.index');
     Route::post('/cart/add', [CartController::class, 'addToCart'])->name('cart.add');
@@ -333,7 +346,8 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\DriverMiddleware::class])
 
     // Orders
     Route::get('/orders', [DriverController::class, 'orders'])->name('orders.index');
-    Route::get('/orders/{delivery}', [DriverController::class, 'showOrder'])->name('orders.show');
+    Route::get('/orders/{order}', [DriverController::class, 'showOrder'])->name('orders.show');
+    Route::post('/orders/{order}/complete', [DriverController::class, 'completeOrder'])->name('orders.complete');
 
     // History
     Route::get('/history', [DriverController::class, 'history'])->name('history.index');

@@ -63,6 +63,11 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\Delivery::class, 'driver_id');
     }
 
+    public function driver()
+    {
+        return $this->hasOne(\App\Models\Driver::class);
+    }
+
     public function store()
     {
         return $this->belongsTo(Store::class);

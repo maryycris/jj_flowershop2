@@ -219,4 +219,23 @@ class AdminController extends Controller
             ], 500);
         }
     }
+
+    public function assignDelivery(Request $request, Order $order)
+    {
+        $request->validate([
+            'driver_id' => 'required|exists:users,id'
+        ]);
+
+        try {
+            $orderStatusService = new OrderStatusService();
+            
+            if ($orderStatusService->assignDriver($order, $request->driver_id, auth()->id())) {
+                return redirect()->back()->with('success', 'Driver assigned successfully! Order is now on delivery.');
+            } else {
+                return redirect()->back()->with('error', 'Failed to assign driver. Please try again.');
+            }
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error assigning driver: ' . $e->getMessage());
+        }
+    }
 } 

@@ -7,13 +7,13 @@
                 <ul class="nav nav-tabs" id="customizeTabs" role="tablist">
                     <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $cat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link <?php if($i==0): ?> active <?php endif; ?>" data-bs-toggle="tab" data-bs-target="#tab-<?php echo e(strtolower($cat)); ?>" type="button" role="tab"><?php echo e($cat); ?></button>
+                        <button class="nav-link <?php if($i==0): ?> active <?php endif; ?>" data-bs-toggle="tab" data-bs-target="#tab-<?php echo e(Str::slug($cat)); ?>" type="button" role="tab"><?php echo e($cat); ?></button>
                     </li>
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </ul>
                 <div class="tab-content border-start border-end border-bottom rounded-bottom p-3" id="customizeTabContent">
                     <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $cat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <div class="tab-pane fade <?php if($i==0): ?> show active <?php endif; ?>" id="tab-<?php echo e(strtolower($cat)); ?>" role="tabpanel">
+                    <div class="tab-pane fade <?php if($i==0): ?> show active <?php endif; ?>" id="tab-<?php echo e(Str::slug($cat)); ?>" role="tabpanel">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="mb-0"><?php echo e($cat); ?> Items</h5>
                             <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addModal" data-category="<?php echo e($cat); ?>"><i class="bi bi-plus-lg"></i> Add</button>

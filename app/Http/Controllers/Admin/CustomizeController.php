@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Clerk;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Traits\CustomizeFilterTrait;
@@ -15,7 +15,7 @@ class CustomizeController extends Controller
         $items = $this->getCustomizeItems();
         $categories = $this->getCustomizeCategories();
         
-        return view('clerk.customize.index', compact('items','categories'));
+        return view('admin.customize.index', compact('items','categories'));
     }
 
     public function store(Request $request)
@@ -34,11 +34,13 @@ class CustomizeController extends Controller
         $product->name = $validated['name'];
         $product->category = $validated['category'];
         $product->price = $validated['price'] ?? 0;
-        $product->image = $path; // ensure model has fillable or accessor used elsewhere
+        $product->image = $path;
         $product->description = $validated['description'] ?? null;
+        $product->is_approved = true; // Admin can directly approve
+        $product->status = true;
         $product->save();
 
-        return back()->with('success','Item added.');
+        return back()->with('success','Item added successfully.');
     }
 
     public function update(Request $request, $id)
@@ -53,8 +55,12 @@ class CustomizeController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            if ($product->image) { \Storage::disk('public')->delete($product->image); }
-            $product->image = $request->file('image')->store('customize','public');
+            // Delete old image
+            if ($product->image && \Storage::disk('public')->exists($product->image)) {
+                \Storage::disk('public')->delete($product->image);
+            }
+            $path = $request->file('image')->store('customize', 'public');
+            $product->image = $path;
         }
 
         $product->name = $validated['name'];
@@ -63,16 +69,19 @@ class CustomizeController extends Controller
         $product->description = $validated['description'] ?? null;
         $product->save();
 
-        return back()->with('success','Item updated.');
+        return back()->with('success','Item updated successfully.');
     }
 
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
-        if ($product->image) { \Storage::disk('public')->delete($product->image); }
+        
+        // Delete image if exists
+        if ($product->image && \Storage::disk('public')->exists($product->image)) {
+            \Storage::disk('public')->delete($product->image);
+        }
+        
         $product->delete();
-        return back()->with('success','Item deleted.');
+        return back()->with('success','Item deleted successfully.');
     }
 }
-
-

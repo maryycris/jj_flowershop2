@@ -153,20 +153,20 @@
                 <div class="mb-3 d-flex align-items-center">
                     <ul class="nav nav-tabs order-tabs" id="orderTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="tab-all" data-status="all" type="button" role="tab">All</button>
+                            <button class="nav-link {{ request('status', 'all') === 'all' ? 'active' : '' }}" id="tab-all" data-status="all" type="button" role="tab">All</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab-to-pay" data-status="to_pay" type="button" role="tab">To Pay</button>
+                            <button class="nav-link {{ request('status') === 'to_pay' ? 'active' : '' }}" id="tab-to-pay" data-status="to_pay" type="button" role="tab">To Pay</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab-to-ship" data-status="to_ship" type="button" role="tab">To Ship</button>
+                            <button class="nav-link {{ request('status') === 'to_ship' ? 'active' : '' }}" id="tab-to-ship" data-status="to_ship" type="button" role="tab">To Ship</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab-to-receive" data-status="to_receive" type="button" role="tab">To Receive</button>
+                            <button class="nav-link {{ request('status') === 'to_receive' ? 'active' : '' }}" id="tab-to-receive" data-status="to_receive" type="button" role="tab">To Receive</button>
                         </li>
                         <li class="nav-item position-relative" role="presentation">
                             <div class="d-inline-block" id="toReviewTabWrapper">
-                                <button class="nav-link" id="tab-to-review" data-status="to_review" type="button" role="tab">
+                                <button class="nav-link {{ request('status') === 'to_review' ? 'active' : '' }}" id="tab-to-review" data-status="to_review" type="button" role="tab">
                                     <span id="toReviewTabLabel">To Review ▼</span>
                                 </button>
                                 <div class="review-dropdown-menu" id="reviewDropdownMenu" style="display:none; position:absolute; top:100%; left:0; min-width:150px;">
@@ -177,9 +177,13 @@
                         </li>
                     </ul>
                 </div>
-                <div class="order-search-bar mb-2">
-                    <input type="text" id="orderSearchInput" class="form-control border-0 bg-transparent" placeholder="Search orders by product name...">
-                </div>
+                <form method="GET" id="orderFilterForm">
+                    <div class="order-search-bar mb-2">
+                        <input type="text" id="orderSearchInput" name="search" class="form-control border-0 bg-transparent" 
+                               placeholder="Search orders by product name..." value="{{ request('search') }}">
+                    </div>
+                    <input type="hidden" name="status" id="statusFilter" value="{{ request('status', 'all') }}">
+                </form>
                 <div id="reviewSectionHeader" class="d-flex align-items-center mb-0" style="display:none;">
                     <div id="reviewSectionTitle" style="font-size:1.3rem;color:#7bb47b; margin-right: 12px;">To be Review</div>
                 </div>
@@ -301,34 +305,17 @@
     </div>
 </div>
 <script>
-    // Tab filtering
+    // Tab filtering with server-side requests
     document.querySelectorAll('.order-tabs .nav-link').forEach(function(tab) {
         tab.addEventListener('click', function(e) {
-            document.querySelectorAll('.order-tabs .nav-link').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
+            e.preventDefault();
             let status = this.getAttribute('data-status');
-            // Show/hide review section header
-            if(status === 'to_review') {
-                document.getElementById('reviewSectionHeader').style.display = 'flex';
-                document.getElementById('orderList').style.display = 'none';
-                document.getElementById('reviewList').style.display = '';
-                document.getElementById('toReviewTabWrapper').classList.add('show-dropdown');
-            } else {
-                document.getElementById('reviewSectionHeader').style.display = 'none';
-                document.getElementById('orderList').style.display = '';
-                document.getElementById('reviewList').style.display = 'none';
-                document.getElementById('reviewDropdownMenu').style.display = 'none';
-                document.getElementById('toReviewTabWrapper').classList.remove('show-dropdown');
-            }
-            document.getElementById('reviewSectionTitle').textContent = document.getElementById('toReviewTabLabel').textContent.replace('▼','').trim();
-            // Filter order rows by status
-            document.querySelectorAll('#orderList .order-row').forEach(function(row) {
-                if (status === 'all' || row.getAttribute('data-status') === status) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
+            
+            // Update the hidden status filter input
+            document.getElementById('statusFilter').value = status;
+            
+            // Submit the form to reload with new filter
+            document.getElementById('orderFilterForm').submit();
         });
     });
     // Review dropdown logic for To Review tab
@@ -367,31 +354,13 @@
         document.getElementById('toBeReviewSection').style.display = '';
         document.getElementById('reviewedSection').style.display = 'none';
     }
-    // Search filtering
+    // Search filtering with debouncing
+    let searchTimeout;
     document.getElementById('orderSearchInput').addEventListener('input', function() {
-        let val = this.value.toLowerCase();
-        document.querySelectorAll('#orderList .order-row').forEach(function(row) {
-            let product = row.getAttribute('data-product');
-            if (product.includes(val)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-        // Also filter review sections if visible
-        ['toBeReviewSection','reviewedSection'].forEach(function(sectionId){
-            let section = document.getElementById(sectionId);
-            if(section && section.style.display !== 'none') {
-                section.querySelectorAll('.fw-bold').forEach(function(el){
-                    let row = el.closest('.order-list-row');
-                    if(el.textContent.toLowerCase().includes(val)) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
-            }
-        });
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            document.getElementById('orderFilterForm').submit();
+        }, 500); // Wait 500ms after user stops typing
     });
 </script>
 @endsection 

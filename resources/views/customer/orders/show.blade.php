@@ -4,19 +4,6 @@
 <div class="pt-0 pb-4" style="background: #f4faf4; min-height: 100vh;">
     <div class="container" style="max-width: 1400px;">
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
 
         <div class="row justify-content-center">
             <!-- Left Box - Order Details -->
@@ -28,16 +15,16 @@
                             Order Details #{{ $order->id }}
                         </h4>
                     </div>
-                </div>
-                
+    </div>
+
                 <div class="bg-white rounded-3 p-4 mb-4 scrollable-content" style="box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: none; max-height: 85vh; overflow-y: auto;">
                     
                     <div class="d-flex align-items-center mb-4">
                         <div class="me-3">
                             <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #8ACB88, #7bb47b); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                                 <i class="fas fa-shopping-bag text-white" style="font-size: 1.5rem;"></i>
-                            </div>
-                        </div>
+        </div>
+        </div>
                         <div>
                             <h4 class="mb-1" style="color: #2c3e50; font-weight: 700;">Order Information</h4>
                             <p class="text-muted mb-0">Order #{{ $order->id }} • {{ $order->created_at->format('M d, Y') }}</p>
@@ -253,6 +240,23 @@
                             <i class="fas fa-download me-2"></i> Download PDF
                         </a>
                     </div>
+                </div>
+                
+                <!-- Mark as Received Button -->
+                <div class="mb-4">
+                    <h5 class="mb-3" style="color: #2c3e50; font-weight: 600;">
+                        <i class="fas fa-check-circle me-2 text-success"></i>Order Actions
+                    </h5>
+                    <p class="text-muted small mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Click the button below when you have received your order to complete the delivery process.
+                    </p>
+                    <form action="{{ route('customer.orders.mark-received', $order->id) }}" method="POST" onsubmit="return confirm('Have you received your order? This will mark the order as completed.');">
+                        @csrf
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-check me-2"></i>Mark as Received
+                        </button>
+                    </form>
                 </div>
             @elseif($isCOD)
                         <div class="mb-4">

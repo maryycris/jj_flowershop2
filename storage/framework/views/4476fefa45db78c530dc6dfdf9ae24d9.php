@@ -95,12 +95,62 @@
                     </div>
                     <div class="mb-3">
                         <label for="role" class="form-label">Role</label>
-                        <select class="form-select" id="role" name="role" required>
+                        <select class="form-select" id="role" name="role" required onchange="toggleDriverFields()">
                             <option value="">Select Role</option>
                             <option value="clerk">Clerk</option>
                             <option value="driver">Driver</option>
                         </select>
                     </div>
+                    
+                    <!-- Driver-specific fields -->
+                    <div id="driverFields" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Driver Information Required:</strong> Please provide vehicle and license details for driver accounts.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="license_number" class="form-label">License Number</label>
+                            <input type="text" class="form-control" id="license_number" name="license_number" placeholder="e.g., DL001">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="vehicle_type" class="form-label">Vehicle Type</label>
+                            <select class="form-select" id="vehicle_type" name="vehicle_type">
+                                <option value="">Select Vehicle Type</option>
+                                <option value="Motorcycle">Motorcycle</option>
+                                <option value="Car">Car</option>
+                                <option value="Van">Van</option>
+                                <option value="Truck">Truck</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="vehicle_plate" class="form-label">Vehicle Plate Number</label>
+                            <input type="text" class="form-control" id="vehicle_plate" name="vehicle_plate" placeholder="e.g., ABC-123">
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="work_start_time" class="form-label">Work Start Time</label>
+                                    <input type="time" class="form-control" id="work_start_time" name="work_start_time" value="08:00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="work_end_time" class="form-label">Work End Time</label>
+                                    <input type="time" class="form-control" id="work_end_time" name="work_end_time" value="17:00">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="max_deliveries_per_day" class="form-label">Max Deliveries Per Day</label>
+                            <input type="number" class="form-control" id="max_deliveries_per_day" name="max_deliveries_per_day" value="15" min="1" max="50">
+                        </div>
+                    </div>
+                    
                     <div class="mb-3">
                         <label for="username" class="form-label">Username</label>
                         <input type="text" class="form-control" id="username" name="username" required>
@@ -176,6 +226,29 @@
 
 <?php $__env->startPush('scripts'); ?>
 <script>
+    // Toggle driver fields when role is selected
+    function toggleDriverFields() {
+        const roleSelect = document.getElementById('role');
+        const driverFields = document.getElementById('driverFields');
+        
+        if (roleSelect.value === 'driver') {
+            driverFields.style.display = 'block';
+            // Make driver fields required
+            const driverInputs = driverFields.querySelectorAll('input, select');
+            driverInputs.forEach(input => {
+                input.required = true;
+            });
+        } else {
+            driverFields.style.display = 'none';
+            // Remove required from driver fields
+            const driverInputs = driverFields.querySelectorAll('input, select');
+            driverInputs.forEach(input => {
+                input.required = false;
+                input.value = '';
+            });
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         var updateUserModal = document.getElementById('updateUserModal');
         updateUserModal.addEventListener('show.bs.modal', function (event) {

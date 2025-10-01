@@ -12,6 +12,10 @@ class OrderStatusHistory extends Model
 
     public $timestamps = false;
 
+    protected $casts = [
+        'created_at' => 'datetime',
+    ];
+
     public function order()
     {
         return $this->belongsTo(Order::class);
