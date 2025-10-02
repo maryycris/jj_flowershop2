@@ -73,6 +73,28 @@ class CustomizeController extends Controller
         $product->delete();
         return back()->with('success','Item deleted.');
     }
+
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:products,id'
+        ]);
+
+        $deletedCount = 0;
+        foreach ($request->ids as $id) {
+            $product = Product::find($id);
+            if ($product) {
+                if ($product->image) { 
+                    \Storage::disk('public')->delete($product->image); 
+                }
+                $product->delete();
+                $deletedCount++;
+            }
+        }
+
+        return back()->with('success', "Successfully deleted {$deletedCount} item(s).");
+    }
 }
 
 

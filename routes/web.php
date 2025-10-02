@@ -196,6 +196,7 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\ClerkMiddleware::class])-
     // Clerk Customize (bouquet components)
     Route::get('/customize', [\App\Http\Controllers\Clerk\CustomizeController::class, 'index'])->name('customize.index');
     Route::post('/customize', [\App\Http\Controllers\Clerk\CustomizeController::class, 'store'])->name('customize.store');
+    Route::delete('/customize/bulk-delete', [\App\Http\Controllers\Clerk\CustomizeController::class, 'bulkDelete'])->name('customize.bulk-delete');
     Route::put('/customize/{id}', [\App\Http\Controllers\Clerk\CustomizeController::class, 'update'])->name('customize.update');
     Route::delete('/customize/{id}', [\App\Http\Controllers\Clerk\CustomizeController::class, 'destroy'])->name('customize.destroy');
     Route::post('/purchase-orders', [PurchaseOrderController::class, 'store'])->name('purchase_orders.store');

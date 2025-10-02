@@ -13,7 +13,7 @@ trait CustomizeFilterTrait
      */
     public function getCustomizeItems()
     {
-        $categories = ['Fresh Flowers','Dried Flowers','Artificial Flowers','Floral Supplies','Packaging Materials'];
+        $categories = ['Fresh Flowers','Greenery','Artificial Flowers','Ribbons','Wrappers'];
         
         // Filter out finished products (bouquets, arrangements, etc.)
         $excludeKeywords = ['bouquet', 'arrangement', 'basket', 'vase', 'harmony', 'bundle', 'set', 'collection'];
@@ -23,8 +23,8 @@ trait CustomizeFilterTrait
             ->orderBy('name')
             ->get();
         
-        // Keep wrappers and floral supplies even if they contain keywords like "bouquet"
-        $safeCategories = ['Packaging Materials', 'Floral Supplies'];
+        // Keep wrappers and ribbons even if they contain keywords like "bouquet"
+        $safeCategories = ['Wrappers', 'Ribbons'];
         $items = $items->filter(function ($product) use ($excludeKeywords, $safeCategories) {
             if (in_array($product->category, $safeCategories, true)) {
                 return true;
@@ -60,7 +60,7 @@ trait CustomizeFilterTrait
      */
     public function getCustomizeCategories()
     {
-        return ['Fresh Flowers','Dried Flowers','Artificial Flowers','Floral Supplies','Packaging Materials'];
+        return ['Fresh Flowers','Greenery','Artificial Flowers','Ribbons','Wrappers'];
     }
     
     /**
@@ -76,8 +76,8 @@ trait CustomizeFilterTrait
         $products = Product::whereIn('category', $categories)
             ->get();
 
-        // Keep wrappers and floral supplies even if they contain keywords like "bouquet"
-        $safeCategories = ['Packaging Materials', 'Floral Supplies'];
+        // Keep wrappers and ribbons even if they contain keywords like "bouquet"
+        $safeCategories = ['Wrappers', 'Ribbons'];
         $products = $products->filter(function ($product) use ($excludeKeywords, $safeCategories) {
             if (in_array($product->category, $safeCategories, true)) {
                 return true;

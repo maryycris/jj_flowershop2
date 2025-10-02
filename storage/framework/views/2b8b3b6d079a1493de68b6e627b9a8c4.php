@@ -227,6 +227,9 @@
                     <a href="<?php echo e(route('admin.users.index')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.users.*')): ?> active <?php endif; ?>">Manage Accounts</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
+                    <a href="<?php echo e(route('admin.customize.index')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.customize.*')): ?> active <?php endif; ?>">Customize</a>
+                </li>
+                <li class="nav-item w-100 mb-1">
                     <a href="<?php echo e(route('admin.reports.sales')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.reports.sales')): ?> active <?php endif; ?>">Sales Report</a>
                 </li>
                 <li class="nav-item w-100 mb-1">

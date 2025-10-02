@@ -10,60 +10,14 @@
                 <!-- Header -->
                 <div class="text-center mb-4">
                     <h3 class="fw-bold text-dark mb-2">Customize your Desired Bouquet</h3>
-        <div class="d-flex justify-content-center gap-2 mb-3">
-            <button class="btn btn-success btn-sm" id="regularBouquetBtn">
-                <i class="bi bi-flower1 me-1"></i>Regular Bouquet
-            </button>
-            <button class="btn btn-outline-success btn-sm" id="moneyBouquetBtn">
-                <i class="bi bi-cash-coin me-1"></i>Money Bouquet
-            </button>
-        </div>
-                    <button class="btn btn-outline-info btn-sm">
-                        <i class="bi bi-info-circle me-1"></i>Notice to Customers
-                    </button>
+                    <div class="d-flex justify-content-center mb-3">
+                        <button class="btn btn-success btn-sm">
+                            <i class="bi bi-info-circle me-1"></i>Notice to Customers
+                        </button>
+                    </div>
                 </div>
                 
                 <hr class="my-4">
-                
-                <!-- Occasion Selection -->
-                <div class="mb-4">
-                    <h5 class="fw-bold text-dark mb-3">Choose Occasion</h5>
-                    <div class="row g-3">
-                        <?php $__currentLoopData = $occasions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $occasion): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <div class="col-6 col-md-4">
-                            <div class="occasion-option" data-occasion="<?php echo e($occasion->slug); ?>" data-theme="<?php echo e($occasion->color_theme); ?>" data-flowers="<?php echo e(json_encode($occasion->recommended_flowers)); ?>" data-wrappers="<?php echo e(json_encode($occasion->recommended_wrappers)); ?>" data-ribbons="<?php echo e(json_encode($occasion->recommended_ribbons)); ?>" data-base-price="<?php echo e($occasion->base_price); ?>">
-                                <div class="occasion-card position-relative">
-                                    <div class="rounded-3" style="height: 100px; background: linear-gradient(135deg, <?php echo e($occasion->color_theme === 'White' ? '#f8f9fa, #e9ecef' : ($occasion->color_theme === 'Red & Pink' ? '#ff6b6b, #ff9ff3' : ($occasion->color_theme === 'Bright Colors' ? '#ffd700, #ff6b6b, #4ecdc4' : '#ff9ff3, #f8f9fa'))); ?>); display: flex; align-items: center; justify-content: center; border: 2px solid transparent; transition: all 0.3s ease;">
-                                        <div class="text-center">
-                                            <i class="bi bi-<?php echo e($occasion->slug === 'funeral' ? 'flower1' : ($occasion->slug === 'birthday' ? 'gift' : ($occasion->slug === 'wedding' ? 'heart' : ($occasion->slug === 'valentines' ? 'heart-fill' : ($occasion->slug === 'anniversary' ? 'gem' : ($occasion->slug === 'get-well' ? 'bandaid' : ($occasion->slug === 'graduation' ? 'mortarboard' : 'flower2'))))))); ?> fs-2 text-white"></i>
-                                            <div class="fw-bold text-white small mt-1"><?php echo e($occasion->name); ?></div>
-                                        </div>
-                                    </div>
-                                    <div class="occasion-check position-absolute top-0 end-0 m-1" style="display: none;">
-                                        <i class="bi bi-check-circle-fill text-success fs-6"></i>
-                                    </div>
-                                    <div class="occasion-info mt-2 text-center">
-                                        <small class="fw-medium text-dark"><?php echo e($occasion->description); ?></small>
-                                        <div class="text-success fw-bold small">From ₱<?php echo e(number_format($occasion->base_price, 0)); ?></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-    </div>
-    
-    <!-- Materials Summary -->
-    <div class="alert alert-success border-0 mt-3" style="background: linear-gradient(135deg, #d4edda, #c3e6cb);">
-        <h6 class="fw-bold text-dark mb-2">
-            <i class="bi bi-flower1 me-2"></i>Your Bouquet Materials
-        </h6>
-        <div id="recipeSummary" class="small text-muted">
-            <em>Select materials to see your arrangement components...</em>
-        </div>
-    </div>
-</div>
-
-<hr class="my-4">
                 
                 <!-- Customization Form -->
                 <form id="bouquetCustomizationForm" class="flex-grow-1 d-flex flex-column">
@@ -72,7 +26,7 @@
                     <!-- Bouquet Wrapper Selection -->
                     <div class="mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold text-dark mb-0">Choose Packaging Materials</h5>
+                            <h5 class="fw-bold text-dark mb-0">Choose Wrappers</h5>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="noWrapper" name="no_wrapper">
                                 <label class="form-check-label fw-medium" for="noWrapper">
@@ -81,23 +35,23 @@
                             </div>
                         </div>
                         <div class="row g-3" id="wrapperGrid">
-                            <?php $__currentLoopData = ($items['Packaging Materials'] ?? []); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $wrap): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <?php $__currentLoopData = ($items['Wrappers'] ?? []); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $wrap): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <div class="col-3">
                                 <div class="wrapper-option" data-wrapper="<?php echo e($wrap->name); ?>" data-price="<?php echo e($wrap->price ?? 0); ?>" data-image="<?php echo e($wrap->image ? asset('storage/'.$wrap->image) : ''); ?>">
                                     <div class="wrapper-card position-relative">
-                                        <div class="rounded-3" style="height: 80px; background:#f8f9fa; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                                        <div class="rounded-3" style="height: 120px; background:#f8f9fa; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                                             <?php if($wrap->image): ?>
-                                                <img src="<?php echo e(asset('storage/'.$wrap->image)); ?>" alt="<?php echo e($wrap->name); ?>" style="max-height:80px; max-width:100%; object-fit:cover;">
+                                                <img src="<?php echo e(asset('storage/'.$wrap->image)); ?>" alt="<?php echo e($wrap->name); ?>" style="max-height:120px; max-width:100%; object-fit:cover;">
                                             <?php else: ?>
-                                                <span class="text-muted fw-bold small"><?php echo e($wrap->name); ?></span>
+                                                <span class="text-muted fw-bold" style="font-size: 8px; line-height: 1.1;"><?php echo e($wrap->name); ?></span>
                                             <?php endif; ?>
                                         </div>
                                         <div class="wrapper-check position-absolute top-0 end-0 m-1" style="display: none;">
                                             <i class="bi bi-check-circle-fill text-success fs-6"></i>
                                         </div>
                                         <div class="wrapper-info mt-2 text-center">
-                                            <small class="fw-medium text-dark"><?php echo e($wrap->name); ?></small>
-                                            <div class="text-success fw-bold small">₱<?php echo e(number_format($wrap->price ?? 0,2)); ?></div>
+                                            <small class="fw-medium text-dark" style="font-size: 10px;"><?php echo e($wrap->name); ?></small>
+                                            <div class="text-success fw-bold" style="font-size: 9px;">₱<?php echo e(number_format($wrap->price ?? 0,2)); ?></div>
                                         </div>
                                     </div>
                                 </div>
@@ -117,7 +71,7 @@
                     <!-- Focal Flower 1 -->
                     <div class="mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold text-dark mb-0">Choose Fresh Flowers 1</h5>
+                            <h5 class="fw-bold text-dark mb-0">Choose Fresh Flowers</h5>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="noFocalFlower1" name="no_focal_flower_1">
                                 <label class="form-check-label fw-medium" for="noFocalFlower1">
@@ -130,19 +84,19 @@
                             <div class="col-3">
                                 <div class="focal1-option" data-flower="<?php echo e($focal->name); ?>" data-price="<?php echo e($focal->price ?? 0); ?>" data-image="<?php echo e($focal->image ? asset('storage/'.$focal->image) : ''); ?>">
                                     <div class="flower-card position-relative">
-                                        <div class="rounded-3" style="height: 80px; background:#f8f9fa; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                                        <div class="rounded-3" style="height: 120px; background:#f8f9fa; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                                             <?php if($focal->image): ?>
-                                                <img src="<?php echo e(asset('storage/'.$focal->image)); ?>" alt="<?php echo e($focal->name); ?>" style="max-height:80px; max-width:100%; object-fit:cover;">
+                                                <img src="<?php echo e(asset('storage/'.$focal->image)); ?>" alt="<?php echo e($focal->name); ?>" style="max-height:120px; max-width:100%; object-fit:cover;">
                                             <?php else: ?>
-                                                <span class="text-muted fw-bold small"><?php echo e($focal->name); ?></span>
+                                                <span class="text-muted fw-bold" style="font-size: 8px; line-height: 1.1;"><?php echo e($focal->name); ?></span>
                                             <?php endif; ?>
                                         </div>
                                         <div class="flower-check position-absolute top-0 end-0 m-1" style="display: none;">
                                             <i class="bi bi-check-circle-fill text-success fs-5"></i>
                                         </div>
                                         <div class="flower-info mt-2 text-center">
-                                            <small class="fw-medium text-dark"><?php echo e($focal->name); ?></small>
-                                            <div class="text-success fw-bold">₱<?php echo e(number_format($focal->price ?? 0,2)); ?></div>
+                                            <small class="fw-medium text-dark" style="font-size: 10px;"><?php echo e($focal->name); ?></small>
+                                            <div class="text-success fw-bold" style="font-size: 9px;">₱<?php echo e(number_format($focal->price ?? 0,2)); ?></div>
                                         </div>
                                     </div>
                                 </div>
@@ -164,7 +118,7 @@
                     <!-- Greenery Selection -->
                     <div class="mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold text-dark mb-0">Choose Dried Flowers</h5>
+                            <h5 class="fw-bold text-dark mb-0">Choose Greenery</h5>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="noGreenery" name="no_greenery">
                                 <label class="form-check-label fw-medium" for="noGreenery">
@@ -173,23 +127,23 @@
                             </div>
                         </div>
                         <div class="row g-3">
-                            <?php $__currentLoopData = ($items['Dried Flowers'] ?? []); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $greenery): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <?php $__currentLoopData = ($items['Greenery'] ?? []); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $greenery): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <div class="col-3">
                                 <div class="greenery-option" data-greenery="<?php echo e($greenery->name); ?>" data-price="<?php echo e($greenery->price ?? 0); ?>" data-image="<?php echo e($greenery->image ? asset('storage/'.$greenery->image) : ''); ?>">
                                     <div class="greenery-card position-relative">
-                                        <div class="rounded-3" style="height: 80px; background:#f8f9fa; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                                        <div class="rounded-3" style="height: 120px; background:#f8f9fa; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                                             <?php if($greenery->image): ?>
-                                                <img src="<?php echo e(asset('storage/'.$greenery->image)); ?>" alt="<?php echo e($greenery->name); ?>" style="max-height:80px; max-width:100%; object-fit:cover;">
+                                                <img src="<?php echo e(asset('storage/'.$greenery->image)); ?>" alt="<?php echo e($greenery->name); ?>" style="max-height:120px; max-width:100%; object-fit:cover;">
                                             <?php else: ?>
-                                                <span class="text-muted fw-bold small"><?php echo e($greenery->name); ?></span>
+                                                <span class="text-muted fw-bold" style="font-size: 8px; line-height: 1.1;"><?php echo e($greenery->name); ?></span>
                                             <?php endif; ?>
                                         </div>
                                         <div class="greenery-check position-absolute top-0 end-0 m-1" style="display: none;">
                                             <i class="bi bi-check-circle-fill text-success fs-6"></i>
                                         </div>
                                         <div class="greenery-info mt-2 text-center">
-                                            <small class="fw-medium text-dark"><?php echo e($greenery->name); ?></small>
-                                            <div class="text-success fw-bold small">₱<?php echo e(number_format($greenery->price ?? 0,2)); ?></div>
+                                            <small class="fw-medium text-dark" style="font-size: 10px;"><?php echo e($greenery->name); ?></small>
+                                            <div class="text-success fw-bold" style="font-size: 9px;">₱<?php echo e(number_format($greenery->price ?? 0,2)); ?></div>
                                         </div>
                                     </div>
                                 </div>
@@ -218,28 +172,34 @@
                             </div>
                         </div>
                         <div class="row g-3">
-                            <?php $__currentLoopData = ($items['Artificial Flowers'] ?? []); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $filler): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <?php if(isset($items['Artificial Flowers']) && count($items['Artificial Flowers']) > 0): ?>
+                                <?php $__currentLoopData = $items['Artificial Flowers']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $filler): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <div class="col-3">
                                 <div class="filler-option" data-filler="<?php echo e($filler->name); ?>" data-price="<?php echo e($filler->price ?? 0); ?>" data-image="<?php echo e($filler->image ? asset('storage/'.$filler->image) : ''); ?>">
                                     <div class="filler-card position-relative">
-                                        <div class="rounded-3" style="height: 80px; background:#f8f9fa; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                                        <div class="rounded-3" style="height: 120px; background:#f8f9fa; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                                             <?php if($filler->image): ?>
-                                                <img src="<?php echo e(asset('storage/'.$filler->image)); ?>" alt="<?php echo e($filler->name); ?>" style="max-height:80px; max-width:100%; object-fit:cover;">
+                                                <img src="<?php echo e(asset('storage/'.$filler->image)); ?>" alt="<?php echo e($filler->name); ?>" style="max-height:120px; max-width:100%; object-fit:cover;">
                                             <?php else: ?>
-                                                <span class="text-muted fw-bold small"><?php echo e($filler->name); ?></span>
+                                                <span class="text-muted fw-bold" style="font-size: 8px; line-height: 1.1;"><?php echo e($filler->name); ?></span>
                                             <?php endif; ?>
                                         </div>
                                         <div class="filler-check position-absolute top-0 end-0 m-1" style="display: none;">
                                             <i class="bi bi-check-circle-fill text-success fs-6"></i>
                                         </div>
                                         <div class="filler-info mt-2 text-center">
-                                            <small class="fw-medium text-dark"><?php echo e($filler->name); ?></small>
-                                            <div class="text-success fw-bold small">₱<?php echo e(number_format($filler->price ?? 0,2)); ?></div>
+                                            <small class="fw-medium text-dark" style="font-size: 10px;"><?php echo e($filler->name); ?></small>
+                                            <div class="text-success fw-bold" style="font-size: 9px;">₱<?php echo e(number_format($filler->price ?? 0,2)); ?></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                            <?php else: ?>
+                                <div class="col-12 text-center text-muted">
+                                    <p>No artificial flowers available at the moment.</p>
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <!-- Pagination dots -->
                         <div class="d-flex justify-content-center mt-3">
@@ -254,7 +214,7 @@
                     <!-- Ribbon Selection -->
                     <div class="mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold text-dark mb-0">Choose Floral Supplies</h5>
+                            <h5 class="fw-bold text-dark mb-0">Choose Ribbons</h5>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="noRibbon" name="no_ribbon">
                                 <label class="form-check-label fw-medium" for="noRibbon">
@@ -263,23 +223,23 @@
                             </div>
                         </div>
                         <div class="row g-3">
-                            <?php $__currentLoopData = ($items['Floral Supplies'] ?? []); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $ribbon): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <?php $__currentLoopData = ($items['Ribbons'] ?? []); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $ribbon): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <div class="col-3">
                                 <div class="ribbon-option" data-ribbon="<?php echo e($ribbon->name); ?>" data-price="<?php echo e($ribbon->price ?? 0); ?>" data-image="<?php echo e($ribbon->image ? asset('storage/'.$ribbon->image) : ''); ?>">
                                     <div class="ribbon-card position-relative">
-                                        <div class="rounded-3" style="height: 80px; background:#f8f9fa; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                                        <div class="rounded-3" style="height: 120px; background:#f8f9fa; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                                             <?php if($ribbon->image): ?>
-                                                <img src="<?php echo e(asset('storage/'.$ribbon->image)); ?>" alt="<?php echo e($ribbon->name); ?>" style="max-height:80px; max-width:100%; object-fit:cover;">
+                                                <img src="<?php echo e(asset('storage/'.$ribbon->image)); ?>" alt="<?php echo e($ribbon->name); ?>" style="max-height:120px; max-width:100%; object-fit:cover;">
                                             <?php else: ?>
-                                                <span class="text-muted fw-bold small"><?php echo e($ribbon->name); ?></span>
+                                                <span class="text-muted fw-bold" style="font-size: 8px; line-height: 1.1;"><?php echo e($ribbon->name); ?></span>
                                             <?php endif; ?>
                                         </div>
                                         <div class="ribbon-check position-absolute top-0 end-0 m-1" style="display: none;">
                                             <i class="bi bi-check-circle-fill text-success fs-6"></i>
                                         </div>
                                         <div class="ribbon-info mt-2 text-center">
-                                            <small class="fw-medium text-dark"><?php echo e($ribbon->name); ?></small>
-                                            <div class="text-success fw-bold small">₱<?php echo e(number_format($ribbon->price ?? 0,2)); ?></div>
+                                            <small class="fw-medium text-dark" style="font-size: 10px;"><?php echo e($ribbon->name); ?></small>
+                                            <div class="text-success fw-bold" style="font-size: 9px;">₱<?php echo e(number_format($ribbon->price ?? 0,2)); ?></div>
                                         </div>
                                     </div>
                                 </div>
@@ -296,76 +256,6 @@
                     </div>
                     <hr class="my-4">
 
-                    <!-- Money Bouquet Section (Hidden by default) -->
-                    <div id="moneyBouquetSection" style="display: none;">
-                        <!-- Money Amount Selection -->
-                        <div class="mb-4">
-                            <h5 class="fw-bold text-dark mb-3">Choose Money Amount</h5>
-                            <div class="row g-3">
-                                <div class="col-6">
-                                    <div class="money-option" data-amount="1000" data-price="1000">
-                                        <div class="money-card position-relative">
-                                            <div class="rounded-3" style="height: 80px; background: linear-gradient(45deg, #ffd700, #ffed4e); display: flex; align-items: center; justify-content: center;">
-                                                <div class="text-center">
-                                                    <i class="bi bi-cash-coin fs-2 text-success"></i>
-                                                    <div class="fw-bold text-dark">₱1,000</div>
-                                                </div>
-                                            </div>
-                                            <div class="money-check position-absolute top-0 end-0 m-1" style="display: none;">
-                                                <i class="bi bi-check-circle-fill text-success fs-6"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="money-option" data-amount="2000" data-price="2000">
-                                        <div class="money-card position-relative">
-                                            <div class="rounded-3" style="height: 80px; background: linear-gradient(45deg, #ffd700, #ffed4e); display: flex; align-items: center; justify-content: center;">
-                                                <div class="text-center">
-                                                    <i class="bi bi-cash-coin fs-2 text-success"></i>
-                                                    <div class="fw-bold text-dark">₱2,000</div>
-                                                </div>
-                                            </div>
-                                            <div class="money-check position-absolute top-0 end-0 m-1" style="display: none;">
-                                                <i class="bi bi-check-circle-fill text-success fs-6"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="money-option" data-amount="5000" data-price="5000">
-                                        <div class="money-card position-relative">
-                                            <div class="rounded-3" style="height: 80px; background: linear-gradient(45deg, #ffd700, #ffed4e); display: flex; align-items: center; justify-content: center;">
-                                                <div class="text-center">
-                                                    <i class="bi bi-cash-coin fs-2 text-success"></i>
-                                                    <div class="fw-bold text-dark">₱5,000</div>
-                                                </div>
-                                            </div>
-                                            <div class="money-check position-absolute top-0 end-0 m-1" style="display: none;">
-                                                <i class="bi bi-check-circle-fill text-success fs-6"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="money-option" data-amount="10000" data-price="10000">
-                                        <div class="money-card position-relative">
-                                            <div class="rounded-3" style="height: 80px; background: linear-gradient(45deg, #ffd700, #ffed4e); display: flex; align-items: center; justify-content: center;">
-                                                <div class="text-center">
-                                                    <i class="bi bi-cash-coin fs-2 text-success"></i>
-                                                    <div class="fw-bold text-dark">₱10,000</div>
-                                                </div>
-                                            </div>
-                                            <div class="money-check position-absolute top-0 end-0 m-1" style="display: none;">
-                                                <i class="bi bi-check-circle-fill text-success fs-6"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <hr class="my-4">
-                    </div>
 
                     <!-- Quantity Selection -->
                     <div class="mb-4">
@@ -399,7 +289,7 @@
             <!-- Bouquet Preview Container -->
             <div class="bouquet-preview-container position-relative" style="width: 360px; max-width: 100%;">
                 <!-- Regular Bouquet Preview -->
-                <div id="regularBouquetPreview" class="img-fluid" style="width: 100%; height: 320px; background: #F1F6F1; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
+                <div class="img-fluid" style="width: 100%; height: 320px; background: #F1F6F1; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
                     <!-- Base Bouquet Shape -->
                     <div class="bouquet-base" style="position: absolute; width: 80%; height: 60%; background: linear-gradient(45deg, #ff6b6b, #4ecdc4); border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; opacity: 0.3; transition: all 0.5s ease;"></div>
                     
@@ -409,7 +299,7 @@
                     
                     <!-- Flower Layer (single after removal of 2 & 3) -->
                     <div id="focal1Layer" class="ingredient-layer" style="position: absolute; width: 100%; height: 100%; border-radius: 0.5rem; opacity: 0; transition: all 0.5s ease;"></div>
-                    <img id="imgFlower" alt="flower" style="position:absolute; width:58%; height:auto; object-fit:contain; bottom:22%; left:50%; transform:translateX(-50%); display:none; z-index:60; pointer-events:none;"/>
+                    <img id="imgFlower" alt="flower" style="position:absolute; width:20%; height:auto; object-fit:contain; bottom:45%; left:50%; transform:translateX(-50%); display:none; z-index:60; pointer-events:none;"/>
                     
                     <!-- Greenery Layer -->
                     <div id="greeneryLayer" class="ingredient-layer" style="position: absolute; width: 100%; height: 100%; border-radius: 0.5rem; opacity: 0; transition: all 0.5s ease;"></div>
@@ -431,22 +321,6 @@
                     </div>
                 </div>
                     
-                    <!-- Money Bouquet Preview (Hidden by default) -->
-                    <div id="moneyBouquetPreview" class="img-fluid" style="width: 100%; height: 320px; background: linear-gradient(135deg, #ffd700, #ffed4e, #ffd700); border-radius: 0.5rem; display: none; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
-                        <!-- Money bills animation -->
-                        <div class="money-bills" style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                            <div class="money-stack" style="position: relative;">
-                                <i class="bi bi-cash-coin" style="font-size: 4rem; color: #28a745; animation: float 2s ease-in-out infinite;"></i>
-                                <div class="money-amount" style="position: absolute; top: -10px; right: -10px; background: #28a745; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold;">
-                                    ₱
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Money text overlay -->
-                        <div class="money-text" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold;">
-                            Money Bouquet
-                        </div>
-                    </div>
                 </div>
                 
                 <!-- Price Summary -->
@@ -463,45 +337,72 @@
                         
                         <!-- Collapsible Details -->
                         <div id="priceDetails" style="display: none; overflow: hidden; transition: all 0.3s ease;">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Packaging Materials:</span>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span>Wrappers:</span>
+                                <select class="form-select form-select-sm" style="width: auto; min-width: 80px;" id="wrapperColorSelect">
+                                    <option value="">Color</option>
+                                    <option value="white">White</option>
+                                    <option value="pink">Pink</option>
+                                    <option value="green">Green</option>
+                                    <option value="brown">Brown</option>
+                                    <option value="gold">Gold</option>
+                                </select>
+                            </div>
                             <span id="wrapperPrice">₱0.00</span>
                         </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Fresh Flowers 1:</span>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span>Fresh Flowers:</span>
+                                    <select class="form-select form-select-sm" style="width: auto; min-width: 80px;" id="freshFlowerColorSelect">
+                                        <option value="">Color</option>
+                                        <option value="red">Red</option>
+                                        <option value="pink">Pink</option>
+                                        <option value="white">White</option>
+                                        <option value="yellow">Yellow</option>
+                                        <option value="purple">Purple</option>
+                                    </select>
+                                    <input type="number" class="form-control form-control-sm text-center" id="freshFlowerQty" value="1" min="1" max="10" style="width: 50px; padding: 4px; font-size: 12px;">
+                                </div>
                                 <span id="focalFlower1Price">₱0.00</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Fresh Flowers 2:</span>
-                                <span id="focalFlower2Price">₱0.00</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Fresh Flowers 3:</span>
-                                <span id="focalFlower3Price">₱0.00</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Dried Flowers:</span>
+                                <span>Greenery:</span>
                                 <span id="greeneryPrice">₱0.00</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Artificial Flowers:</span>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span>Artificial Flowers:</span>
+                                    <select class="form-select form-select-sm" style="width: auto; min-width: 80px;" id="artificialFlowerColorSelect">
+                                        <option value="">Color</option>
+                                        <option value="white">White</option>
+                                        <option value="pink">Pink</option>
+                                        <option value="yellow">Yellow</option>
+                                        <option value="purple">Purple</option>
+                                        <option value="blue">Blue</option>
+                                    </select>
+                                    <input type="number" class="form-control form-control-sm text-center" id="artificialFlowerQty" value="1" min="1" max="10" style="width: 50px; padding: 4px; font-size: 12px;">
+                                </div>
                                 <span id="fillerPrice">₱0.00</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Floral Supplies:</span>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span>Ribbons:</span>
+                                    <select class="form-select form-select-sm" style="width: auto; min-width: 80px;" id="ribbonColorSelect">
+                                        <option value="">Color</option>
+                                        <option value="red">Red</option>
+                                        <option value="pink">Pink</option>
+                                        <option value="white">White</option>
+                                        <option value="gold">Gold</option>
+                                        <option value="silver">Silver</option>
+                                        <option value="green">Green</option>
+                                    </select>
+                                </div>
                                 <span id="ribbonPrice">₱0.00</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-2" id="moneyAmountRow" style="display: none;">
-                                <span>Money Amount:</span>
-                                <span id="moneyAmountPrice">₱0.00</span>
-                            </div>
-                    <div class="d-flex justify-content-between mb-2" id="occasionPriceRow" style="display: none;">
-                        <span>Occasion Base:</span>
-                        <span id="occasionPrice">₱0.00</span>
-                    </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Assembly Fee:</span>
-                        <span>₱150.00</span>
+                        <span id="assemblyFeePrice">₱0.00</span>
                     </div>
                             <hr class="my-2">
                             <div class="d-flex justify-content-between fw-bold">
@@ -546,6 +447,9 @@
     transition: all 0.9s ease;
     background: white;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    height: 180px;
+    display: flex;
+    flex-direction: column;
 }
 
 .wrapper-option.selected .wrapper-card,
@@ -732,6 +636,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const assemblyFee = 150;
     
     // Bouquet type toggle handlers
+    // Bouquet type toggle handlers - commented out since buttons were removed
+    /*
     document.getElementById('regularBouquetBtn').addEventListener('click', function() {
         bouquetType = 'regular';
         this.classList.remove('btn-outline-success');
@@ -758,7 +664,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         updatePrice();
     });
+    */
     
+    /*
     document.getElementById('moneyBouquetBtn').addEventListener('click', function() {
         bouquetType = 'money';
         this.classList.remove('btn-outline-success');
@@ -791,8 +699,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         updatePrice();
     });
+    */
     
-    // Money amount selection handlers
+    // Money amount selection handlers - commented out since money bouquet was removed
+    /*
     document.querySelectorAll('.money-option').forEach(option => {
         option.addEventListener('click', function() {
             // Remove previous selection
@@ -815,8 +725,10 @@ document.addEventListener('DOMContentLoaded', function() {
             updatePrice();
         });
     });
+    */
     
-    // Occasion selection handlers
+    // Occasion selection handlers - commented out since occasion section was removed
+    /*
     document.querySelectorAll('.occasion-option').forEach(option => {
         option.addEventListener('click', function() {
             // Remove previous selection
@@ -844,8 +756,10 @@ document.addEventListener('DOMContentLoaded', function() {
             updatePrice();
         });
     });
+    */
     
-    // Auto-select recommended components based on occasion
+    // Auto-select recommended components based on occasion - commented out since occasion section was removed
+    /*
     function autoSelectOccasionComponents() {
         if (!selectedOccasion) return;
         
@@ -878,6 +792,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
+    */
     
     // Clear all component selections
     function clearAllSelections() {
@@ -901,22 +816,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // Wrapper selection handlers
     document.querySelectorAll('.wrapper-option').forEach(option => {
         option.addEventListener('click', function() {
-            // Remove previous selection
-            document.querySelectorAll('.wrapper-option').forEach(opt => {
-                opt.classList.remove('selected');
-                opt.querySelector('.wrapper-check').style.display = 'none';
-            });
+            // Check if this option is already selected
+            if (this.classList.contains('selected')) {
+                // If already selected, unselect it
+                this.classList.remove('selected');
+                this.querySelector('.wrapper-check').style.display = 'none';
+                selectedWrapper = null;
+                document.getElementById('selectedWrapper').value = '';
+            } else {
+                // Remove previous selection
+                document.querySelectorAll('.wrapper-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                    opt.querySelector('.wrapper-check').style.display = 'none';
+                });
+                
+                // Add selection to clicked option
+                this.classList.add('selected');
+                this.querySelector('.wrapper-check').style.display = 'block';
+                
+                selectedWrapper = {
+                    name: this.dataset.wrapper,
+                    price: parseFloat(this.dataset.price)
+                };
+                
+                document.getElementById('selectedWrapper').value = selectedWrapper.name;
+            }
             
-            // Add selection to clicked option
-            this.classList.add('selected');
-            this.querySelector('.wrapper-check').style.display = 'block';
-            
-            selectedWrapper = {
-                name: this.dataset.wrapper,
-                price: parseFloat(this.dataset.price)
-            };
-            
-            document.getElementById('selectedWrapper').value = selectedWrapper.name;
             updatePreview();
             updatePrice();
         });
@@ -925,22 +850,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // Focal Flower 1 selection handlers
     document.querySelectorAll('.focal1-option').forEach(option => {
         option.addEventListener('click', function() {
-            // Remove previous selection
-            document.querySelectorAll('.focal1-option').forEach(opt => {
-                opt.classList.remove('selected');
-                opt.querySelector('.flower-check').style.display = 'none';
-            });
+            // Check if this option is already selected
+            if (this.classList.contains('selected')) {
+                // If already selected, unselect it
+                this.classList.remove('selected');
+                this.querySelector('.flower-check').style.display = 'none';
+                selectedFocalFlower1 = null;
+                document.getElementById('selectedFocalFlower1').value = '';
+            } else {
+                // Remove previous selection
+                document.querySelectorAll('.focal1-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                    opt.querySelector('.flower-check').style.display = 'none';
+                });
+                
+                // Add selection to clicked option
+                this.classList.add('selected');
+                this.querySelector('.flower-check').style.display = 'block';
+                
+                selectedFocalFlower1 = {
+                    name: this.dataset.flower,
+                    price: parseFloat(this.dataset.price)
+                };
+                
+                document.getElementById('selectedFocalFlower1').value = selectedFocalFlower1.name;
+            }
             
-            // Add selection to clicked option
-            this.classList.add('selected');
-            this.querySelector('.flower-check').style.display = 'block';
-            
-            selectedFocalFlower1 = {
-                name: this.dataset.flower,
-                price: parseFloat(this.dataset.price)
-            };
-            
-            document.getElementById('selectedFocalFlower1').value = selectedFocalFlower1.name;
             updatePreview();
             updatePrice();
         });
@@ -997,22 +932,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // Greenery selection handlers
     document.querySelectorAll('.greenery-option').forEach(option => {
         option.addEventListener('click', function() {
-            // Remove previous selection
-            document.querySelectorAll('.greenery-option').forEach(opt => {
-                opt.classList.remove('selected');
-                opt.querySelector('.greenery-check').style.display = 'none';
-            });
+            // Check if this option is already selected
+            if (this.classList.contains('selected')) {
+                // If already selected, unselect it
+                this.classList.remove('selected');
+                this.querySelector('.greenery-check').style.display = 'none';
+                selectedGreenery = null;
+                document.getElementById('selectedGreenery').value = '';
+            } else {
+                // Remove previous selection
+                document.querySelectorAll('.greenery-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                    opt.querySelector('.greenery-check').style.display = 'none';
+                });
+                
+                // Add selection to clicked option
+                this.classList.add('selected');
+                this.querySelector('.greenery-check').style.display = 'block';
+                
+                selectedGreenery = {
+                    name: this.dataset.greenery,
+                    price: parseFloat(this.dataset.price)
+                };
+                
+                document.getElementById('selectedGreenery').value = selectedGreenery.name;
+            }
             
-            // Add selection to clicked option
-            this.classList.add('selected');
-            this.querySelector('.greenery-check').style.display = 'block';
-            
-            selectedGreenery = {
-                name: this.dataset.greenery,
-                price: parseFloat(this.dataset.price)
-            };
-            
-            document.getElementById('selectedGreenery').value = selectedGreenery.name;
             updatePreview();
             updatePrice();
         });
@@ -1021,22 +966,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // Filler selection handlers
     document.querySelectorAll('.filler-option').forEach(option => {
         option.addEventListener('click', function() {
-            // Remove previous selection
-            document.querySelectorAll('.filler-option').forEach(opt => {
-                opt.classList.remove('selected');
-                opt.querySelector('.filler-check').style.display = 'none';
-            });
+            // Check if this option is already selected
+            if (this.classList.contains('selected')) {
+                // If already selected, unselect it
+                this.classList.remove('selected');
+                this.querySelector('.filler-check').style.display = 'none';
+                selectedFiller = null;
+                document.getElementById('selectedFiller').value = '';
+            } else {
+                // Remove previous selection
+                document.querySelectorAll('.filler-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                    opt.querySelector('.filler-check').style.display = 'none';
+                });
+                
+                // Add selection to clicked option
+                this.classList.add('selected');
+                this.querySelector('.filler-check').style.display = 'block';
+                
+                selectedFiller = {
+                    name: this.dataset.filler,
+                    price: parseFloat(this.dataset.price)
+                };
+                
+                document.getElementById('selectedFiller').value = selectedFiller.name;
+            }
             
-            // Add selection to clicked option
-            this.classList.add('selected');
-            this.querySelector('.filler-check').style.display = 'block';
-            
-            selectedFiller = {
-                name: this.dataset.filler,
-                price: parseFloat(this.dataset.price)
-            };
-            
-            document.getElementById('selectedFiller').value = selectedFiller.name;
             updatePreview();
             updatePrice();
         });
@@ -1045,22 +1000,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // Ribbon selection handlers
     document.querySelectorAll('.ribbon-option').forEach(option => {
         option.addEventListener('click', function() {
-            // Remove previous selection
-            document.querySelectorAll('.ribbon-option').forEach(opt => {
-                opt.classList.remove('selected');
-                opt.querySelector('.ribbon-check').style.display = 'none';
-            });
+            // Check if this option is already selected
+            if (this.classList.contains('selected')) {
+                // If already selected, unselect it
+                this.classList.remove('selected');
+                this.querySelector('.ribbon-check').style.display = 'none';
+                selectedRibbon = null;
+                document.getElementById('selectedRibbon').value = '';
+            } else {
+                // Remove previous selection
+                document.querySelectorAll('.ribbon-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                    opt.querySelector('.ribbon-check').style.display = 'none';
+                });
+                
+                // Add selection to clicked option
+                this.classList.add('selected');
+                this.querySelector('.ribbon-check').style.display = 'block';
+                
+                selectedRibbon = {
+                    name: this.dataset.ribbon,
+                    price: parseFloat(this.dataset.price)
+                };
+                
+                document.getElementById('selectedRibbon').value = selectedRibbon.name;
+            }
             
-            // Add selection to clicked option
-            this.classList.add('selected');
-            this.querySelector('.ribbon-check').style.display = 'block';
-            
-            selectedRibbon = {
-                name: this.dataset.ribbon,
-                price: parseFloat(this.dataset.price)
-            };
-            
-            document.getElementById('selectedRibbon').value = selectedRibbon.name;
             updatePreview();
             updatePrice();
         });
@@ -1087,6 +1052,76 @@ document.addEventListener('DOMContentLoaded', function() {
         quantity = Math.max(1, Math.min(10, parseInt(this.value) || 1));
         this.value = quantity;
         updatePrice();
+    });
+    
+    // Fresh Flower quantity controls
+    document.getElementById('freshFlowerQty').addEventListener('change', function(e) {
+        e.stopPropagation();
+        let qty = Math.max(1, Math.min(10, parseInt(this.value) || 1));
+        this.value = qty;
+        updatePrice();
+    });
+    
+    document.getElementById('freshFlowerQty').addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    // Artificial Flower quantity controls
+    document.getElementById('artificialFlowerQty').addEventListener('change', function(e) {
+        e.stopPropagation();
+        let qty = Math.max(1, Math.min(10, parseInt(this.value) || 1));
+        this.value = qty;
+        updatePrice();
+    });
+    
+    document.getElementById('artificialFlowerQty').addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    // Color selection handlers
+    document.getElementById('wrapperColorSelect').addEventListener('change', function(e) {
+        e.stopPropagation();
+        console.log('Wrapper color selected:', this.value);
+        // Add color-specific logic here if needed
+    });
+    
+    document.getElementById('wrapperColorSelect').addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    document.getElementById('freshFlowerColorSelect').addEventListener('change', function(e) {
+        e.stopPropagation();
+        console.log('Fresh flower color selected:', this.value);
+        // Add color-specific logic here if needed
+    });
+    
+    document.getElementById('freshFlowerColorSelect').addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    document.getElementById('artificialFlowerColorSelect').addEventListener('change', function(e) {
+        e.stopPropagation();
+        console.log('Artificial flower color selected:', this.value);
+        // Add color-specific logic here if needed
+    });
+    
+    document.getElementById('artificialFlowerColorSelect').addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    document.getElementById('ribbonColorSelect').addEventListener('change', function(e) {
+        e.stopPropagation();
+        console.log('Ribbon color selected:', this.value);
+        // Add color-specific logic here if needed
+    });
+    
+    document.getElementById('ribbonColorSelect').addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    // Prevent clicks inside price details from closing the summary
+    document.getElementById('priceDetails').addEventListener('click', function(e) {
+        e.stopPropagation();
     });
     
     // Update money preview
@@ -1283,69 +1318,61 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add occasion base price if selected
             if (selectedOccasion) {
                 total += selectedOccasion.basePrice;
-                document.getElementById('occasionPriceRow').style.display = 'flex';
-                document.getElementById('occasionPrice').textContent = `₱${(selectedOccasion.basePrice * quantity).toFixed(2)}`;
-            } else {
-                document.getElementById('occasionPriceRow').style.display = 'none';
             }
-        
-        // Show/hide money amount row based on bouquet type
-        const moneyAmountRow = document.getElementById('moneyAmountRow');
-        if (bouquetType === 'money') {
-            moneyAmountRow.style.display = 'flex';
-            
-            // Money amount price
-            const moneyPrice = selectedMoneyAmount ? selectedMoneyAmount.price : 0;
-            document.getElementById('moneyAmountPrice').textContent = `₱${(moneyPrice * quantity).toFixed(2)}`;
-            total += moneyPrice * quantity;
-        } else {
-            moneyAmountRow.style.display = 'none';
-        }
         
         // Wrapper price
         const wrapperPrice = selectedWrapper ? selectedWrapper.price : 0;
         document.getElementById('wrapperPrice').textContent = `₱${(wrapperPrice * quantity).toFixed(2)}`;
         total += wrapperPrice * quantity;
         
-        // Focal flower 1 price
+        // Focal flower 1 price (with individual quantity)
         const focal1Price = selectedFocalFlower1 ? selectedFocalFlower1.price : 0;
-        document.getElementById('focalFlower1Price').textContent = `₱${(focal1Price * quantity).toFixed(2)}`;
-        total += focal1Price * quantity;
+        const freshFlowerQty = parseInt(document.getElementById('freshFlowerQty').value) || 1;
+        document.getElementById('focalFlower1Price').textContent = `₱${(focal1Price * freshFlowerQty * quantity).toFixed(2)}`;
+        total += focal1Price * freshFlowerQty * quantity;
         
-        // Focal flower 2 price
+        // Focal flower 2 price (removed from UI)
         const focal2Price = selectedFocalFlower2 ? selectedFocalFlower2.price : 0;
-        document.getElementById('focalFlower2Price').textContent = `₱${(focal2Price * quantity).toFixed(2)}`;
         total += focal2Price * quantity;
         
-        // Focal flower 3 price
+        // Focal flower 3 price (removed from UI)
         const focal3Price = 0;
-        const focalFlower3PriceEl = document.getElementById('focalFlower3Price');
-        if (focalFlower3PriceEl) focalFlower3PriceEl.textContent = `₱${(focal3Price * quantity).toFixed(2)}`;
         
         // Greenery price
         const greeneryPrice = selectedGreenery ? selectedGreenery.price : 0;
         document.getElementById('greeneryPrice').textContent = `₱${(greeneryPrice * quantity).toFixed(2)}`;
         total += greeneryPrice * quantity;
         
-        // Filler price
+        // Filler price (with individual quantity)
         const fillerPrice = selectedFiller ? selectedFiller.price : 0;
-        document.getElementById('fillerPrice').textContent = `₱${(fillerPrice * quantity).toFixed(2)}`;
-        total += fillerPrice * quantity;
+        const artificialFlowerQty = parseInt(document.getElementById('artificialFlowerQty').value) || 1;
+        document.getElementById('fillerPrice').textContent = `₱${(fillerPrice * artificialFlowerQty * quantity).toFixed(2)}`;
+        total += fillerPrice * artificialFlowerQty * quantity;
         
-            // Ribbon price
-            const ribbonPrice = selectedRibbon ? selectedRibbon.price : 0;
-            document.getElementById('ribbonPrice').textContent = `₱${(ribbonPrice * quantity).toFixed(2)}`;
-            total += ribbonPrice * quantity;
-            
-            // Add assembly fee only if there are materials selected
-            const hasMaterials = selectedWrapper || selectedFocalFlower1 || selectedGreenery || selectedFiller || selectedRibbon || selectedMoneyAmount;
-            if (hasMaterials) {
-                total += assemblyFee;
-            }
-            
-            document.getElementById('totalPrice').textContent = `₱${total.toFixed(2)}`;
-            document.getElementById('expandedTotalPrice').textContent = `₱${total.toFixed(2)}`;
+        // Ribbon price
+        const ribbonPrice = selectedRibbon ? selectedRibbon.price : 0;
+        document.getElementById('ribbonPrice').textContent = `₱${(ribbonPrice * quantity).toFixed(2)}`;
+        total += ribbonPrice * quantity;
+        
+        // Money amount price (if money bouquet)
+        if (bouquetType === 'money') {
+            const moneyPrice = selectedMoneyAmount ? selectedMoneyAmount.price : 0;
+            total += moneyPrice * quantity;
         }
+        
+        // Add assembly fee only if there are materials selected
+        const hasMaterials = selectedWrapper || selectedFocalFlower1 || selectedGreenery || selectedFiller || selectedRibbon || selectedMoneyAmount;
+        if (hasMaterials) {
+            const assemblyFeeTotal = assemblyFee * quantity;
+            document.getElementById('assemblyFeePrice').textContent = `₱${assemblyFeeTotal.toFixed(2)}`;
+            total += assemblyFeeTotal;
+        } else {
+            document.getElementById('assemblyFeePrice').textContent = `₱0.00`;
+        }
+        
+        document.getElementById('totalPrice').textContent = `₱${total.toFixed(2)}`;
+        document.getElementById('expandedTotalPrice').textContent = `₱${total.toFixed(2)}`;
+    }
     
     // Form submission
     document.getElementById('bouquetCustomizationForm').addEventListener('submit', function(e) {

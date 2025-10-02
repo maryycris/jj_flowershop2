@@ -324,7 +324,6 @@
         font-weight: 600;
     }
     .nav-tabs .nav-link.active {
-        border-bottom: 3px solid #8ACB88 !important;
         color: #385E42 !important;
         background: #fff !important;
     }
@@ -356,6 +355,8 @@
     .category-tabs .nav-link.active {
         color: #27ae60 !important;
         font-weight: 700;
+        background: transparent !important;
+        background-color: transparent !important;
     }
     .category-tabs .nav-link.active::after {
         content: '';
@@ -370,7 +371,36 @@
     }
     .category-tabs .nav-link:hover {
         color: #27ae60 !important;
-        background: #f8f9fa !important;
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+    
+    /* More specific override for any Bootstrap or global styles */
+    .category-tabs .nav-link:hover,
+    .category-tabs .nav-link:focus,
+    .category-tabs .nav-link:active {
+        background: transparent !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+    }
+    
+    /* Even more specific targeting */
+    ul.nav.category-tabs li.nav-item a.nav-link:hover {
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+    
+    /* Override any Bootstrap nav-tabs styles */
+    .nav-tabs.category-tabs .nav-link:hover {
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+    
+    /* Override active tab background */
+    .nav-tabs.category-tabs .nav-link.active,
+    ul.nav.category-tabs li.nav-item a.nav-link.active {
+        background: transparent !important;
+        background-color: transparent !important;
     }
     .category-tabs {
         border-bottom: none !important;
