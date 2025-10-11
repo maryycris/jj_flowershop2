@@ -5,13 +5,50 @@
     .text-capitalize {
         text-transform: capitalize;
     }
+    .address-card {
+        border: 1px solid #e6efe7;
+        border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.05);
+    }
+    .address-card .card-header {
+        background: #eafbe7;
+        border-bottom: 1px solid #e6efe7;
+        border-top-left-radius: 14px;
+        border-top-right-radius: 14px;
+        padding: 14px 16px;
+    }
+    .address-title {
+        font-weight: 700;
+        color: #346c43;
+        margin: 0;
+    }
+    .address-card .card-body {
+        padding: 16px;
+    }
+    .set-address-btn {
+        background: #7bb47b;
+        border: none;
+        color: #fff;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 20px;
+    }
+    .set-address-btn:hover { background:#5aa65a; }
+    /* Smaller add address modal with internal scroll */
+    #addAddressModal .modal-dialog { max-width: 520px; }
+    #addAddressModal .modal-body { max-height: 60vh; overflow-y: auto; }
+    /* Optional thin scrollbar styling */
+    #addAddressModal .modal-body::-webkit-scrollbar { width: 6px; }
+    #addAddressModal .modal-body::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+    #addAddressModal .modal-body::-webkit-scrollbar-thumb { background: #7bb47b; border-radius: 3px; }
+    #addAddressModal .modal-body::-webkit-scrollbar-thumb:hover { background: #5aa65a; }
 </style>
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-md-3 col-lg-3">
             @include('customer.sidebar')
         </div>
-        <div class="col-md-9 col-lg-7">
+        <div class="col-md-9 col-lg-8 main-content-with-sidebar" style="margin-left: 25%; max-width: calc(75% - 30px);">
             <div class="py-4 px-3">
                 <!-- Location-Based Recommendations Box -->
                 <div class="mb-4">
@@ -30,12 +67,7 @@
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0">My Address Book</h2>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAddressModal">
-                        <i class="fas fa-plus"></i> Add New Address
-                    </button>
-                </div>
+                
 
                 @if(session('success'))
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -58,15 +90,20 @@
                 <div class="row">
                     @forelse($addresses as $address)
                         <div class="col-md-6 mb-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-3">
-                                        <h5 class="card-title mb-0">
+                            <div class="card h-100 address-card">
+                                <div class="card-header d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <h6 class="address-title">
                                             {{ $address->label ?? 'Address' }}
-                                            @if($address->is_default)
-                                                <span class="badge bg-primary ms-2">Default</span>
-                                            @endif
-                                        </h5>
+                                        </h6>
+                                        @if($address->is_default)
+                                            <span class="badge bg-success">Default</span>
+                                        @endif
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button type="button" class="set-address-btn btn btn-sm" data-bs-toggle="modal" data-bs-target="#addAddressModal">
+                                            <i class="fas fa-plus me-1"></i> Set Address
+                                        </button>
                                         <div class="dropdown">
                                             <button class="btn btn-link text-dark p-0" type="button" data-bs-toggle="dropdown">
                                                 <i class="fas fa-ellipsis-v"></i>
@@ -99,6 +136,8 @@
                                             </ul>
                                         </div>
                                     </div>
+                                </div>
+                                <div class="card-body">
                                     <p class="card-text mb-0">
                                         {{ $address->street_address }}<br>
                                         {{ $address->barangay }}<br>
@@ -463,6 +502,11 @@ function updateLocation() {
         }
     }
 }
+
+// Initialize location detection on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initializeLocationDetection();
+});
 </script>
 @endpush
 @endsection 

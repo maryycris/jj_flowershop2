@@ -20,6 +20,39 @@ class AdminInventoryController extends Controller
         return view('admin.inventory.index', compact('pendingChanges'));
     }
 
+    public function reports()
+    {
+        // Get inventory history reports
+        // For now, return sample data - replace with actual database queries
+        $inventoryHistory = collect([
+            (object)['id' => 1, 'date' => '2025-10-10', 'user' => 'Admin', 'user_type' => 'admin'],
+            (object)['id' => 2, 'date' => '2025-10-09', 'user' => 'Clerk', 'user_type' => 'clerk'],
+            (object)['id' => 3, 'date' => '2025-10-08', 'user' => 'Admin', 'user_type' => 'admin'],
+            (object)['id' => 4, 'date' => '2025-10-07', 'user' => 'Clerk', 'user_type' => 'clerk'],
+            (object)['id' => 5, 'date' => '2025-10-06', 'user' => 'Admin', 'user_type' => 'admin'],
+            (object)['id' => 6, 'date' => '2025-10-05', 'user' => 'Clerk', 'user_type' => 'clerk'],
+            (object)['id' => 7, 'date' => '2025-10-04', 'user' => 'Admin', 'user_type' => 'admin'],
+            (object)['id' => 8, 'date' => '2025-10-03', 'user' => 'Clerk', 'user_type' => 'clerk'],
+        ]);
+
+        // Get pending update requests from clerks
+        $updateRequests = collect([
+            (object)[
+                'id' => 1,
+                'clerk_name' => 'John Doe',
+                'date' => '2025-10-10',
+                'status' => 'pending',
+                'changes' => [
+                    (object)['type' => 'added', 'product_code' => '06001', 'name' => 'Rose'],
+                    (object)['type' => 'edited', 'product_code' => '01002', 'name' => 'Tulip'],
+                    (object)['type' => 'deleted', 'product_code' => '07003', 'name' => 'Yellow Tulip'],
+                ]
+            ]
+        ]);
+
+        return view('admin.inventory.reports', compact('inventoryHistory', 'updateRequests'));
+    }
+
     public function approve(Request $request, $id)
     {
         try {

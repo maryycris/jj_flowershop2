@@ -15,7 +15,7 @@
                     </h2>
                     <p class="text-muted mb-0">Stay updated with your event status</p>
     </div>
-                <button class="btn btn-outline-primary" onclick="markAllAsRead()">
+                <button class="btn btn-outline-primary" id="markAllReadBtn" onclick="markAllAsRead()">
                     <i class="fas fa-check-double me-1"></i> Mark All Read
                 </button>
             </div>
@@ -24,14 +24,37 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-0">
                     <div id="notificationsList">
-                        <div class="text-center py-5">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                        </div>
-                        </div>
+                        @if($notifications->count() > 0)
+                            @foreach($notifications as $notification)
+                                <div class="notification-item p-3 border-bottom {{ $notification->read_at ? '' : 'bg-light' }}" 
+                                     onclick="markAsRead({{ $notification->id }})" style="cursor: pointer;">
+                                    <div class="d-flex align-items-start">
+                                        <div class="me-3">
+                                            <i class="fas fa-{{ $notification->data['type'] ?? 'bell' === 'event_status_change' ? 'calendar-check' : 'bell' }} text-primary"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 {{ $notification->read_at ? 'text-muted' : 'fw-bold' }}">
+                                                {{ $notification->data['title'] ?? $notification->data['message'] ?? 'Notification' }}
+                                            </h6>
+                                            <p class="mb-1 text-muted">{{ $notification->data['message'] ?? $notification->data['body'] ?? 'No message' }}</p>
+                                            <small class="text-muted">{{ $notification->created_at->diffForHumans() }}</small>
+                                        </div>
+                                        @if(!$notification->read_at)
+                                            <div class="badge bg-primary rounded-pill">New</div>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="text-center py-5">
+                                <i class="fas fa-bell-slash text-muted" style="font-size: 3rem;"></i>
+                                <h5 class="text-muted mt-3">No notifications yet</h5>
+                                <p class="text-muted">You'll receive notifications when your event status changes</p>
+                            </div>
+                        @endif
+                    </div>
                 </div>
-                </div>
-      </div>
+            </div>
     </div>
   </div>
 </div>
@@ -40,13 +63,31 @@
 @section('styles')
 <style>
     .notification-item {
-        transition: background-color 0.2s ease;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        position: relative;
     }
     .notification-item:hover {
         background-color: #f8f9fa !important;
+        transform: translateX(2px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .notification-item:last-child {
         border-bottom: none !important;
+    }
+    .notification-item::after {
+        content: 'Click to mark as read';
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.75rem;
+        color: #6c757d;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    .notification-item:hover::after {
+        opacity: 1;
     }
     .card {
         border-radius: 0.5rem;
@@ -82,110 +123,131 @@
 
 @section('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    loadNotifications();
-});
-
-function loadNotifications() {
-    fetch('{{ route("customer.notifications.list") }}')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
-            return response.json();
-        })
-        .then(data => {
-            displayNotifications(Array.isArray(data) ? data : []);
-        })
-        .catch(error => {
-            console.error('Error loading notifications:', error);
-            document.getElementById('notificationsList').innerHTML = `
-                <div class="text-center py-5 text-muted">
-                    Failed to load notifications. Please refresh the page.
-                </div>`;
-        });
-}
-
-function displayNotifications(notifications) {
-    const container = document.getElementById('notificationsList');
-    
-    if (notifications.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-5">
-                <i class="fas fa-bell-slash text-muted" style="font-size: 3rem;"></i>
-                <h5 class="text-muted mt-3">No notifications yet</h5>
-                <p class="text-muted">You'll receive notifications when your event status changes</p>
-            </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = notifications.map(notification => `
-        <div class="notification-item p-3 border-bottom ${notification.read_at ? '' : 'bg-light'}" 
-             onclick="markAsRead(${notification.id})" style="cursor: pointer;">
-            <div class="d-flex align-items-start">
-                <div class="me-3">
-                    <i class="fas fa-${getNotificationIcon(notification.type)} text-primary"></i>
-                </div>
-                <div class="flex-grow-1">
-                    <h6 class="mb-1 ${notification.read_at ? 'text-muted' : 'fw-bold'}">${notification.title}</h6>
-                    <p class="mb-1 text-muted">${notification.message}</p>
-                    <small class="text-muted">${formatDate(notification.created_at)}</small>
-                </div>
-                ${!notification.read_at ? '<div class="badge bg-primary rounded-pill">New</div>' : ''}
-            </div>
-        </div>
-    `).join('');
-}
-
-function getNotificationIcon(type) {
-    switch(type) {
-        case 'event_status_change': return 'calendar-check';
-        default: return 'bell';
-    }
-}
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now - date;
-    
-    if (diff < 60000) return 'Just now';
-    if (diff < 3600000) return Math.floor(diff / 60000) + ' minutes ago';
-    if (diff < 86400000) return Math.floor(diff / 3600000) + ' hours ago';
-    return date.toLocaleDateString();
-}
-
 function markAsRead(notificationId) {
+    console.log('Marking notification as read:', notificationId);
+    
+    // Find the notification item and add loading state
+    const notificationItem = document.querySelector(`[onclick*="${notificationId}"]`);
+    if (notificationItem) {
+        notificationItem.style.opacity = '0.6';
+        notificationItem.style.pointerEvents = 'none';
+    }
+    
     fetch(`{{ url('customer/notifications') }}/${notificationId}/read`, {
-                    method: 'POST',
-                    headers: {
+        method: 'POST',
+        headers: {
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
         }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-            loadNotifications();
+    })
+    .then(response => {
+        console.log('Mark as read response status:', response.status);
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Mark as read response data:', data);
+        if (data.success) {
+            // Show success message
+            alert('Notification marked as read!');
+            // Reload the page to show updated notifications
+            window.location.reload();
+        } else {
+            alert('Failed to mark notification as read.');
+            // Reset loading state
+            if (notificationItem) {
+                notificationItem.style.opacity = '1';
+                notificationItem.style.pointerEvents = 'auto';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error marking notification as read:', error);
+        alert('Error: ' + error.message);
+        // Reset loading state
+        if (notificationItem) {
+            notificationItem.style.opacity = '1';
+            notificationItem.style.pointerEvents = 'auto';
         }
     });
 }
 
 function markAllAsRead() {
+    console.log('Marking all notifications as read');
+    
+    if (!confirm('Are you sure you want to mark all notifications as read?')) {
+        return;
+    }
+    
+    // Add loading state to button
+    const markAllBtn = document.getElementById('markAllReadBtn');
+    const originalText = markAllBtn.innerHTML;
+    markAllBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Marking...';
+    markAllBtn.disabled = true;
+    
     fetch('{{ route("customer.notifications.markAllAsRead") }}', {
-                    method: 'POST',
-                    headers: {
+        method: 'POST',
+        headers: {
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
         }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-            loadNotifications();
+    })
+    .then(response => {
+        console.log('Mark all as read response status:', response.status);
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
         }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Mark all as read response data:', data);
+        if (data.success) {
+            // Show success message
+            alert('All notifications marked as read!');
+            // Reload the page to show updated notifications
+            window.location.reload();
+        } else {
+            alert('Failed to mark all notifications as read.');
+            // Reset button state
+            markAllBtn.innerHTML = originalText;
+            markAllBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error marking all notifications as read:', error);
+        alert('Error: ' + error.message);
+        // Reset button state
+        markAllBtn.innerHTML = originalText;
+        markAllBtn.disabled = false;
     });
 }
+
+// Add click event listeners when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Notifications page loaded');
+    
+    // Add click event listener to the Mark All Read button
+    const markAllButton = document.querySelector('button[onclick="markAllAsRead()"]');
+    if (markAllButton) {
+        markAllButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            markAllAsRead();
+        });
+    }
+    
+    // Add click event listeners to notification items
+    const notificationItems = document.querySelectorAll('.notification-item');
+    notificationItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const notificationId = this.getAttribute('onclick').match(/\d+/)[0];
+            markAsRead(notificationId);
+        });
+    });
+});
 </script>
 @endsection

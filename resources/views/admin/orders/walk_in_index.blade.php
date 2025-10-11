@@ -4,6 +4,7 @@
 
 @section('content')
 <div class="container-fluid">
+    <div class="mx-auto" style="max-width: 1200px;">
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -23,7 +24,7 @@
                     @endif
 
                     @if($walkInOrders->count() > 0)
-                        <div class="table-responsive">
+                        <div class="table-responsive orders-table-container">
                             <table class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
@@ -86,5 +87,37 @@
             </div>
         </div>
     </div>
+    </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    /* Orders table scrollbar styling */
+    .orders-table-container {
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #e3e6f0;
+        border-radius: 0.5rem;
+        background: #fff;
+    }
+    
+    .orders-table-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .orders-table-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .orders-table-container::-webkit-scrollbar-thumb {
+        background: #5E8458;
+        border-radius: 4px;
+    }
+    
+    .orders-table-container::-webkit-scrollbar-thumb:hover {
+        background: #4a6b45;
+    }
+</style>
+@endpush

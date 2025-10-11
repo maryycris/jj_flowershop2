@@ -42,16 +42,49 @@ class OrderController extends Controller
                 $status = $request->status;
                 switch ($status) {
                     case 'to_pay':
-                        $query->where('status', 'pending');
+                        $query->where(function($q) {
+                            $q->where('order_status', 'pending')
+                              ->orWhere(function($subQ) {
+                                  $subQ->whereNull('order_status')
+                                       ->where('status', 'pending');
+                              });
+                        });
                         break;
                     case 'to_ship':
-                        $query->where('status', 'approved');
+                        $query->where(function($q) {
+                            $q->where('order_status', 'approved')
+                              ->orWhere(function($subQ) {
+                                  $subQ->whereNull('order_status')
+                                       ->where('status', 'approved');
+                              });
+                        });
                         break;
                     case 'to_receive':
-                        $query->where('status', 'on_delivery');
+                        $query->where(function($q) {
+                            $q->where('order_status', 'on_delivery')
+                              ->orWhere(function($subQ) {
+                                  $subQ->whereNull('order_status')
+                                       ->where('status', 'on_delivery');
+                              });
+                        });
+                        break;
+                    case 'receive':
+                        $query->where(function($q) {
+                            $q->whereIn('order_status', ['delivered', 'completed'])
+                              ->orWhere(function($subQ) {
+                                  $subQ->whereNull('order_status')
+                                       ->whereIn('status', ['delivered', 'completed']);
+                              });
+                        });
                         break;
                     case 'to_review':
-                        $query->where('status', 'completed');
+                        $query->where(function($q) {
+                            $q->where('order_status', 'completed')
+                              ->orWhere(function($subQ) {
+                                  $subQ->whereNull('order_status')
+                                       ->where('status', 'completed');
+                              });
+                        });
                         break;
                     default:
                         // For 'all' or any other status, show all orders
@@ -86,6 +119,20 @@ class OrderController extends Controller
                         })
                         ->orWhere('id', 'like', "%$search%");
                     });
+                }
+                // Apply dashboard-style status filters
+                if ($request->filled('status')) {
+                    $status = $request->input('status');
+                    $onlineOrdersQuery->where(function($q) use ($status) {
+                        $q->where('order_status', $status)
+                          ->orWhere(function($sub) use ($status){
+                              $sub->whereNull('order_status')->where('status', $status);
+                          });
+                    });
+                }
+                // Complete today filter
+                if ($request->boolean('today') && $request->input('status') === 'completed') {
+                    $onlineOrdersQuery->whereDate('updated_at', now()->toDateString());
                 }
                 $onlineOrders = $onlineOrdersQuery->latest()->get();
                 $walkInOrders = collect();
@@ -170,11 +217,19 @@ class OrderController extends Controller
             'type' => $validatedData['order_type'],
         ]);
 
+        // Create initial status history entry
+        $order->statusHistories()->create([
+            'status' => 'pending',
+            'message' => 'Order created and pending approval',
+        ]);
+
         foreach ($validatedData['products'] as $productData) {
             $order->products()->attach($productData['product_id'], ['quantity' => $productData['quantity']]);
-            // Optional: Decrement product stock
-            // Product::find($productData['product_id'])->decrement('stock', $productData['quantity']);
         }
+
+        // Log order for inventory tracking (no stock decrease yet)
+        $inventoryService = new \App\Services\InventoryService();
+        $inventoryService->updateInventoryOnOrder($order);
 
         // Create delivery record for walk-in orders
         $delivery = new Delivery([
@@ -458,7 +513,17 @@ class OrderController extends Controller
             abort(403, 'Unauthorized action.');
         }
         $history = $order->statusHistories()->orderBy('created_at')->get(['status', 'message', 'created_at']);
-        return response()->json($history);
+        
+        // Transform the data to include formatted status
+        $formattedHistory = $history->map(function ($item) {
+            return [
+                'status' => ucfirst($item->status),
+                'message' => $item->message,
+                'created_at' => $item->created_at,
+            ];
+        });
+        
+        return response()->json($formattedHistory);
     }
 
     /**
@@ -480,6 +545,10 @@ class OrderController extends Controller
             $order->delivery->status = 'delivered';
             $order->delivery->save();
         }
+
+        // Log delivery for inventory tracking (no stock change yet)
+        $inventoryService = new \App\Services\InventoryService();
+        $inventoryService->updateInventoryOnDelivery($order);
 
         return redirect()->back()->with('success', 'Order marked as delivered successfully!');
     }
@@ -523,6 +592,10 @@ class OrderController extends Controller
         $orderStatusService = new \App\Services\OrderStatusService();
         
         if ($orderStatusService->completeOrder($order, auth()->id())) {
+            // Update inventory when order is received by customer
+            $inventoryService = new \App\Services\InventoryService();
+            $inventoryService->updateInventoryOnReceived($order);
+            
             return redirect()->back()->with('success', 'Order marked as received. Order completed successfully.');
         } else {
             return redirect()->back()->with('error', 'Failed to mark order as received. Please try again.');
@@ -575,5 +648,105 @@ class OrderController extends Controller
         $recipient->notify(new NewChatMessageNotification($request->message));
 
         // ...existing code...
+    }
+
+    public function submitReview(Request $request)
+    {
+        $request->validate([
+            'order_id' => 'required|exists:orders,id',
+            'product_id' => 'required|exists:products,id',
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:1000'
+        ]);
+
+        try {
+            $order = auth()->user()->orders()->findOrFail($request->order_id);
+            
+            // Check if the order is completed
+            if ($order->order_status !== 'completed' && $order->status !== 'completed') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You can only review completed orders.'
+                ], 400);
+            }
+
+            // Check if the product belongs to this order
+            $product = $order->products()->where('products.id', $request->product_id)->first();
+            if (!$product) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Product not found in this order.'
+                ], 400);
+            }
+
+            // Check if already reviewed
+            if ($product->pivot->reviewed) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This product has already been reviewed.'
+                ], 400);
+            }
+
+            // Update the pivot table with review data
+            $order->products()->updateExistingPivot($request->product_id, [
+                'rating' => $request->rating,
+                'review_comment' => $request->comment,
+                'reviewed' => true,
+                'reviewed_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Review submitted successfully!'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to submit review. Please try again.'
+            ], 500);
+        }
+    }
+
+    public function updateDeliverySchedule(Request $request, $orderId)
+    {
+        $request->validate([
+            'delivery_date' => 'required|date|after:today',
+            'delivery_time' => 'required|string|in:08:00 AM,09:00 AM,10:00 AM,11:00 AM,01:00 PM,02:00 PM,03:00 PM,04:00 PM,05:00 PM'
+        ]);
+
+        try {
+            $order = auth()->user()->orders()->findOrFail($orderId);
+            
+            // Check if order can be modified
+            $orderStatus = $order->order_status ?? $order->status;
+            if (!in_array($orderStatus, ['pending', 'approved'])) {
+                return back()->withErrors(['error' => 'You can only update delivery schedule for pending or approved orders.']);
+            }
+
+            // Update delivery information
+            if ($order->delivery) {
+                $order->delivery->update([
+                    'delivery_date' => $request->delivery_date,
+                    'delivery_time' => $request->delivery_time,
+                    'updated_at' => now()
+                ]);
+            } else {
+                // Create delivery record if it doesn't exist
+                $order->delivery()->create([
+                    'delivery_address' => $order->user->address ?? 'N/A',
+                    'recipient_name' => $order->user->name,
+                    'delivery_date' => $request->delivery_date,
+                    'delivery_time' => $request->delivery_time,
+                    'status' => 'scheduled'
+                ]);
+            }
+
+            return back()->with('success', 'Delivery schedule updated successfully! We will deliver your flowers on ' . 
+                date('M d, Y', strtotime($request->delivery_date)) . ' at ' . $request->delivery_time . '.');
+                
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Failed to update delivery schedule. Please try again.']);
+        }
     }
 }

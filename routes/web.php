@@ -39,11 +39,36 @@ Route::get('/api/test', function () {
     return response()->json(['message' => 'API is working!']);
 });
 
-// Map and routing API endpoints (using GET for simplicity)
-Route::get('/api/map/geocode', [\App\Http\Controllers\MapController::class, 'geocode']);
-Route::get('/api/map/route', [\App\Http\Controllers\MapController::class, 'getRoute']);
-Route::get('/api/map/shipping-calculate', [\App\Http\Controllers\MapController::class, 'calculateShippingWithDistance']);
+// Compact analytics for dashboard widgets
+Route::get('/api/analytics/compact', function () {
+    $today = \Carbon\Carbon::today();
+    $thisMonth = \Carbon\Carbon::now()->startOfMonth();
+    // Daily last 7
+    $daily = [];
+    for ($i=6;$i>=0;$i--) {
+        $day = \Carbon\Carbon::now()->subDays($i);
+        $revenue = \App\Models\Order::whereBetween('created_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()])
+            ->where('status','!=','cancelled')->sum('total_price');
+        $daily[] = ['day'=>$day->format('M d'),'revenue'=>$revenue];
+    }
+    // Monthly last 6
+    $monthly = [];
+    for ($i=5;$i>=0;$i--) {
+        $m = \Carbon\Carbon::now()->subMonths($i);
+        $revenue = \App\Models\Order::whereBetween('created_at', [$m->copy()->startOfMonth(), $m->copy()->endOfMonth()])
+            ->where('status','!=','cancelled')->sum('total_price');
+        $monthly[] = ['month'=>$m->format('M Y'),'revenue'=>$revenue];
+    }
+    return response()->json(['daily'=>$daily,'monthly'=>$monthly]);
+});
 
+
+
+
+// Map API routes (temporary fix)
+Route::post('/api/map/geocode', [\App\Http\Controllers\MapController::class, 'geocode']);
+Route::post('/api/map/route', [\App\Http\Controllers\MapController::class, 'getRoute']);
+Route::post('/api/map/shipping-calculate', [\App\Http\Controllers\MapController::class, 'calculateShippingWithDistance']);
 
 // PUBLIC CUSTOMER CART ROUTE
 Route::get('/cart', [CartController::class, 'index'])->name('customer.cart.index');
@@ -71,7 +96,7 @@ Route::post('password/reset', [App\Http\Controllers\AuthController::class, 'rese
 // Admin Routes
 Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-    Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'dashboard'])->name('analytics');
+    // Analytics page removed; key analytics moved to dashboard
     Route::resource('products', ProductController::class);
     Route::post('products/{product}/images/update', [ProductController::class, 'updateImages'])->name('products.updateImages');
     Route::delete('products/{product}/images/delete', [ProductController::class, 'deleteImage'])->name('products.deleteImage');
@@ -83,6 +108,7 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     Route::post('/api/products/{product}/approve', [\App\Http\Controllers\Admin\AdminProductApprovalController::class, 'approveProduct'])->name('api.products.approve');
     Route::delete('/api/products/{product}/disapprove', [\App\Http\Controllers\Admin\AdminProductApprovalController::class, 'disapproveProduct'])->name('api.products.disapprove');
     Route::get('/api/products/{product}/details', [\App\Http\Controllers\Admin\AdminProductApprovalController::class, 'getProductDetails'])->name('api.products.details');
+    Route::get('/api/products/{product}/compositions', [\App\Http\Controllers\Admin\AdminProductApprovalController::class, 'getProductCompositions'])->name('api.products.compositions');
     
     // Admin Walk-in Order Creation (must be before resource routes)
     Route::get('orders/create', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'createWalkinOrder'])->name('orders.create');
@@ -125,9 +151,14 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     Route::post('/inventory/approve/{id}', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'approve'])->name('inventory.approve');
     Route::post('/inventory/reject/{id}', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'reject'])->name('inventory.reject');
     
+    // Admin Inventory Reports
+    Route::get('/inventory/reports', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'reports'])->name('inventory.reports');
+    
+    
     // Admin Customize (bouquet components)
     Route::get('/customize', [\App\Http\Controllers\Admin\CustomizeController::class, 'index'])->name('customize.index');
     Route::post('/customize', [\App\Http\Controllers\Admin\CustomizeController::class, 'store'])->name('customize.store');
+    Route::delete('/customize/bulk-delete', [\App\Http\Controllers\Admin\CustomizeController::class, 'bulkDelete'])->name('customize.bulk-delete');
     Route::put('/customize/{id}', [\App\Http\Controllers\Admin\CustomizeController::class, 'update'])->name('customize.update');
     Route::delete('/customize/{id}', [\App\Http\Controllers\Admin\CustomizeController::class, 'destroy'])->name('customize.destroy');
     Route::get('/inventory/pending-count', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'getPendingCount'])->name('inventory.pending-count');
@@ -139,6 +170,7 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     Route::get('/inventory', [ProductController::class, 'inventory'])->name('inventory.index');
     Route::post('/inventory', [ProductController::class, 'storeInventory'])->name('inventory.store');
     Route::put('/inventory/{product}', [ProductController::class, 'updateInventory'])->name('inventory.update');
+    Route::delete('/inventory/{product}', [ProductController::class, 'destroyInventory'])->name('inventory.destroy');
     Route::get('/profile', [AdminController::class, 'editProfile'])->name('profile');
     Route::post('/profile', [AdminController::class, 'updateProfile'])->name('profile.update');
     Route::post('/profile/password', [AdminController::class, 'updatePassword'])->name('profile.password');
@@ -154,6 +186,16 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     Route::post('orders/{order}/approve', [AdminController::class, 'approveOrder'])->name('orders.approve');
     Route::post('orders/{order}/assign-driver', [AdminController::class, 'assignDriver'])->name('orders.assign-driver');
     Route::post('orders/{order}/complete', [AdminController::class, 'completeOrder'])->name('orders.complete');
+    
+    // Invoice Management
+    Route::resource('invoices', \App\Http\Controllers\Admin\InvoiceController::class);
+    Route::post('orders/{order}/create-invoice', [\App\Http\Controllers\Admin\InvoiceController::class, 'createInvoice'])->name('orders.create-invoice');
+    Route::post('invoices/{invoice}/register-payment', [\App\Http\Controllers\Admin\InvoiceController::class, 'registerPayment'])->name('invoices.register-payment');
+    Route::get('api/payment-modes', [\App\Http\Controllers\Admin\InvoiceController::class, 'getPaymentModes'])->name('api.payment-modes');
+    // Loyalty management
+    Route::get('loyalty', [\App\Http\Controllers\Admin\LoyaltyController::class, 'index'])->name('loyalty.index');
+    Route::put('loyalty/{card}/adjust', [\App\Http\Controllers\Admin\LoyaltyController::class, 'adjust'])->name('loyalty.adjust');
+    Route::get('loyalty/{card}/history', [\App\Http\Controllers\Admin\LoyaltyController::class, 'history'])->name('loyalty.history');
 });
 
 // Clerk Routes
@@ -162,17 +204,22 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\ClerkMiddleware::class])-
     // FIX: Use ClerkController for product_catalog
     Route::get('/product_catalog', [ClerkController::class, 'productCatalog'])->name('product_catalog.index');
     Route::post('/product_catalog', [ClerkController::class, 'storeProduct'])->name('product_catalog.store');
-    Route::put('/product_catalog/{id}', [ClerkController::class, 'updateProduct'])->name('product_catalog.update');
+    Route::put('/product_catalog/{id}', [ClerkController::class, 'updateCatalogProduct'])->name('product_catalog.update');
     Route::delete('/product_catalog/{id}', [ClerkController::class, 'destroyProduct'])->name('product_catalog.destroy');
     // Fallback: allow DELETE without ID, read id from request body
     Route::delete('/product_catalog', [ClerkController::class, 'destroyProductByForm'])->name('product_catalog.destroy.noid');
+    
+    // Clerk API routes
+    Route::get('/api/products/{product}/details', [ClerkController::class, 'getProductDetails'])->name('api.products.details');
+    Route::get('/api/products/{product}/compositions', [ClerkController::class, 'getProductCompositions'])->name('api.products.compositions');
     Route::resource('products', ProductController::class);
     Route::post('products/{product}/images/update', [ProductController::class, 'updateImages'])->name('products.updateImages');
     Route::delete('products/{product}/images/delete', [ProductController::class, 'deleteImage'])->name('products.deleteImage');
     Route::delete('products/{product}/images/delete-all', [ProductController::class, 'deleteAllImages'])->name('products.deleteAllImages');
     Route::get('/inventory', [ClerkController::class, 'inventory'])->name('inventory.index');
-    Route::post('/inventory', [ClerkController::class, 'storeProduct'])->name('inventory.store');
+    Route::post('/inventory', [ClerkController::class, 'storeInventory'])->name('inventory.store');
     Route::put('/inventory/{product}', [ClerkController::class, 'updateProduct'])->name('inventory.update');
+    Route::delete('/inventory/{product}', [\App\Http\Controllers\ProductController::class, 'destroyInventory'])->name('inventory.destroy');
     Route::post('/inventory/submit-changes', [ClerkController::class, 'submitInventoryChanges'])->name('inventory.submit-changes');
     Route::get('/orders', [ClerkController::class, 'orders'])->name('orders.index');
     Route::resource('orders', OrderController::class)->except(['index']);
@@ -254,6 +301,16 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\ClerkMiddleware::class])-
     Route::post('/orders/{order}/assign-delivery', [\App\Http\Controllers\Clerk\ClerkController::class, 'assignDelivery'])->name('orders.assignDelivery');
     Route::post('/orders/{order}/mark-ready', [\App\Http\Controllers\Clerk\ClerkController::class, 'markReady'])->name('orders.mark-ready');
     Route::post('/orders/{order}/mark-done', [\App\Http\Controllers\Clerk\ClerkController::class, 'markDone'])->name('orders.mark-done');
+    
+    // Invoice Management
+    Route::resource('invoices', \App\Http\Controllers\Clerk\InvoiceController::class);
+    Route::post('orders/{order}/create-invoice', [\App\Http\Controllers\Clerk\InvoiceController::class, 'createInvoice'])->name('orders.create-invoice');
+    Route::post('invoices/{invoice}/register-payment', [\App\Http\Controllers\Clerk\InvoiceController::class, 'registerPayment'])->name('invoices.register-payment');
+    Route::get('api/payment-modes', [\App\Http\Controllers\Clerk\InvoiceController::class, 'getPaymentModes'])->name('api.payment-modes');
+    // Loyalty management
+    Route::get('loyalty', [\App\Http\Controllers\Clerk\LoyaltyController::class, 'index'])->name('loyalty.index');
+    Route::put('loyalty/{card}/adjust', [\App\Http\Controllers\Clerk\LoyaltyController::class, 'adjust'])->name('loyalty.adjust');
+    Route::get('loyalty/{card}/history', [\App\Http\Controllers\Clerk\LoyaltyController::class, 'history'])->name('loyalty.history');
 });
 
 // Delivery mark as delivered
@@ -277,6 +334,7 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\CustomerMiddleware::class
     Route::post('/products/bouquet-customize', [\App\Http\Controllers\Customer\CustomizeController::class, 'store'])->name('products.bouquet-customize.store');
     Route::post('/products/bouquet-customize/add-to-cart', [\App\Http\Controllers\Customer\CustomizeController::class, 'addToCart'])->name('products.bouquet-customize.add-to-cart');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
+    Route::get('/products/{product}/reviews', [ProductController::class, 'reviews'])->name('products.reviews');
     Route::get('/cart', [CartController::class, 'index'])->name('customer.cart.index');
     Route::post('/cart/add', [CartController::class, 'addToCart'])->name('cart.add');
     Route::post('/cart-items/{cartItem}/update-quantity', [CartController::class, 'updateQuantity'])->name('cart.updateQuantity');
@@ -290,7 +348,6 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\CustomerMiddleware::class
     Route::post('/api/favorites', [\App\Http\Controllers\Customer\FavoriteController::class, 'store'])->name('favorites.store');
     Route::delete('/api/favorites/{product}', [\App\Http\Controllers\Customer\FavoriteController::class, 'destroy'])->name('favorites.destroy');
     Route::get('/account', [AccountController::class, 'index'])->name('account');
-    Route::get('/account/change-password', [AccountController::class, 'changePassword'])->name('account.change_password');
     Route::post('/account/change-password', [AccountController::class, 'updatePassword'])->name('account.update_password');
     Route::post('/account/update', [AccountController::class, 'update'])->name('account.update');
     Route::resource('address_book', AddressController::class)->parameters(['address_book' => 'address']);
@@ -306,6 +363,9 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\CustomerMiddleware::class
     Route::delete('/notifications/{id}', [CustomerNotificationController::class, 'destroy'])->name('notifications.delete');
     Route::post('/notifications/{id}/read', [CustomerNotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
     Route::post('/notifications/{id}/unread', [CustomerNotificationController::class, 'markAsUnread'])->name('notifications.markAsUnread');
+
+    // Order Reviews
+    Route::post('/orders/submit-review', [OrderController::class, 'submitReview'])->name('orders.submitReview');
 
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::get('/checkout/payment-method', [CheckoutController::class, 'paymentMethod'])->name('checkout.payment_method');
@@ -328,6 +388,8 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\CustomerMiddleware::class
     Route::post('/orders/{order}/upload-payment-proof', [OrderController::class, 'uploadPaymentProof'])->name('orders.uploadPaymentProof');
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
     Route::get('/orders/{order}/status-history', [OrderController::class, 'statusHistory'])->name('orders.statusHistory');
+    Route::post('/orders/submit-review', [OrderController::class, 'submitReview'])->name('orders.submitReview');
+    Route::post('/orders/{order}/update-delivery-schedule', [OrderController::class, 'updateDeliverySchedule'])->name('orders.update-delivery-schedule');
     Route::get('/track-orders', [OrderController::class, 'trackOrdersPage'])->name('trackOrders.page');
 });
 
@@ -348,7 +410,10 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\DriverMiddleware::class])
     // Orders
     Route::get('/orders', [DriverController::class, 'orders'])->name('orders.index');
     Route::get('/orders/{order}', [DriverController::class, 'showOrder'])->name('orders.show');
+    Route::post('/orders/{order}/accept', [DriverController::class, 'acceptOrder'])->name('orders.accept');
+    Route::post('/orders/{order}/decline', [DriverController::class, 'declineOrder'])->name('orders.decline');
     Route::post('/orders/{order}/complete', [DriverController::class, 'completeOrder'])->name('orders.complete');
+    Route::post('/orders/{order}/return', [DriverController::class, 'returnOrder'])->name('orders.return');
 
     // History
     Route::get('/history', [DriverController::class, 'history'])->name('history.index');
@@ -373,6 +438,9 @@ Route::post('/verify-code/resend', [AuthController::class, 'resendCode'])->name(
 
 // PayMongo payment callback route
 Route::get('/customer/payment/callback/{order}', [App\Http\Controllers\Customer\PaymentController::class, 'paymongoCallback'])->name('customer.payment.callback');
+
+// PayMongo webhook route (no authentication required)
+Route::post('/webhooks/paymongo', [App\Http\Controllers\PayMongoWebhookController::class, 'handle'])->name('webhooks.paymongo');
 
 Route::post('phone/send-code', [PhoneAuthController::class, 'sendCode']);
 Route::post('phone/verify-code', [PhoneAuthController::class, 'verifyCode']);

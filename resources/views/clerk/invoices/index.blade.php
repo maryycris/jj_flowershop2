@@ -1,153 +1,99 @@
 @extends('layouts.clerk_app')
 
+@section('title', 'Invoice Management')
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="mb-0">
-                    <i class="bi bi-file-earmark-text me-2"></i>
-                    Invoices
-                </h2>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary" onclick="window.print()">
-                        <i class="bi bi-printer me-2"></i>Print List
-                    </button>
-                </div>
-            </div>
-
-            <!-- Search and Filter Section -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="bi bi-search"></i>
-                                </span>
-                                <input type="text" class="form-control" id="searchInput" placeholder="Search by name, invoice number, or SO number...">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <select class="form-select" id="statusFilter">
-                                <option value="">All Statuses</option>
-                                <option value="draft">Draft</option>
-                                <option value="ready">Ready</option>
-                                <option value="paid">Paid</option>
-                                <option value="overdue">Overdue</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <input type="date" class="form-control" id="dateFilter" placeholder="Filter by date">
-                        </div>
-                        <div class="col-md-2">
-                            <button class="btn btn-primary w-100" onclick="applyFilters()">
-                                <i class="bi bi-funnel me-2"></i>Filter
-                            </button>
-                        </div>
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">Invoice Management</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-primary" onclick="refreshInvoices()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
                     </div>
                 </div>
-            </div>
-
-            <!-- Invoices Table -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-list-ul me-2"></i>
-                        Invoice List ({{ $invoices->count() }} invoices)
-                    </h5>
-                </div>
-                <div class="card-body p-0">
+                <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0" id="invoicesTable">
-                            <thead class="table-light">
+                        <table class="table table-bordered table-striped" id="invoicesTable">
+                            <thead>
                                 <tr>
-                                    <th>Name</th>
-                                    <th>Invoice Number</th>
-                                    <th>Invoice Date</th>
-                                    <th>Source Document</th>
+                                    <th>Invoice #</th>
+                                    <th>Order #</th>
+                                    <th>Customer</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
                                     <th>Status</th>
-                                    <th>Total</th>
+                                    <th>Payment Type</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($invoices as $invoice)
-                                <tr class="invoice-row" data-name="{{ strtolower($invoice['name']) }}" 
-                                    data-invoice="{{ strtolower($invoice['invoice_number']) }}" 
-                                    data-so="{{ strtolower($invoice['source_document']) }}"
-                                    data-status="{{ $invoice['status'] }}"
-                                    data-date="{{ $invoice['invoice_date'] }}">
+                                <tr>
                                     <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
-                                                {{ substr($invoice['name'], 0, 1) }}
-                                            </div>
-                                            <div>
-                                                <strong>{{ $invoice['name'] }}</strong>
-                                            </div>
-                                        </div>
+                                        <strong>{{ $invoice->invoice_number }}</strong>
                                     </td>
                                     <td>
-                                        <span class="fw-semibold text-primary">{{ $invoice['invoice_number'] }}</span>
+                                        <a href="{{ route('clerk.orders.show', $invoice->order_id) }}" class="text-primary">
+                                            #{{ $invoice->order_id }}
+                                        </a>
                                     </td>
-                                    <td>{{ $invoice['invoice_date'] }}</td>
+                                    <td>{{ $invoice->order->user->name }}</td>
+                                    <td>{{ $invoice->created_at->format('M d, Y') }}</td>
                                     <td>
-                                        <span class="badge bg-info">{{ $invoice['source_document'] }}</span>
-                                    </td>
-                                    <td>
-                                        @php
-                                            $statusClass = 'bg-warning text-dark';
-                                            switch($invoice['status']) {
-                                                case 'ready':
-                                                    $statusClass = 'bg-warning text-dark';
-                                                    break;
-                                                case 'paid':
-                                                    $statusClass = 'bg-success';
-                                                    break;
-                                                case 'overdue':
-                                                    $statusClass = 'bg-danger';
-                                                    break;
-                                                case 'draft':
-                                                    $statusClass = 'bg-secondary';
-                                                    break;
-                                            }
-                                        @endphp
-                                        <span class="badge {{ $statusClass }}">{{ ucfirst($invoice['status']) }}</span>
+                                        <span class="text-success font-weight-bold">
+                                            ₱{{ number_format($invoice->total_amount, 2) }}
+                                        </span>
                                     </td>
                                     <td>
-                                        <strong class="text-success">₱{{ number_format($invoice['total'], 2) }}</strong>
+                                        @if($invoice->status === 'paid')
+                                            <span class="badge badge-success">Paid</span>
+                                        @elseif($invoice->status === 'ready')
+                                            <span class="badge badge-warning">Ready</span>
+                                        @elseif($invoice->status === 'draft')
+                                            <span class="badge badge-secondary">Draft</span>
+                                        @else
+                                            <span class="badge badge-danger">Cancelled</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($invoice->payment_type === 'online')
+                                            <span class="badge badge-info">Online</span>
+                                        @else
+                                            <span class="badge badge-primary">COD</span>
+                                        @endif
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <a href="{{ route('clerk.invoices.show', $invoice['order']->id) }}" 
-                                               class="btn btn-sm btn-outline-primary" 
-                                               title="View Invoice">
-                                                <i class="bi bi-eye"></i>
+                                            <a href="{{ route('clerk.invoices.show', $invoice->id) }}" 
+                                               class="btn btn-sm btn-info" title="View Invoice">
+                                                <i class="fas fa-eye"></i>
                                             </a>
-                                            @if(strtolower($invoice['order']->payment_method) === 'cod' && $invoice['order']->invoice_status === 'ready')
-                                            <a href="{{ route('clerk.payment.form', $invoice['order']->id) }}" 
-                                               class="btn btn-sm btn-outline-warning" 
-                                               title="Register Payment">
-                                                <i class="bi bi-credit-card"></i>
-                                            </a>
+                                            
+                                            @if($invoice->status === 'ready' && $invoice->payment_type === 'cod')
+                                                <button type="button" class="btn btn-sm btn-success" 
+                                                        onclick="openPaymentWizard({{ $invoice->id }})" 
+                                                        title="Register Payment">
+                                                    <i class="fas fa-credit-card"></i>
+                                                </button>
                                             @endif
-                                            <a href="{{ route('clerk.invoices.download', $invoice['order']->id) }}" 
-                                               class="btn btn-sm btn-outline-success" 
-                                               title="Download PDF">
-                                                <i class="bi bi-download"></i>
+                                            
+                                            <a href="{{ route('clerk.invoices.show', $invoice->id) }}?download=1" 
+                                               class="btn btn-sm btn-secondary" title="Download PDF">
+                                                <i class="fas fa-download"></i>
                                             </a>
                                         </div>
                                     </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="7" class="text-center py-4">
-                                        <div class="text-muted">
-                                            <i class="bi bi-file-earmark-text" style="font-size: 3rem;"></i>
-                                            <p class="mt-2 mb-0">No invoices found</p>
-                                            <small>Invoices will appear here once orders are validated</small>
-                                        </div>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="fas fa-file-invoice fa-3x mb-3"></i>
+                                        <br>
+                                        No invoices found
                                     </td>
                                 </tr>
                                 @endforelse
@@ -160,105 +106,130 @@
     </div>
 </div>
 
-@push('styles')
-<style>
-.avatar-sm {
-    width: 32px;
-    height: 32px;
-    font-size: 0.875rem;
-    font-weight: 600;
-}
+<!-- Payment Wizard Modal -->
+<div class="modal fade" id="paymentWizardModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Register Payment</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="paymentForm">
+                    @csrf
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="mode_of_payment">Mode of Payment <span class="text-danger">*</span></label>
+                                <select class="form-control" id="mode_of_payment" name="mode_of_payment" required>
+                                    <option value="">Select Payment Mode</option>
+                                    <option value="cash">Cash</option>
+                                    <option value="gcash">GCash</option>
+                                    <option value="bank">Bank Transfer</option>
+                                    <option value="card">Card Payment</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="amount">Amount <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="amount" name="amount" 
+                                       step="0.01" min="0.01" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="payment_date">Payment Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="payment_date" name="payment_date" 
+                                       value="{{ date('Y-m-d') }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="memo">Memo (Optional)</label>
+                                <input type="text" class="form-control" id="memo" name="memo" 
+                                       placeholder="Payment reference or notes">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="validatePayment()">
+                    <i class="fas fa-check"></i> Validate Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
 
-.invoice-row {
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.invoice-row:hover {
-    background-color: #f8f9fa;
-}
-
-.table th {
-    border-top: none;
-    font-weight: 600;
-    color: #495057;
-}
-
-.btn-group .btn {
-    border-radius: 0.375rem;
-    margin-right: 2px;
-}
-
-.btn-group .btn:last-child {
-    margin-right: 0;
-}
-</style>
-@endpush
-
-@push('scripts')
+@section('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Make rows clickable
-    document.querySelectorAll('.invoice-row').forEach(row => {
-        row.addEventListener('click', function(e) {
-            // Don't trigger if clicking on buttons
-            if (!e.target.closest('.btn-group')) {
-                const viewBtn = this.querySelector('a[title="View Invoice"]');
-                if (viewBtn) {
-                    window.location.href = viewBtn.href;
-                }
-            }
-        });
-    });
+let currentInvoiceId = null;
 
-    // Search functionality
-    document.getElementById('searchInput').addEventListener('input', function() {
-        applyFilters();
-    });
+function openPaymentWizard(invoiceId) {
+    currentInvoiceId = invoiceId;
+    $('#paymentWizardModal').modal('show');
+}
 
-    // Status filter
-    document.getElementById('statusFilter').addEventListener('change', function() {
-        applyFilters();
-    });
+function validatePayment() {
+    if (!currentInvoiceId) {
+        alert('No invoice selected');
+        return;
+    }
 
-    // Date filter
-    document.getElementById('dateFilter').addEventListener('change', function() {
-        applyFilters();
+    const formData = new FormData(document.getElementById('paymentForm'));
+    
+    // Show loading state
+    const validateBtn = document.querySelector('button[onclick="validatePayment()"]');
+    const originalText = validateBtn.innerHTML;
+    validateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    validateBtn.disabled = true;
+
+    fetch(`/clerk/invoices/${currentInvoiceId}/register-payment`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Payment registered successfully!');
+            $('#paymentWizardModal').modal('hide');
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while registering payment');
+    })
+    .finally(() => {
+        validateBtn.innerHTML = originalText;
+        validateBtn.disabled = false;
+    });
+}
+
+function refreshInvoices() {
+    location.reload();
+}
+
+// Initialize DataTable if needed
+$(document).ready(function() {
+    $('#invoicesTable').DataTable({
+        "pageLength": 25,
+        "order": [[ 3, "desc" ]]
     });
 });
-
-function applyFilters() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const statusFilter = document.getElementById('statusFilter').value;
-    const dateFilter = document.getElementById('dateFilter').value;
-    
-    document.querySelectorAll('.invoice-row').forEach(row => {
-        const name = row.dataset.name;
-        const invoice = row.dataset.invoice;
-        const so = row.dataset.so;
-        const status = row.dataset.status;
-        const date = row.dataset.date;
-        
-        let showRow = true;
-        
-        // Search filter
-        if (searchTerm && !name.includes(searchTerm) && !invoice.includes(searchTerm) && !so.includes(searchTerm)) {
-            showRow = false;
-        }
-        
-        // Status filter
-        if (statusFilter && status !== statusFilter) {
-            showRow = false;
-        }
-        
-        // Date filter
-        if (dateFilter && date !== dateFilter) {
-            showRow = false;
-        }
-        
-        row.style.display = showRow ? '' : 'none';
-    });
-}
 </script>
-@endpush
 @endsection

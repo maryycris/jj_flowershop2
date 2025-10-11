@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Services\InventoryValidationService;
 use Illuminate\Support\Facades\Auth;
 
 class CartController extends Controller
@@ -31,12 +32,21 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1',
             'product_id' => 'nullable|integer|exists:products,id',
             'catalog_product_id' => 'nullable|integer|exists:catalog_products,id',
+            'force_add' => 'nullable|boolean',
         ]);
 
         $quantity = (int) $request->input('quantity');
         $productId = $request->input('product_id');
         $catalogProductId = $request->input('catalog_product_id');
+        $forceAdd = $request->input('force_add', false);
         $user = Auth::user();
+        
+        $inventoryService = new InventoryValidationService();
+        $inventoryCheckService = new \App\Services\InventoryCheckService();
+
+        // Inventory validation disabled - customers can add any product to cart
+        // This allows customers to add products even if components are missing or stock is low
+        // Inventory will be managed separately by admin/clerk
 
         // Resolve to a Product ID if only catalog product is provided.
         if (!$productId && $catalogProductId) {
@@ -92,9 +102,11 @@ class CartController extends Controller
 
         // For fetch requests expecting JSON, return JSON success; otherwise fallback to redirect
         if ($request->expectsJson()) {
-            return response()->json(['success' => true, 'message' => 'Product added to cart!']);
+            $message = $forceAdd ? 'Product added to cart (backorder)' : 'Product added to cart!';
+            return response()->json(['success' => true, 'message' => $message]);
         }
-        return redirect()->back()->with('success', 'Product added to cart!');
+        $message = $forceAdd ? 'Product added to cart (backorder)' : 'Product added to cart!';
+        return redirect()->back()->with('success', $message);
     }
 
     public function updateQuantity(Request $request, CartItem $cartItem)

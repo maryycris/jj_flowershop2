@@ -242,6 +242,10 @@
                     <i class="bi bi-cart"></i>
                     <span>Sales Orders</span>
                 </a>
+                <a href="{{ route('clerk.loyalty.index') }}" class="clerk-navbar-link @if(request()->routeIs('clerk.loyalty.*')) active @endif">
+                    <i class="bi bi-gift"></i>
+                    <span>Loyalty Cards</span>
+                </a>
                 <a href="#" class="clerk-navbar-link">
                     <i class="bi bi-chat"></i>
                     <span>Chat</span>

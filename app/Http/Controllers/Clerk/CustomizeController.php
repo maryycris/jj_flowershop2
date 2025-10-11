@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Traits\CustomizeFilterTrait;
 use Illuminate\Http\Request;
 use App\Models\Product;
+use App\Models\CustomizeItem;
 
 class CustomizeController extends Controller
 {
@@ -22,55 +23,57 @@ class CustomizeController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'category' => 'required|in:Fresh Flowers,Dried Flowers,Artificial Flowers,Floral Supplies,Packaging Materials',
+            'category' => 'required|in:Fresh Flowers,Artificial Flowers,Greenery,Ribbon,Wrappers',
             'price' => 'nullable|numeric|min:0',
             'image' => 'required|image|max:4096',
-            'description' => 'nullable|string|max:1000'
+            'inventory_item_id' => 'nullable|exists:products,id'
         ]);
 
         $path = $request->file('image')->store('customize', 'public');
 
-        $product = new Product();
-        $product->name = $validated['name'];
-        $product->category = $validated['category'];
-        $product->price = $validated['price'] ?? 0;
-        $product->image = $path; // ensure model has fillable or accessor used elsewhere
-        $product->description = $validated['description'] ?? null;
-        $product->save();
+        $customizeItem = new CustomizeItem();
+        $customizeItem->name = $validated['name'];
+        $customizeItem->category = $validated['category'];
+        $customizeItem->price = $validated['price'] ?? 0;
+        $customizeItem->image = $path;
+        $customizeItem->inventory_item_id = $validated['inventory_item_id'] ?? null;
+        $customizeItem->is_approved = false; // Clerk needs admin approval
+        $customizeItem->status = true;
+        $customizeItem->save();
 
         return back()->with('success','Item added.');
     }
 
     public function update(Request $request, $id)
     {
-        $product = Product::findOrFail($id);
+        $customizeItem = CustomizeItem::findOrFail($id);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'category' => 'required|in:Fresh Flowers,Dried Flowers,Artificial Flowers,Floral Supplies,Packaging Materials',
+            'category' => 'required|in:Fresh Flowers,Artificial Flowers,Greenery,Ribbon,Wrappers',
             'price' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|max:4096',
-            'description' => 'nullable|string|max:1000'
+            'inventory_item_id' => 'nullable|exists:products,id'
         ]);
 
         if ($request->hasFile('image')) {
-            if ($product->image) { \Storage::disk('public')->delete($product->image); }
-            $product->image = $request->file('image')->store('customize','public');
+            if ($customizeItem->image) { \Storage::disk('public')->delete($customizeItem->image); }
+            $customizeItem->image = $request->file('image')->store('customize','public');
         }
 
-        $product->name = $validated['name'];
-        $product->category = $validated['category'];
-        $product->price = $validated['price'] ?? 0;
-        $product->description = $validated['description'] ?? null;
-        $product->save();
+        $customizeItem->name = $validated['name'];
+        $customizeItem->category = $validated['category'];
+        $customizeItem->price = $validated['price'] ?? 0;
+        $customizeItem->inventory_item_id = $validated['inventory_item_id'] ?? null;
+        $customizeItem->save();
 
         return back()->with('success','Item updated.');
     }
 
     public function destroy($id)
     {
-        $product = Product::findOrFail($id);
-        if ($product->image) { \Storage::disk('public')->delete($product->image); }
-        $product->delete();
+        $customizeItem = CustomizeItem::findOrFail($id);
+        if ($customizeItem->image) { \Storage::disk('public')->delete($customizeItem->image); }
+        $customizeItem->delete();
         return back()->with('success','Item deleted.');
     }
 

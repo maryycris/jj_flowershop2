@@ -1,7 +1,7 @@
 @extends('layouts.admin_app')
 
 @section('admin_content')
-<div class="container-fluid">
+<div class="container-fluid pt-3">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0 text-gray-800">Manage Accounts</h1>
         <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addUserModal">Add new</button>
@@ -30,17 +30,19 @@
                             <td>{{ ucfirst($user->role) }}</td>
                             <td>{{ $user->contact_number }}</td>
                             
-                            <td>
-                                <button class="btn btn-sm btn-primary edit-user-btn" data-bs-toggle="modal" data-bs-target="#updateUserModal" data-user='{{ json_encode($user) }}'>
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="fas fa-trash"></i>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-2">
+                                    <button class="btn btn-sm action-btn edit-btn" data-bs-toggle="modal" data-bs-target="#updateUserModal" data-user='{{ json_encode($user) }}' title="Edit User">
+                                        <i class="fas fa-edit"></i>
                                     </button>
-                                </form>
+                                    <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm action-btn delete-btn" title="Delete User">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -65,7 +67,7 @@
             </div>
             <form action="{{ route('admin.users.store') }}" method="POST">
                 @csrf
-                <div class="modal-body">
+                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
                     @if ($errors->any())
                         <div class="alert alert-danger">
                             <ul>
@@ -185,7 +187,7 @@
             <form id="updateUserForm" method="POST">
                 @csrf
                 @method('PUT')
-                <div class="modal-body">
+                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
                     <div class="mb-3">
                         <label for="update_full_name" class="form-label">Full name</label>
                         <input type="text" class="form-control" id="update_full_name" name="name" required>
@@ -272,6 +274,38 @@
 
 @push('styles')
 <style>
+    /* Register New Account Modal scrollbar styling */
+    #addUserModal .modal-body::-webkit-scrollbar {
+        width: 6px;
+    }
+    #addUserModal .modal-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    #addUserModal .modal-body::-webkit-scrollbar-thumb {
+        background: #7bb47b;
+        border-radius: 3px;
+    }
+    #addUserModal .modal-body::-webkit-scrollbar-thumb:hover {
+        background: #5aa65a;
+    }
+
+    /* Update Account Modal scrollbar styling */
+    #updateUserModal .modal-body::-webkit-scrollbar {
+        width: 6px;
+    }
+    #updateUserModal .modal-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    #updateUserModal .modal-body::-webkit-scrollbar-thumb {
+        background: #7bb47b;
+        border-radius: 3px;
+    }
+    #updateUserModal .modal-body::-webkit-scrollbar-thumb:hover {
+        background: #5aa65a;
+    }
+
     .bg-light-green {
         background-color: #f0f2ed !important;
     }
@@ -289,6 +323,68 @@
     .table thead th {
         background-color: #385E42; /* Dark green for table header */
         color: white;
+    }
+
+    /* Action Buttons Styling */
+    .action-btn {
+        width: 50px;
+        height: 40px;
+        border: none;
+        background: transparent;
+        color: #4CAF50;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        padding: 0;
+        font-size: 16px;
+        flex: 1;
+        min-width: 50px;
+        max-width: 50px;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .action-btn i {
+        transition: color 0.3s ease;
+    }
+
+    /* Edit Button */
+    .edit-btn:hover {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .edit-btn:hover i {
+        color: white;
+    }
+
+    /* Delete Button */
+    .delete-btn:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .delete-btn:hover i {
+        color: white;
+    }
+
+    /* Ensure buttons are evenly spaced and fill the column */
+    .d-flex.justify-content-center.gap-2 {
+        width: 100%;
+        max-width: 120px;
+        margin: 0 auto;
+        gap: 8px !important;
+    }
+
+    /* Make sure both buttons have exactly the same width */
+    .edit-btn, .delete-btn {
+        width: 50px !important;
+        flex: 1 1 50px;
     }
 </style>
 @endpush

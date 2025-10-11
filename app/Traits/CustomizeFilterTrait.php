@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Models\Product;
+use App\Models\CustomizeItem;
 use Illuminate\Support\Str;
 
 trait CustomizeFilterTrait
@@ -13,44 +14,12 @@ trait CustomizeFilterTrait
      */
     public function getCustomizeItems()
     {
-        $categories = ['Fresh Flowers','Greenery','Artificial Flowers','Ribbons','Wrappers'];
-        
-        // Filter out finished products (bouquets, arrangements, etc.)
-        $excludeKeywords = ['bouquet', 'arrangement', 'basket', 'vase', 'harmony', 'bundle', 'set', 'collection'];
-        
-        $items = Product::whereIn('category', $categories)
+        // Get customize items from the separate customize_items table
+        $items = CustomizeItem::where('status', true)
             ->orderBy('category')
             ->orderBy('name')
-            ->get();
-        
-        // Keep wrappers and ribbons even if they contain keywords like "bouquet"
-        $safeCategories = ['Wrappers', 'Ribbons'];
-        $items = $items->filter(function ($product) use ($excludeKeywords, $safeCategories) {
-            if (in_array($product->category, $safeCategories, true)) {
-                return true;
-            }
-            $nameLower = mb_strtolower($product->name);
-            foreach ($excludeKeywords as $kw) {
-                if (str_contains($nameLower, mb_strtolower($kw))) {
-                    return false;
-                }
-            }
-            return true;
-        });
-
-        // Normalize names to avoid duplicates caused by spacing/case
-        $normalize = function ($value) {
-            $v = trim($value ?? '');
-            $v = preg_replace('/\s+/', ' ', $v);
-            return mb_strtolower($v);
-        };
-
-        // Remove duplicates by normalized category + name
-        $items = $items->unique(function ($product) use ($normalize) {
-            return $normalize($product->category) . '|' . $normalize($product->name);
-        })->sortBy(function ($p) use ($normalize) {
-            return $normalize($p->category) . '|' . $normalize($p->name);
-        })->values()->groupBy('category');
+            ->get()
+            ->groupBy('category');
             
         return $items;
     }
@@ -60,7 +29,7 @@ trait CustomizeFilterTrait
      */
     public function getCustomizeCategories()
     {
-        return ['Fresh Flowers','Greenery','Artificial Flowers','Ribbons','Wrappers'];
+        return ['Fresh Flowers','Greenery','Artificial Flowers','Ribbon','Wrappers'];
     }
     
     /**
@@ -77,7 +46,7 @@ trait CustomizeFilterTrait
             ->get();
 
         // Keep wrappers and ribbons even if they contain keywords like "bouquet"
-        $safeCategories = ['Wrappers', 'Ribbons'];
+        $safeCategories = ['Wrappers', 'Ribbon'];
         $products = $products->filter(function ($product) use ($excludeKeywords, $safeCategories) {
             if (in_array($product->category, $safeCategories, true)) {
                 return true;

@@ -10,6 +10,7 @@ use App\Models\Delivery;
 use App\Models\CartItem;
 use App\Services\OrderStatusService;
 use App\Services\PayMongoService;
+use App\Services\LoyaltyService;
 
 class PaymentController extends Controller
 {
@@ -364,6 +365,31 @@ class PaymentController extends Controller
             abort(403, 'Unauthorized access to order.');
         }
 
+        // DEMO: Allow simulated success without calling PayMongo
+        if ($request->boolean('simulate') && env('DEMO_PAYMENTS', false)) {
+            $order->update([
+                'payment_status' => 'paid',
+                'status' => 'pending',
+            ]);
+            
+            // Clear only the purchased items from cart after successful payment
+            $selectedItemIds = $order->selected_cart_item_ids;
+            if (!empty($selectedItemIds)) {
+                // Only delete the selected items that were purchased
+                Auth::user()->cartItems()->whereIn('id', $selectedItemIds)->delete();
+            } else {
+                // If no selected items, clear all (fallback for old behavior)
+                Auth::user()->cartItems()->delete();
+            }
+            
+            // Loyalty: don't issue stamp here - wait for order completion
+            // Stamps will be issued when order is completed/received by customer
+
+            \Log::info('Demo payment simulated as paid', ['order_id' => $order->id]);
+            return redirect()->route('customer.orders.show', $order->id)
+                ->with('success', 'Demo payment successful! Your order is now pending approval.');
+        }
+
         // Check payment status from PayMongo
         $checkoutSessionId = $order->paymongo_checkout_session_id;
         $sourceId = $order->paymongo_source_id;
@@ -398,6 +424,34 @@ class PaymentController extends Controller
                             'payment_status' => 'paid',
                             'status' => 'pending', // still needs approval
                         ]);
+                        
+                        // Clear only the purchased items from cart after successful payment
+                        $selectedItemIds = $order->selected_cart_item_ids;
+                        if (!empty($selectedItemIds)) {
+                            // Only delete the selected items that were purchased
+                            Auth::user()->cartItems()->whereIn('id', $selectedItemIds)->delete();
+                        } else {
+                            // If no selected items, clear all (fallback for old behavior)
+                            Auth::user()->cartItems()->delete();
+                        }
+                        
+                        // Loyalty: redeem if discount used (but don't issue stamp yet - wait for order completion)
+                        try {
+                            $loyalty = new LoyaltyService();
+                            $order->loadMissing('products');
+                            $discount = (float) (session('loyalty_discount_pending', 0));
+                            if ($discount > 0) {
+                                $card = $loyalty->getActiveCardForUser($order->user_id);
+                                if ($loyalty->canRedeem($card)) {
+                                    $loyalty->redeem($card, $order, $discount);
+                                }
+                                session()->forget('loyalty_discount_pending');
+                            }
+                            // Don't issue stamp here - wait for order completion
+                        } catch (\Throwable $e) {
+                            \Log::error('Loyalty redeem failed (checkout session)', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+                        }
+
                         \Log::info('Order updated to paid', ['order_id' => $order->id]);
                         return redirect()->route('customer.orders.show', $order->id)
                             ->with('success', 'Payment successful! Your order is now pending approval.');
@@ -426,6 +480,34 @@ class PaymentController extends Controller
                         'payment_status' => 'paid',
                         'status' => 'pending', // still needs approval
                     ]);
+                    
+                    // Clear only the purchased items from cart after successful payment
+                    $selectedItemIds = $order->selected_cart_item_ids;
+                    if (!empty($selectedItemIds)) {
+                        // Only delete the selected items that were purchased
+                        Auth::user()->cartItems()->whereIn('id', $selectedItemIds)->delete();
+                    } else {
+                        // If no selected items, clear all (fallback for old behavior)
+                        Auth::user()->cartItems()->delete();
+                    }
+                    
+                    // Loyalty: redeem if discount used (but don't issue stamp yet - wait for order completion)
+                    try {
+                        $loyalty = new LoyaltyService();
+                        $order->loadMissing('products');
+                        $discount = (float) (session('loyalty_discount_pending', 0));
+                        if ($discount > 0) {
+                            $card = $loyalty->getActiveCardForUser($order->user_id);
+                            if ($loyalty->canRedeem($card)) {
+                                $loyalty->redeem($card, $order, $discount);
+                            }
+                            session()->forget('loyalty_discount_pending');
+                        }
+                        // Don't issue stamp here - wait for order completion
+                    } catch (\Throwable $e) {
+                        \Log::error('Loyalty redeem failed (source)', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+                    }
+
                     return redirect()->route('customer.orders.show', $order->id)
                         ->with('success', 'Payment successful! Your order is now pending approval.');
                 } else {

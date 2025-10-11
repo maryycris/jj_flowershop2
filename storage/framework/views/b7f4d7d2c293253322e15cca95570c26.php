@@ -292,9 +292,21 @@
         </nav>
         <main class="py-4 flex-grow-1">
             <div class="container-fluid">
+                <?php if(auth()->guard()->check()): ?>
                 <?php echo $__env->yieldContent('content'); ?>
+                <?php endif; ?>
             </div>
         </main>
+        <?php
+            $hideFooterOnRoutes = [
+                'customer.account.index',
+                'customer.address_book.index',
+                'customer.account.change_password',
+                'customer.orders.index',
+                'customer.trackOrders.page',
+            ];
+        ?>
+        <?php if (! (request()->routeIs($hideFooterOnRoutes))): ?>
         <footer class="footer mt-4">
             <div class="container">
                 <div class="row align-items-center">
@@ -323,6 +335,7 @@
                 </div>
             </div>
         </footer>
+        <?php endif; ?>
     </div>
 
     <!-- Bootstrap JS -->

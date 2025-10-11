@@ -21,24 +21,11 @@
             <div class="d-flex align-items-start justify-content-between mb-2">
               <div>
                 <h3 id="modalProductName" class="mb-1" style="font-weight: 700; color: #1f2d27; font-size: 1.4rem;">Product Name</h3>
-                <div id="modalRatingSummary" class="d-flex align-items-center" style="gap:6px;">
-                  <div class="rating-stars" aria-label="average rating" style="font-size: 0.9rem; color:#f3c04b;"></div>
-                  <small id="modalRatingText" class="text-muted" style="font-size: 0.85rem;">No reviews yet</small>
-                </div>
               </div>
               <span id="modalProductPrice" class="badge text-bg-light" style="font-size: 1.1rem; font-weight: 700; color:#1f2d27; background:#eafbe6; border:1px solid #cbe7cb;">₱0.00</span>
             </div>
             
             <hr class="my-2">
-            
-          <div class="mb-3">
-              <label class="form-label mb-1 fw-semibold" style="font-size: 0.9rem;">Deliver to</label>
-              <div class="input-group rounded-pill overflow-hidden" style="border:1px solid #d7ead6;">
-              <span class="input-group-text" style="background: #cbe7cb; border: none;"><i class="fas fa-map-marker-alt"></i></span>
-                <input type="text" class="form-control" id="modalDeliveryLocation" placeholder="Enter delivery address" style="border: none; background: #f7fff6; font-size: 0.9rem;">
-              <button class="btn btn-link px-2" type="button" id="clearDeliveryLocation"><i class="fas fa-times"></i></button>
-            </div>
-          </div>
             
           <div class="mb-3">
               <label class="form-label mb-1 fw-semibold" style="font-size: 0.9rem;">Quantity</label>
@@ -64,13 +51,22 @@
           </div>
         
         <!-- Reviews Section -->
-        <div id="modalReviewsSection" class="mt-2" style="background:#ffffff; border:1px solid #eef3ef; border-radius:10px; padding:12px;">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <h6 class="mb-0 fw-bold" style="color:#1f2d27; font-size: 0.95rem;">Customer Reviews</h6>
-            <small id="modalReviewsCount" class="text-muted" style="font-size: 0.8rem;"></small>
+        <div id="modalReviewsSection" class="mt-3" style="background:#ffffff; border:1px solid #eef3ef; border-radius:12px; padding:16px;">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center" style="gap: 8px;">
+              <h6 class="mb-0 fw-bold" style="color:#1f2d27; font-size: 1.1rem;">Customer Reviews</h6>
+              <div id="modalRatingSummary" class="d-flex align-items-center" style="gap:4px;">
+                <div class="rating-stars" aria-label="average rating" style="font-size: 0.9rem; color:#f3c04b;"></div>
+                <small id="modalRatingText" class="text-muted" style="font-size: 0.85rem;">No reviews yet</small>
+              </div>
+            </div>
+            <small id="modalReviewsCount" class="text-muted fw-semibold" style="font-size: 0.9rem; background:#f8f9fa; padding:4px 8px; border-radius:12px;"></small>
           </div>
-          <div id="modalReviewsList" style="max-height: 160px; overflow:auto;">
-            <div class="text-muted small">Loading reviews…</div>
+          <div id="modalReviewsList" style="max-height: 200px; overflow-y:auto; padding-right: 8px;">
+            <div class="text-center text-muted py-3">
+              <i class="bi bi-chat-square-text" style="font-size: 2rem; opacity: 0.3;"></i>
+              <div class="mt-2">No reviews yet</div>
+            </div>
           </div>
         </div>
       </div>
@@ -119,7 +115,7 @@
         const avg = Number(data.average_rating || 0);
         setRatingSummary(avg, reviews.length);
         if (!reviews.length) {
-          list.innerHTML = '<div class="text-muted small">No reviews yet.</div>';
+          list.innerHTML = '<div class="text-center text-muted py-3"><i class="bi bi-chat-square-text" style="font-size: 2rem; opacity: 0.3;"></i><div class="mt-2">No reviews yet</div></div>';
           return;
         }
         list.innerHTML = reviews.map(rv => {
@@ -127,38 +123,44 @@
           const when = rv.created_at ? new Date(rv.created_at).toLocaleDateString() : '';
           const stars = renderStars(Number(rv.rating || 0));
           const text = (rv.comment || '').replace(/</g,'&lt;');
-          return `<div class="review-item">
-                    <div class="d-flex align-items-center justify-content-between">
-                      <div class="d-flex align-items-center" style="gap:8px;">
-                        <strong style="color:#1f2d27; font-size:0.95rem;">${name}</strong>
-                        <span class="rating-stars" style="font-size:0.9rem;">${stars}</span>
+          return `<div class="review-item" style="border-bottom: 1px solid #f0f0f0; padding: 12px 0;">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                      <div class="d-flex align-items-center" style="gap:10px;">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:32px; height:32px; background:#e9ecef; color:#6c757d; font-weight:600; font-size:0.8rem;">
+                          ${name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div class="fw-semibold" style="color:#1f2d27; font-size:0.95rem;">${name}</div>
+                          <div class="rating-stars" style="font-size:0.85rem;">${stars}</div>
+                        </div>
                       </div>
-                      <small class="text-muted">${when}</small>
+                      <small class="text-muted" style="font-size:0.8rem;">${when}</small>
                     </div>
-                    <div class="mt-1" style="color:#475057; font-size:0.95rem;">${text}</div>
+                    <div class="ms-11" style="color:#495057; font-size:0.9rem; line-height:1.4;">${text}</div>
                   </div>`;
         }).join('');
       })
       .catch(() => {
         setRatingSummary(0,0);
-        if (list) list.innerHTML = '<div class="text-muted small">No reviews yet.</div>';
+        if (list) list.innerHTML = '<div class="text-center text-muted py-3"><i class="bi bi-chat-square-text" style="font-size: 2rem; opacity: 0.3;"></i><div class="mt-2">No reviews yet</div></div>';
       });
   }
-  function openProductModal(product) {
-    modalProduct = product;
-    document.getElementById('modalProductImage').src = product.image;
-    document.getElementById('modalProductName').textContent = product.name;
-    document.getElementById('modalProductPrice').textContent = '₱' + parseFloat(product.price).toFixed(2);
-    document.getElementById('modalProductDescription').textContent = product.description || 'Description of the product...';
-    document.getElementById('modalProductQty').value = 1;
-    document.getElementById('modalProductTotal').textContent = '₱' + parseFloat(product.price).toFixed(2);
-    document.getElementById('modalDeliveryLocation').value = '';
-    setRatingSummary(0,0);
-    if (product.id) { loadProductReviews(product.id); }
-    setFavStateOnOpen();
-    var modal = new bootstrap.Modal(document.getElementById('productModal'));
-    modal.show();
-  }
+    function openProductModal(product) {
+      console.log('Opening product modal with:', product);
+      modalProduct = product;
+      document.getElementById('modalProductImage').src = product.image;
+      document.getElementById('modalProductName').textContent = product.name;
+      document.getElementById('modalProductPrice').textContent = '₱' + parseFloat(product.price).toFixed(2);
+      document.getElementById('modalProductDescription').textContent = product.description || 'Description of the product...';
+      document.getElementById('modalProductQty').value = 1;
+      document.getElementById('modalProductTotal').textContent = '₱' + parseFloat(product.price).toFixed(2);
+      setRatingSummary(0,0);
+      if (product.id) { loadProductReviews(product.id); }
+      setFavStateOnOpen();
+      var modal = new bootstrap.Modal(document.getElementById('productModal'));
+      modal.show();
+      console.log('Modal opened for product ID:', product.id);
+    }
   document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('modalQtyMinus').onclick = function() {
       let qty = parseInt(document.getElementById('modalProductQty').value);
@@ -172,23 +174,67 @@
       document.getElementById('modalProductQty').value = qty;
       updateModalTotal();
     };
-    document.getElementById('clearDeliveryLocation').onclick = function() {
-      document.getElementById('modalDeliveryLocation').value = '';
-    };
     document.getElementById('modalAddToCartBtn').onclick = function() {
-      if (!modalProduct) return;
+      if (!modalProduct) {
+        console.error('No modalProduct found');
+        alert('No product selected');
+        return;
+      }
+      
+      console.log('Adding to cart:', modalProduct);
       const qty = parseInt(document.getElementById('modalProductQty').value);
+      console.log('Quantity:', qty);
+      
+      const requestData = { catalog_product_id: modalProduct.id, quantity: qty };
+      console.log('Request data:', requestData);
+      
       fetch("{{ route('customer.cart.add') }}", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']').getAttribute('content') },
-        body: JSON.stringify({ catalog_product_id: modalProduct.id, quantity: qty })
+        body: JSON.stringify(requestData)
       })
       .then(response => {
-        if (response.redirected) { window.location.href = response.url; }
-        else if (!response.ok) { return response.json().then(errorData => { alert('Failed to add product to cart: ' + (errorData.message || 'Unknown error')); throw new Error('Server error'); }); }
-        else { alert('Product added to cart!'); }
+        console.log('Response status:', response.status);
+        if (response.redirected) { 
+          console.log('Redirected to:', response.url);
+          window.location.href = response.url; 
+        }
+        else if (!response.ok) { 
+          return response.json().then(errorData => { 
+            console.error('Server error:', errorData);
+            
+            // Handle inventory validation errors with SweetAlert
+            if (errorData.type === 'insufficient_inventory' || errorData.type === 'missing_components') {
+              showInventoryAlert(errorData);
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: errorData.message || 'Failed to add product to cart'
+              });
+            }
+            throw new Error('Server error'); 
+          }); 
+        }
+        else { 
+          console.log('Successfully added to cart');
+          Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: 'Product added to cart!',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        }
       })
-      .catch(() => { alert('An error occurred while adding product to cart.'); });
+      .catch(error => { 
+        console.error('Fetch error:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'An error occurred while adding product to cart.'
+        });
+      });
     };
     document.getElementById('modalBuyNowBtn').onclick = function() {
       if (!modalProduct) return;
@@ -196,6 +242,122 @@
       const url = `{{ url('/customer/checkout') }}?catalog_product_id=${modalProduct.id}&quantity=${qty}`;
       window.location.href = url;
     };
+    // Function to show inventory alert with alternatives
+    function showInventoryAlert(errorData) {
+      let issuesText = '';
+      if (errorData.issues && errorData.issues.length > 0) {
+        issuesText = '\n\nIssues:\n';
+        errorData.issues.forEach(issue => {
+          issuesText += `• ${issue.message}\n`;
+        });
+      }
+
+      let alternativesHtml = '';
+      if (errorData.alternatives && errorData.alternatives.length > 0) {
+        alternativesHtml = '<div class="mt-3"><h6>Suggested Alternatives:</h6><div class="row">';
+        errorData.alternatives.forEach(alt => {
+          alternativesHtml += `
+            <div class="col-md-4 mb-2">
+              <div class="card border-primary">
+                <img src="${alt.image || '/images/placeholder.jpg'}" class="card-img-top" style="height: 100px; object-fit: cover;">
+                <div class="card-body p-2">
+                  <h6 class="card-title">${alt.name}</h6>
+                  <p class="card-text">₱${alt.price}</p>
+                  <button class="btn btn-sm btn-primary" onclick="selectAlternative(${alt.id}, '${alt.name}')">Select</button>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        alternativesHtml += '</div></div>';
+      }
+
+      // Determine icon and title based on error type
+      let icon = 'warning';
+      let title = 'Low Stock Alert!';
+      let showContinueButton = true;
+      
+      if (errorData.type === 'missing_components') {
+        icon = 'error';
+        title = 'Product Unavailable!';
+        showContinueButton = false;
+      }
+
+      const swalConfig = {
+        icon: icon,
+        title: title,
+        html: `<div class="text-start">${errorData.message}${issuesText}</div>${alternativesHtml}`,
+        confirmButtonText: showContinueButton ? 'Continue Anyway' : 'OK',
+        confirmButtonColor: showContinueButton ? '#ffc107' : '#dc3545',
+        width: alternativesHtml ? '600px' : '400px'
+      };
+
+      if (showContinueButton) {
+        swalConfig.showCancelButton = true;
+        swalConfig.cancelButtonText = 'Cancel';
+        swalConfig.cancelButtonColor = '#6c757d';
+      }
+
+      Swal.fire(swalConfig).then((result) => {
+        if (result.isConfirmed && showContinueButton) {
+          // User chose to continue anyway - add to cart without inventory check
+          addToCartAnyway();
+        }
+      });
+    }
+
+    // Function to add to cart without inventory validation
+    function addToCartAnyway() {
+      if (!modalProduct) return;
+      const qty = parseInt(document.getElementById('modalProductQty').value);
+      const formData = new FormData();
+      formData.append('quantity', qty);
+      formData.append('catalog_product_id', modalProduct.id);
+      formData.append('_token', document.querySelector('meta[name=csrf-token]').getAttribute('content'));
+      formData.append('force_add', 'true'); // Flag to bypass inventory check
+
+      fetch('{{ route("customer.cart.add") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Added to Cart!',
+            text: 'Product added to cart (backorder)',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        } else {
+          throw new Error('Failed to add to cart');
+        }
+      })
+      .catch(error => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to add product to cart'
+        });
+      });
+    }
+
+    // Function to select alternative product
+    function selectAlternative(altId, altName) {
+      Swal.close();
+      // Open the modal for the alternative product
+      // This would need to be implemented based on your product structure
+      Swal.fire({
+        icon: 'info',
+        title: 'Alternative Selected',
+        text: `You selected: ${altName}. Please add this product to your cart.`,
+        confirmButtonText: 'OK'
+      });
+    }
+
     const favBtn = document.getElementById('modalAddToFavoritesBtn');
     // Build API routes from Laravel route() to avoid path mistakes (GLOBAL)
     window.favRoutes = {

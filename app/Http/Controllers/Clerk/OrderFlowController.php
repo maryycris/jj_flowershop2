@@ -39,7 +39,7 @@ class OrderFlowController extends Controller
         $orderStatusService->approveOrder($order, auth()->id());
         
         // Generate invoice after validation
-        $invoiceService->generateInvoice($order, auth()->id());
+        $invoiceService->createInvoice($order);
         
         // Don't auto-assign driver - let clerk manually assign
         
@@ -52,14 +52,13 @@ class OrderFlowController extends Controller
     public function onlineDone(Request $request, Order $order)
     {
         // Load relationships
-        $order->load('user', 'products', 'delivery', 'assignedDriver');
+        $order->load('user', 'products', 'delivery', 'assignedDriver', 'invoice');
         
         // Get invoice data for display
-        $invoiceService = new InvoiceService();
-        $invoiceData = $invoiceService->getInvoiceData($order);
+        $invoice = $order->invoice;
         
         $view = auth()->user()->role === 'admin' ? 'admin.orders.online.done' : 'clerk.orders.online.done';
-        return view($view, compact('order', 'invoiceData'));
+        return view($view, compact('order', 'invoice'));
     }
 
     // Walk-in Orders Flow
@@ -112,7 +111,7 @@ class OrderFlowController extends Controller
         $orderStatusService->approveOrder($order, auth()->id());
         
         // Generate invoice after validation
-        $invoiceService->generateInvoice($order, auth()->id());
+        $invoiceService->createInvoice($order);
         
         // Get available drivers (users with role 'driver' or similar)
         $drivers = \App\Models\User::where('role', 'driver')->get();
@@ -188,6 +187,12 @@ class OrderFlowController extends Controller
             'payment_status' => 'pending',
             'payment_method' => $request->payment_method,
             'notes' => "Customer: {$request->customer_name}",
+        ]);
+
+        // Create initial status history entry
+        $order->statusHistories()->create([
+            'status' => 'quotation',
+            'message' => 'Order created and pending quotation',
         ]);
 
         // Attach products to order

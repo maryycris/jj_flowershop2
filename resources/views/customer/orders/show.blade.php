@@ -138,25 +138,92 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px;">
-                                        <i class="fas fa-calendar me-3 text-primary"></i>
-                                        <div>
-                                            <small class="text-muted d-block">Delivery Date</small>
-                                            <strong>{{ $order->delivery->delivery_date ? date('M d, Y', strtotime($order->delivery->delivery_date)) : 'N/A' }}</strong>
+                                
+                                @php
+                                    $canEditDelivery = in_array($order->order_status ?? $order->status, ['pending', 'approved']) && 
+                                                     !in_array($order->order_status ?? $order->status, ['on_delivery', 'delivered', 'completed', 'cancelled']);
+                                @endphp
+                                
+                                @if($canEditDelivery)
+                                    <!-- Editable Delivery Schedule -->
+                                    <div class="col-12">
+                                        <div class="p-3" style="background: linear-gradient(135deg, #e8f5e8, #f0f8f0); border-radius: 8px; border-left: 4px solid #8ACB88;">
+                                            <h6 class="mb-3" style="color: #2c3e50; font-weight: 600;">
+                                                <i class="fas fa-calendar-check me-2 text-success"></i>Choose Your Delivery Schedule
+                                            </h6>
+                                            <p class="text-muted small mb-3">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Select your preferred delivery date and time. We'll deliver your flowers when you need them most!
+                                            </p>
+                                            
+                                            <form action="{{ route('customer.orders.update-delivery-schedule', $order->id) }}" method="POST" id="deliveryScheduleForm">
+                                                @csrf
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label for="delivery_date" class="form-label">
+                                                            <i class="fas fa-calendar me-2"></i>Delivery Date *
+                                                        </label>
+                                                        <input type="date" 
+                                                               class="form-control" 
+                                                               id="delivery_date" 
+                                                               name="delivery_date" 
+                                                               value="{{ $order->delivery->delivery_date ?? '' }}"
+                                                               min="{{ date('Y-m-d', strtotime('+1 day')) }}"
+                                                               max="{{ date('Y-m-d', strtotime('+30 days')) }}"
+                                                               required>
+                                                        <small class="text-muted">Select a date at least 1 day from now</small>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="delivery_time" class="form-label">
+                                                            <i class="fas fa-clock me-2"></i>Delivery Time *
+                                                        </label>
+                                                        <select class="form-control" id="delivery_time" name="delivery_time" required>
+                                                            <option value="">Choose time...</option>
+                                                            <option value="08:00 AM" {{ ($order->delivery->delivery_time ?? '') === '08:00 AM' ? 'selected' : '' }}>8:00 AM - 9:00 AM</option>
+                                                            <option value="09:00 AM" {{ ($order->delivery->delivery_time ?? '') === '09:00 AM' ? 'selected' : '' }}>9:00 AM - 10:00 AM</option>
+                                                            <option value="10:00 AM" {{ ($order->delivery->delivery_time ?? '') === '10:00 AM' ? 'selected' : '' }}>10:00 AM - 11:00 AM</option>
+                                                            <option value="11:00 AM" {{ ($order->delivery->delivery_time ?? '') === '11:00 AM' ? 'selected' : '' }}>11:00 AM - 12:00 PM</option>
+                                                            <option value="12:00 PM" {{ ($order->delivery->delivery_time ?? '') === '12:00 PM' ? 'selected' : '' }}>12:00 PM - 1:00 PM</option>
+                                                            <option value="01:00 PM" {{ ($order->delivery->delivery_time ?? '') === '01:00 PM' ? 'selected' : '' }}>1:00 PM - 2:00 PM</option>
+                                                            <option value="02:00 PM" {{ ($order->delivery->delivery_time ?? '') === '02:00 PM' ? 'selected' : '' }}>2:00 PM - 3:00 PM</option>
+                                                            <option value="03:00 PM" {{ ($order->delivery->delivery_time ?? '') === '03:00 PM' ? 'selected' : '' }}>3:00 PM - 4:00 PM</option>
+                                                            <option value="04:00 PM" {{ ($order->delivery->delivery_time ?? '') === '04:00 PM' ? 'selected' : '' }}>4:00 PM - 5:00 PM</option>
+                                                            <option value="05:00 PM" {{ ($order->delivery->delivery_time ?? '') === '05:00 PM' ? 'selected' : '' }}>5:00 PM - 6:00 PM</option>
+                                                            <option value="06:00 PM" {{ ($order->delivery->delivery_time ?? '') === '06:00 PM' ? 'selected' : '' }}>6:00 PM - 7:00 PM</option>
+                                                        </select>
+                                                        <small class="text-muted">Choose your preferred time slot</small>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-3">
+                                                    <button type="submit" class="btn btn-success">
+                                                        <i class="fas fa-save me-2"></i>Update Delivery Schedule
+                                                    </button>
+                                                </div>
+                                            </form>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px;">
-                                        <i class="fas fa-clock me-3 text-primary"></i>
-                                        <div>
-                                            <small class="text-muted d-block">Delivery Time</small>
-                                            <strong>{{ $order->delivery->delivery_time ?? 'N/A' }}</strong>
+                                @else
+                                    <!-- Read-only Delivery Schedule -->
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                                            <i class="fas fa-calendar me-3 text-primary"></i>
+                                            <div>
+                                                <small class="text-muted d-block">Delivery Date</small>
+                                                <strong>{{ $order->delivery->delivery_date ? date('M d, Y', strtotime($order->delivery->delivery_date)) : 'N/A' }}</strong>
+                                            </div>
                                         </div>
-                        </div>
-                        </div>
-                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+                                            <i class="fas fa-clock me-3 text-primary"></i>
+                                            <div>
+                                                <small class="text-muted d-block">Delivery Time</small>
+                                                <strong>{{ $order->delivery->delivery_time ?? 'N/A' }}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
                         </div>
                     @endif
 
@@ -331,7 +398,7 @@
                             </h5>
                         <p class="text-muted small mb-3">
                             <i class="fas fa-info-circle me-2"></i>
-                            You can only cancel orders that are still pending and within 24 hours of placement.
+                            You can only cancel orders that are still pending.
                         </p>
                         <form action="{{ route('customer.orders.cancel', $order->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this order? This action cannot be undone.');">
                             @csrf

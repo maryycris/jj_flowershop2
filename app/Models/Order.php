@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Order extends Model
@@ -17,6 +18,7 @@ class Order extends Model
         'total_price',
         'status',
         'notes',
+        'selected_cart_item_ids',
         'payment_status',
         'payment_method',
         'type',
@@ -29,6 +31,17 @@ class Order extends Model
         'invoice_status',
         'invoice_generated_at',
         'invoice_paid_at',
+        'paymongo_source_id',
+        'paymongo_checkout_session_id',
+        'paymongo_payment_id',
+        'returned_at',
+        'return_reason',
+        'returned_by',
+    ];
+
+    protected $casts = [
+        'selected_cart_item_ids' => 'array',
+        'total_price' => 'decimal:2',
     ];
 
     /**
@@ -52,7 +65,9 @@ class Order extends Model
      */
     public function products(): BelongsToMany
     {
-        return $this->belongsToMany(Product::class, 'order_product')->withPivot('quantity')->withTimestamps();
+        return $this->belongsToMany(Product::class, 'order_product')
+            ->withPivot('quantity', 'rating', 'review_comment', 'reviewed', 'reviewed_at')
+            ->withTimestamps();
     }
 
     /**
@@ -89,6 +104,22 @@ class Order extends Model
     public function assignedDriver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_driver_id');
+    }
+
+    /**
+     * Get the invoice for the order.
+     */
+    public function invoice(): HasOne
+    {
+        return $this->hasOne(Invoice::class);
+    }
+
+    /**
+     * Get all payments for the order.
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 
     /**

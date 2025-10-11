@@ -1,4 +1,267 @@
 @extends('layouts.clerk_app')
+
+@push('styles')
+<style>
+/* Action Buttons Styling */
+.action-btn {
+    width: 50px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    color: #4CAF50;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    padding: 0;
+    font-size: 16px;
+    flex: 1;
+    min-width: 50px;
+    max-width: 50px;
+    cursor: pointer !important;
+    z-index: 10 !important;
+    pointer-events: auto !important;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.action-btn i {
+    transition: color 0.3s ease;
+}
+
+/* Edit Button */
+.edit-btn:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+.edit-btn:hover i {
+    color: white;
+}
+
+/* Delete Button */
+.delete-btn:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+.delete-btn:hover i {
+    color: white;
+}
+
+/* Ensure buttons are evenly spaced and fill the column */
+.d-flex.justify-content-center.gap-2 {
+    width: 100%;
+    max-width: 120px;
+    margin: 0 auto;
+    gap: 8px !important;
+}
+
+/* Make sure both buttons have exactly the same width */
+.edit-btn, .delete-btn {
+    width: 50px !important;
+    flex: 1 1 50px;
+}
+
+/* Edit Product Modal scrollbar styling */
+.modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: #4CAF50;
+    border-radius: 3px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: #45a049;
+}
+
+/* Marked for deletion styling */
+.marked-for-deletion {
+    border: 2px solid #dc3545 !important;
+    background-color: transparent !important;
+}
+
+.marked-for-deletion td {
+    border-color: #dc3545 !important;
+    background-color: transparent !important;
+}
+
+
+/* Ensure Actions header doesn't have action buttons */
+thead th:last-child {
+    text-align: center;
+}
+
+thead th:last-child::before,
+thead th:last-child::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Remove any action buttons from table header */
+thead .action-btn {
+    display: none !important;
+}
+
+thead .d-flex {
+    display: none !important;
+}
+
+/* More specific rules to hide action buttons in header */
+thead th:last-child .action-btn,
+thead th:last-child .edit-btn,
+thead th:last-child .delete-btn,
+thead th:last-child .btn,
+thead th:last-child i {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
+}
+
+/* Ensure Actions header only shows text */
+thead th:last-child {
+    text-align: center !important;
+    font-weight: bold !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+thead th:last-child * {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+thead th:last-child::before {
+    content: "Actions" !important;
+    display: block !important;
+    font-weight: bold !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+/* Ensure thead stays fixed and has higher z-index than any action buttons */
+thead {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    background: #e6f4ea !important;
+}
+
+thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 101 !important;
+    background: #e6f4ea !important;
+}
+</style>
+@endpush
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, setting up delete buttons...');
+    
+    // Handle delete button clicks
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        console.log('Setting up delete button for product:', button.getAttribute('data-product-id'));
+        
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Delete button clicked!');
+            
+            const productId = this.getAttribute('data-product-id');
+            const isMarked = this.getAttribute('data-is-marked') === 'true';
+            const productRow = document.getElementById('product-row-' + productId);
+            const icon = this.querySelector('i');
+            
+            console.log('Product ID:', productId, 'Is Marked:', isMarked);
+            
+            const confirmMessage = isMarked ? 
+                'Are you sure you want to unmark this product for deletion?' : 
+                'Are you sure you want to mark this product for deletion?';
+            
+            // Show confirmation
+            if (confirm(confirmMessage)) {
+                console.log('User confirmed, making AJAX request...');
+                
+                // Make AJAX request
+                fetch(`/clerk/inventory/${productId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                })
+                .then(response => {
+                    console.log('Response received:', response);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Data received:', data);
+                    
+                    if (data.success) {
+                        if (isMarked) {
+                            // Unmark the row - remove red border
+                            productRow.classList.remove('marked-for-deletion');
+                            productRow.style.border = '';
+                            
+                            // Update button
+                            icon.className = 'bi bi-trash3';
+                            this.setAttribute('title', 'Mark for deletion');
+                            this.setAttribute('data-is-marked', 'false');
+                        } else {
+                            // Mark the row with red border
+                            productRow.classList.add('marked-for-deletion');
+                            productRow.style.border = '2px solid #dc3545';
+                            
+                            // Update button
+                            icon.className = 'bi bi-arrow-counterclockwise';
+                            this.setAttribute('title', 'Unmark for deletion');
+                            this.setAttribute('data-is-marked', 'true');
+                        }
+                        
+                        // Show success message
+                        console.log('Success:', data.message);
+                        alert(data.message);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while updating the product deletion status.');
+                });
+            }
+        });
+    });
+    
+    console.log('Delete buttons setup complete. Found', document.querySelectorAll('.delete-btn').length, 'buttons');
+});
+</script>
+@endpush
+
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Inventory (Clerk) <span id="pendingIcon" class="badge bg-warning ms-2" style="display: none; background-color: #ff8c00 !important;"><i class="fas fa-clock"></i> Pending</span></h2>
@@ -17,10 +280,6 @@
         @csrf
         <div class="modal-body">
           <div class="mb-3">
-            <label for="code" class="form-label">Product Code</label>
-            <input type="text" class="form-control" id="code" name="code" required>
-          </div>
-          <div class="mb-3">
             <label for="name" class="form-label">Product Name</label>
             <input type="text" class="form-control" id="name" name="name" required>
           </div>
@@ -33,9 +292,12 @@
               <option value="Artificial Flowers">Artificial Flowers</option>
               <option value="Floral Supplies">Floral Supplies</option>
               <option value="Packaging Materials">Packaging Materials</option>
+              <option value="Wrappers">Wrappers</option>
+              <option value="Ribbon">Ribbon</option>
               <option value="Materials, Tools, and Equipment">Materials, Tools, and Equipment</option>
               <option value="Office Supplies">Office Supplies</option>
               <option value="Other Offers">Other Offers</option>
+              <option value="Greenery">Greenery</option>
             </select>
           </div>
           <div class="mb-3">
@@ -43,7 +305,7 @@
             <input type="number" step="0.01" class="form-control" id="price" name="price" required>
           </div>
           <div class="mb-3">
-            <label for="cost_price" class="form-label">Cost Price</label>
+            <label for="cost_price" class="form-label">Acquisition Cost</label>
             <input type="number" step="0.01" class="form-control" id="cost_price" name="cost_price">
           </div>
           <div class="mb-3">
@@ -80,8 +342,13 @@
   </div>
 </div>
 
-<!-- Update Button -->
-<div class="d-flex justify-content-end mt-3">
+<!-- Toolbar: Search + Update -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+    <div class="input-group" style="max-width: 360px;">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" class="form-control" id="inventorySearch" placeholder="Search code, name, or category..." autocomplete="off">
+        <button class="btn btn-outline-secondary" type="button" id="clearInventorySearch">Clear</button>
+    </div>
     <button class="btn btn-success" id="submitInventoryBtn">Update</button>
 </div>
 
@@ -104,7 +371,7 @@
 @if($products->count())
     <!-- Bootstrap Nav Tabs -->
     <ul class="nav nav-tabs mb-3" id="inventoryTabs" role="tablist">
-        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Other Offers'] as $category)
+        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Greenery', 'Floral Supplies', 'Packaging Materials', 'Wrappers', 'Ribbon', 'Other Offers'] as $category)
             <li class="nav-item" role="presentation">
                 <button class="nav-link @if($loop->first) active @endif" id="tab-{{ Str::slug($category) }}" data-bs-toggle="tab" data-bs-target="#{{ Str::slug($category) }}" type="button" role="tab" aria-controls="{{ Str::slug($category) }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}">
                     {{ $category }}
@@ -113,9 +380,9 @@
         @endforeach
     </ul>
     <div class="tab-content" id="inventoryTabsContent">
-        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Floral Supplies', 'Packaging Materials', 'Other Offers'] as $category)
+        @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Greenery', 'Floral Supplies', 'Packaging Materials', 'Wrappers', 'Ribbon', 'Other Offers'] as $category)
             <div class="tab-pane fade @if($loop->first) show active @endif" id="{{ Str::slug($category) }}" role="tabpanel">
-                <div class="table-responsive">
+                <div class="table-responsive inventory-scroll">
                     <table class="table table-bordered table-striped align-middle">
                         <thead>
                             <tr>
@@ -123,7 +390,7 @@
                                 <th>Name</th>
                                 <th>Category</th>
                                 <th>Selling Price</th>
-                                <th>Cost Price</th>
+                                <th>Acquisition Cost</th>
                                 <th colspan="2">Reordering Rules<br><small>(Min / Max)</small></th>
                                 <th>Qty On Hand</th>
                                 <th>Qty Consumed</th>
@@ -143,7 +410,11 @@
                                     $stock = $product->stock ?? 0;
                                     $qtyToPurchase = ($stock < $max) ? ($max - $stock) : 0;
                                 @endphp
-                                    <tr id="product-row-{{ $product->id }}" data-product-id="{{ $product->id }}">
+                                    <tr id="product-row-{{ $product->id }}" data-product-id="{{ $product->id }}" 
+                                        @if($product->is_marked_for_deletion) 
+                                            class="marked-for-deletion" 
+                                            style="border: 2px solid #dc3545 !important;"
+                                        @endif>
                                     <td>{{ $product->code ?? $product->id }}</td>
                                     <td>{{ $product->name }}</td>
                                     <td>{{ $product->category }}</td>
@@ -157,11 +428,18 @@
                                     <td>{{ $product->qty_sold ?? '-' }}</td>
                                     <td>{{ $qtyToPurchase }}</td>
                                     <td>{{ $product->created_at ? $product->created_at->format('Y-m-d') : '-' }}</td>
-                                    <td>
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center gap-2">
                                             <!-- Edit Button -->
-                                        <button class="btn btn-sm btn-primary edit-product-btn" data-bs-toggle="modal" data-bs-target="#editProductModal{{ $product->id }}" data-product-id="{{ $product->id }}">Edit</button>
+                                            <button class="btn btn-sm action-btn edit-btn edit-product-btn" data-bs-toggle="modal" data-bs-target="#editProductModal{{ $product->id }}" data-product-id="{{ $product->id }}" title="Edit"><i class="bi bi-pencil-square"></i></button>
                                             <!-- Delete Button -->
-                                            <button class="btn btn-sm btn-danger delete-product-btn" data-product-id="{{ $product->id }}">Delete</button>
+                                            <button class="btn btn-sm action-btn delete-btn" 
+                                                    data-product-id="{{ $product->id }}" 
+                                                    data-is-marked="{{ $product->is_marked_for_deletion ? 'true' : 'false' }}"
+                                                    title="{{ $product->is_marked_for_deletion ? 'Unmark for deletion' : 'Mark for deletion' }}">
+                                                <i class="bi {{ $product->is_marked_for_deletion ? 'bi-arrow-counterclockwise' : 'bi-trash3' }}"></i>
+                                            </button>
+                                        </div>
                                             <!-- Edit Modal -->
                                 <div class="modal fade" id="editProductModal{{ $product->id }}" tabindex="-1" aria-labelledby="editProductModalLabel{{ $product->id }}" aria-hidden="true">
                                   <div class="modal-dialog">
@@ -186,9 +464,12 @@
                                                           <option value="Artificial Flowers" @if($product->category == 'Artificial Flowers') selected @endif>Artificial Flowers</option>
                                                           <option value="Floral Supplies" @if($product->category == 'Floral Supplies') selected @endif>Floral Supplies</option>
                                                           <option value="Packaging Materials" @if($product->category == 'Packaging Materials') selected @endif>Packaging Materials</option>
+                                                          <option value="Wrappers" @if($product->category == 'Wrappers') selected @endif>Wrappers</option>
+                                                          <option value="Ribbon" @if($product->category == 'Ribbon') selected @endif>Ribbon</option>
                                                           <option value="Materials, Tools, and Equipment" @if($product->category == 'Materials, Tools, and Equipment') selected @endif>Materials, Tools, and Equipment</option>
                                                           <option value="Office Supplies" @if($product->category == 'Office Supplies') selected @endif>Office Supplies</option>
                                                           <option value="Other Offers" @if($product->category == 'Other Offers') selected @endif>Other Offers</option>
+                                                          <option value="Greenery" @if($product->category == 'Greenery') selected @endif>Greenery</option>
                                                         </select>
                                                       </div>
                                                       <div class="mb-3">
@@ -196,7 +477,7 @@
                                                         <input type="number" step="0.01" class="form-control" id="price{{ $product->id }}" name="price" value="{{ $product->price }}" required>
                                                       </div>
                                                       <div class="mb-3">
-                                                        <label for="cost_price{{ $product->id }}" class="form-label">Cost Price</label>
+                                                        <label for="cost_price{{ $product->id }}" class="form-label">Acquisition Cost</label>
                                                         <input type="number" step="0.01" class="form-control" id="cost_price{{ $product->id }}" name="cost_price" value="{{ $product->cost_price }}">
                                                       </div>
                                                       <div class="mb-3">
@@ -258,6 +539,35 @@
     transition: background-color 0.3s ease;
     border: 2px solid #FF6363 !important; /* Add border to make it more visible */
 }
+</style>
+<style>
+.inventory-scroll {
+    max-height: 60vh;
+    overflow-y: scroll; /* always show vertical scrollbar for consistency */
+    overflow-x: auto;
+    scrollbar-color: #7bb47b #f1f1f1; /* Firefox */
+    scrollbar-width: thin;            /* Firefox */
+}
+.inventory-scroll table { margin-bottom: 0; }
+/* Keep table header fixed while body scrolls */
+.inventory-scroll table thead th {
+    position: sticky;
+    top: 0;
+    background: #e6f4ea; /* light green */
+    color: #1e874b;      /* green text */
+    z-index: 2;
+}
+/* Green scrollbar styling (WebKit) */
+.inventory-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.inventory-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+.inventory-scroll::-webkit-scrollbar-thumb { background: #7bb47b; border-radius: 4px; }
+.inventory-scroll::-webkit-scrollbar-thumb:hover { background: #5aa65a; }
+/* Hide scrollbar arrows for smoother look */
+.inventory-scroll::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
+/* Make category tab names green */
+#inventoryTabs .nav-link { color: #27ae60 !important; }
+#inventoryTabs .nav-link.active { color: #1e874b !important; border-color: transparent !important; }
 </style>
 
 <script>
@@ -449,6 +759,32 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+
+    // Simple client-side filter for inventory table rows (per active tab)
+    const searchInput = document.getElementById('inventorySearch');
+    const clearBtn = document.getElementById('clearInventorySearch');
+    function filterRows(query) {
+        const normalized = (query || '').toLowerCase().trim();
+        const activePane = document.querySelector('#inventoryTabsContent .tab-pane.show.active');
+        if (!activePane) return;
+        const rows = activePane.querySelectorAll('tbody tr[id^="product-row-"]');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            const code = (cells[0]?.textContent || '').toLowerCase();
+            const name = (cells[1]?.textContent || '').toLowerCase();
+            const category = (cells[2]?.textContent || '').toLowerCase();
+            const match = !normalized || code.includes(normalized) || name.includes(normalized) || category.includes(normalized);
+            row.style.display = match ? '' : 'none';
+        });
+    }
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e){ filterRows(e.target.value); });
+    }
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function(){ searchInput.value = ''; filterRows(''); searchInput.focus(); });
+    }
+    // Re-apply filter when switching tabs
+    document.getElementById('inventoryTabs')?.addEventListener('shown.bs.tab', function(){ filterRows(searchInput?.value || ''); });
     
     // Add direct click handlers for Edit buttons in modals
     document.addEventListener('click', function(event) {

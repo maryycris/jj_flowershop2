@@ -131,4 +131,24 @@ class AdminProductApprovalController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get product compositions for edit
+     */
+    public function getProductCompositions($productId)
+    {
+        try {
+            $product = CatalogProduct::with(['compositions'])->findOrFail($productId);
+            
+            return response()->json([
+                'success' => true,
+                'compositions' => $product->compositions
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching product compositions: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

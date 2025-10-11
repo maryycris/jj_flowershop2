@@ -4,63 +4,94 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use App\Helpers\ShippingFeeHelper;
 
 class MapController extends Controller
 {
     /**
-     * Geocode address to coordinates using Nominatim
+     * Geocode address to coordinates
      */
     public function geocode(Request $request)
     {
+        \Log::info('Geocoding method called with method: ' . $request->method());
+        \Log::info('Request data: ' . json_encode($request->all()));
+        
+        $request->validate([
+            'address' => 'required|string|max:500'
+        ]);
+
         try {
-            $request->validate([
-                'address' => 'required|string|max:500'
+            \Log::info('Geocoding request for address: ' . $request->address);
+            
+            // Improve address formatting for better geocoding
+            $address = $request->address;
+            $lowerAddress = strtolower(trim($address));
+            
+            // Add timeout to prevent long waits
+            $timeout = 10; // 10 seconds timeout
+            
+            // Handle common variations with better formatting
+            if ($lowerAddress === 'cebu city' || $lowerAddress === 'cebu') {
+                $address = 'Cebu City, Cebu, Philippines';
+            } elseif (str_contains($lowerAddress, 'minglanilla')) {
+                $address = 'Minglanilla, Cebu, Philippines';
+            } elseif (str_contains($lowerAddress, 'kalawisan')) {
+                $address = 'Kalawisan, Lapu-Lapu City, Cebu, Philippines';
+            } elseif (str_contains($lowerAddress, 'lapu-lapu') || str_contains($lowerAddress, 'lapulapu')) {
+                $address = 'Lapu-Lapu City, Cebu, Philippines';
+            } elseif (str_contains($lowerAddress, 'mandaue')) {
+                $address = 'Mandaue City, Cebu, Philippines';
+            } elseif (str_contains($lowerAddress, 'talisay')) {
+                $address = 'Talisay City, Cebu, Philippines';
+            } elseif (!str_contains($lowerAddress, 'philippines')) {
+                if (!str_contains($lowerAddress, 'cebu')) {
+                    $address = $address . ', Cebu, Philippines';
+                } else {
+                    $address = $address . ', Philippines';
+                }
+            }
+            
+            $response = Http::timeout($timeout)->get('https://nominatim.openstreetmap.org/search', [
+                'q' => $address,
+                'format' => 'json',
+                'limit' => 1,
+                'addressdetails' => 1,
+                'countrycodes' => 'ph'
             ]);
 
-            \Log::info('Geocoding request', ['address' => $request->input('address')]);
-
-            $response = Http::timeout(10)
-                ->withHeaders([
-                    'User-Agent' => 'J&J Flower Shop Delivery System/1.0'
-                ])
-                ->get('https://nominatim.openstreetmap.org/search', [
-                    'q' => $request->input('address') . ', Philippines',
-                    'format' => 'json',
-                    'limit' => 1,
-                    'addressdetails' => 1
-                ]);
-
-            if (!$response->successful()) {
-                \Log::error('Nominatim API error', ['status' => $response->status()]);
-                
-                // Fallback to approximate coordinates for major cities
-                $fallbackCoords = $this->getFallbackCoordinates($request->input('address'));
-                if ($fallbackCoords) {
-                    return response()->json([
-                        'success' => true,
-                        'coordinates' => $fallbackCoords,
-                        'display_name' => $request->input('address'),
-                        'fallback' => true
-                    ]);
-                }
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Geocoding service unavailable'
-                ], 500);
-            }
-
             $data = $response->json();
-            
+            \Log::info('Nominatim response: ' . json_encode($data));
+
             if (!empty($data) && isset($data[0]['lat']) && isset($data[0]['lon'])) {
                 return response()->json([
                     'success' => true,
-                    'coordinates' => [
-                        'lat' => (float) $data[0]['lat'],
-                        'lon' => (float) $data[0]['lon']
-                    ],
-                    'display_name' => $data[0]['display_name'] ?? $request->input('address')
+                    'latitude' => (float) $data[0]['lat'],
+                    'longitude' => (float) $data[0]['lon'],
+                    'address' => $data[0]['display_name'] ?? $request->address
                 ]);
+            }
+
+            // Fallback for common Cebu locations
+            $fallbackLocations = [
+                'cebu city' => ['lat' => 10.3157, 'lon' => 123.8854, 'name' => 'Cebu City, Philippines'],
+                'cebu' => ['lat' => 10.3157, 'lon' => 123.8854, 'name' => 'Cebu City, Philippines'],
+                'mandaue' => ['lat' => 10.3333, 'lon' => 123.9333, 'name' => 'Mandaue City, Philippines'],
+                'lapu-lapu' => ['lat' => 10.3103, 'lon' => 123.9494, 'name' => 'Lapu-Lapu City, Philippines'],
+                'lapulapu' => ['lat' => 10.3103, 'lon' => 123.9494, 'name' => 'Lapu-Lapu City, Philippines'],
+                'talisay' => ['lat' => 10.2447, 'lon' => 123.8425, 'name' => 'Talisay City, Philippines']
+            ];
+
+            $searchTerm = strtolower(trim($request->address));
+            foreach ($fallbackLocations as $key => $location) {
+                if (str_contains($searchTerm, $key)) {
+                    \Log::info('Using fallback location for: ' . $searchTerm);
+                    return response()->json([
+                        'success' => true,
+                        'latitude' => $location['lat'],
+                        'longitude' => $location['lon'],
+                        'address' => $location['name']
+                    ]);
+                }
             }
 
             return response()->json([
@@ -68,86 +99,64 @@ class MapController extends Controller
                 'message' => 'Address not found'
             ], 404);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            \Log::error('Geocoding timeout: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid address format'
-            ], 422);
-        } catch (\Throwable $e) {
-            \Log::error('Geocoding error: '.$e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
+                'message' => 'Geocoding request timed out. Please try again.'
+            ], 408);
+        } catch (\Exception $e) {
+            \Log::error('Geocoding error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Geocoding service unavailable'
+                'message' => 'Geocoding failed: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Get route and distance using OSRM
+     * Get route between two points
      */
     public function getRoute(Request $request)
     {
-        try {
-            $request->validate([
-                'origin_lat' => 'required|numeric|between:-90,90',
-                'origin_lon' => 'required|numeric|between:-180,180',
-                'dest_lat' => 'required|numeric|between:-90,90',
-                'dest_lon' => 'required|numeric|between:-180,180'
-            ]);
+        $request->validate([
+            'origin_lat' => 'required|numeric|between:-90,90',
+            'origin_lng' => 'required|numeric|between:-180,180',
+            'dest_lat' => 'required|numeric|between:-90,90',
+            'dest_lng' => 'required|numeric|between:-180,180'
+        ]);
 
+        try {
             $url = sprintf(
                 'https://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson',
-                $request->input('origin_lon'),
-                $request->input('origin_lat'),
-                $request->input('dest_lon'),
-                $request->input('dest_lat')
+                $request->origin_lng,
+                $request->origin_lat,
+                $request->dest_lng,
+                $request->dest_lat
             );
 
-            \Log::info('OSRM request', ['url' => $url]);
-
-            $response = Http::timeout(15)->get($url);
-            
-            if (!$response->successful()) {
-                \Log::error('OSRM API error', ['status' => $response->status()]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Routing service unavailable'
-                ], 500);
-            }
-
+            $response = Http::timeout($timeout)->get($url);
             $data = $response->json();
 
             if (isset($data['routes'][0])) {
                 $route = $data['routes'][0];
                 return response()->json([
                     'success' => true,
-                    'distance' => $route['distance'], // in meters
-                    'duration' => $route['duration'], // in seconds
-                    'geometry' => $route['geometry'], // GeoJSON LineString
-                    'distance_km' => round($route['distance'] / 1000, 2),
-                    'duration_minutes' => round($route['duration'] / 60, 1)
+                    'distance' => $route['distance'],
+                    'duration' => $route['duration'],
+                    'geometry' => $route['geometry']
                 ]);
             }
 
             return response()->json([
                 'success' => false,
-                'message' => 'Route not found'
+                'message' => 'No route found'
             ], 404);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid coordinates'
-            ], 422);
-        } catch (\Throwable $e) {
-            \Log::error('OSRM routing error: '.$e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Routing service unavailable'
+                'message' => 'Routing failed: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -158,71 +167,44 @@ class MapController extends Controller
     public function calculateShippingWithDistance(Request $request)
     {
         $request->validate([
-            'origin_lat' => 'required|numeric|between:-90,90',
-            'origin_lon' => 'required|numeric|between:-180,180',
-            'dest_lat' => 'required|numeric|between:-90,90',
-            'dest_lon' => 'required|numeric|between:-180,180'
+            'origin_address' => 'required|string',
+            'destination_address' => 'required|string'
         ]);
 
         try {
-            // Get route first
-            $routeResponse = $this->getRoute($request);
-            $routeData = $routeResponse->getData(true);
+            \Log::info('Shipping calculation request', [
+                'origin' => $request->origin_address,
+                'destination' => $request->destination_address
+            ]);
+            
+            // Use Bangbang, Cordova as the origin
+            $originAddress = 'Bangbang, Cordova, Cebu';
+            $shippingFee = ShippingFeeHelper::calculateShippingFee(
+                $originAddress,
+                $request->destination_address
+            );
+            
+            \Log::info('Shipping fee calculated', ['shipping_fee' => $shippingFee]);
 
-            if (!$routeData['success']) {
-                return $routeResponse;
-            }
-
-            $distanceKm = $routeData['distance_km'];
-            $baseFee = 30; // Base fee for Cordova
-            $additionalRatePerKm = 12; // Rate per km outside base area
-
-            // Calculate shipping fee
-            $shippingFee = $baseFee;
-            if ($distanceKm > 2) { // Free within 2km
-                $shippingFee += (($distanceKm - 2) * $additionalRatePerKm);
+            // Calculate estimated distance for display
+            $estimatedDistance = 0;
+            if ($shippingFee > 30) {
+                $estimatedDistance = ($shippingFee - 30) / 10; // Reverse calculate from fee
             }
 
             return response()->json([
                 'success' => true,
-                'distance_km' => $distanceKm,
-                'duration_minutes' => $routeData['duration_minutes'],
-                'shipping_fee' => round($shippingFee, 2),
-                'geometry' => $routeData['geometry']
+                'shipping_fee' => $shippingFee,
+                'distance' => round($estimatedDistance, 1),
+                'origin' => $request->origin_address,
+                'destination' => $request->destination_address
             ]);
 
-        } catch (\Throwable $e) {
-            \Log::error('Shipping calculation error: '.$e->getMessage());
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Calculation failed'
+                'message' => 'Shipping calculation failed: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Get fallback coordinates for major cities when external API fails
-     */
-    private function getFallbackCoordinates($address)
-    {
-        $normalized = strtolower($address);
-        
-        $fallbackCities = [
-            'cebu city' => ['lat' => 10.3157, 'lon' => 123.8854],
-            'mandaue' => ['lat' => 10.3236, 'lon' => 123.9221],
-            'lapu-lapu' => ['lat' => 10.3103, 'lon' => 123.9494],
-            'talisay' => ['lat' => 10.2447, 'lon' => 123.9633],
-            'consolacion' => ['lat' => 10.3766, 'lon' => 123.9573],
-            'cordova' => ['lat' => 10.3157, 'lon' => 123.8854],
-            'bang-bang' => ['lat' => 10.3157, 'lon' => 123.8854],
-        ];
-        
-        foreach ($fallbackCities as $city => $coords) {
-            if (strpos($normalized, $city) !== false) {
-                return $coords;
-            }
-        }
-        
-        return null;
     }
 }

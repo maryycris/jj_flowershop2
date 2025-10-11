@@ -6,16 +6,15 @@
         <div class="col-md-3 col-lg-3">
             @include('customer.sidebar')
         </div>
-        <div class="col-md-9 col-lg-7">
+        <div class="col-md-9 col-lg-8 main-content-with-sidebar" style="margin-left: 25%; max-width: calc(75% - 30px);">
             <div class="row">
                 <div class="col-md-7">
-            <h2 class="mb-4" style="font-weight: 500; color: #222;">Track Orders</h2>
             @if ($orders->isEmpty())
                 <div class="alert alert-info" role="alert">
                     You have no orders to track.
                 </div>
             @else
-                <div class="d-flex flex-column gap-3">
+                <div class="orders-scroll-container d-flex flex-column gap-3">
                     @foreach ($orders as $order)
                         <div class="card shadow-sm border" style="border-radius: 8px;">
                             <div class="card-body">
@@ -50,7 +49,7 @@
                     <span class="fw-bold" id="timeline-order-id" style="color: #4a9448;">Order #</span>
                     <span class="ms-3" style="color: #888;">Customer</span>
                 </div>
-                <div class="card-body" style="min-height: 350px;">
+                <div class="card-body timeline-scroll-container" style="min-height: 350px;">
                     <ul class="timeline list-unstyled" id="order-timeline">
                         <li class="text-center text-muted">Select an order to view its timeline.</li>
                     </ul>
@@ -97,6 +96,56 @@
 .btn-success:hover {
     background: #4a9448 !important;
 }
+
+/* Scrollbar styles for orders list */
+.orders-scroll-container {
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.orders-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.orders-scroll-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.orders-scroll-container::-webkit-scrollbar-thumb {
+    background: #7cc47f;
+    border-radius: 3px;
+}
+
+.orders-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #4a9448;
+}
+
+/* Scrollbar styles for timeline */
+.timeline-scroll-container {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-thumb {
+    background: #7cc47f;
+    border-radius: 3px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #4a9448;
+}
 </style>
 @endpush
 @push('scripts')
@@ -123,6 +172,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <li>
                             <div class="d-flex align-items-center mb-1">
                                 <span class="text-muted small me-3">${new Date(item.created_at).toLocaleString()}</span>
+                                <span class="badge bg-success me-2">${item.status}</span>
                                 <span>${item.message ? item.message : ''}</span>
                             </div>
                         </li>

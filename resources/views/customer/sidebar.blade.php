@@ -1,5 +1,5 @@
 @php use Illuminate\Support\Str; @endphp
-<div class="d-flex flex-column align-items-center py-5">
+<div class="sidebar-container d-flex flex-column align-items-center py-5">
     <img src="{{
         Auth::user()->profile_picture
             ? (Str::startsWith(Auth::user()->profile_picture, 'http')
@@ -16,9 +16,6 @@
             </a>
             <a href="{{ route('customer.address_book.index') }}" class="sidebar-link d-flex align-items-center @if(request()->routeIs('customer.address_book.index')) active-link @endif" style="color: #222; font-weight: @if(request()->routeIs('customer.address_book.index')) 600 @else 400 @endif;">
                 <i class="fas fa-map-marker-alt me-2" style="color: #222;"></i> Address Book
-            </a>
-            <a href="{{ route('customer.account.change_password') }}" class="sidebar-link d-flex align-items-center @if(request()->routeIs('customer.account.change_password')) active-link @endif" style="color: #222; font-weight: @if(request()->routeIs('customer.account.change_password')) 600 @else 400 @endif;">
-                <i class="fas fa-key me-2" style="color: #222;"></i> Change Password
             </a>
             <a href="{{ route('customer.orders.index') }}" class="sidebar-link d-flex align-items-center @if(request()->routeIs('customer.orders.index')) active-link @endif" style="color: #222; font-weight: @if(request()->routeIs('customer.orders.index')) 600 @else 400 @endif;">
                 <i class="fas fa-shopping-bag me-2" style="color: #222;"></i> My Purchase
@@ -92,5 +89,33 @@
     .sidebar-label {
         margin-bottom: 6px;
         letter-spacing: 0.5px;
+    }
+    .sidebar-container {
+        position: fixed;
+        top: 110px;
+        left: 0;
+        width: 25%;
+        max-width: 300px;
+        min-height: calc(100vh - 110px);
+        background: #f8f9fa;
+        z-index: 100;
+        overflow-y: auto;
+    }
+    @media (max-width: 768px) {
+        .sidebar-container {
+            position: relative;
+            top: 0;
+            width: 100%;
+            max-width: none;
+            min-height: auto;
+        }
+    }
+    
+    /* Responsive adjustments for main content */
+    @media (max-width: 768px) {
+        .main-content-with-sidebar {
+            margin-left: 0 !important;
+            max-width: 100% !important;
+        }
     }
 </style> 

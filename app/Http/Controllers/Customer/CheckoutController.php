@@ -75,11 +75,11 @@ class CheckoutController extends Controller
             // Regular cart flow
             $selectedItemIds = $request->input('selected_items', []);
         
-        if (!empty($selectedItemIds)) {
-            $cartItems = $user->cartItems()->with('product')->whereIn('id', $selectedItemIds)->get();
-        } else {
-        $cartItems = $user->cartItems()->with('product')->get();
-        }
+            if (!empty($selectedItemIds)) {
+                $cartItems = $user->cartItems()->with('product')->whereIn('id', $selectedItemIds)->get();
+            } else {
+                $cartItems = $user->cartItems()->with('product')->get();
+            }
 
         if ($cartItems->isEmpty()) {
             return redirect()->route('customer.cart.index')->with('error', 'Your cart is empty.');
@@ -95,6 +95,35 @@ class CheckoutController extends Controller
         $addresses = $user->addresses()->get();
         // Use default address (or first) for initial calculation
         $deliveryAddress = $addresses->where('is_default', true)->first() ?? $addresses->first();
+        
+        // Get user's loyalty card
+        $loyaltyCard = \App\Models\LoyaltyCard::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->first();
+        
+        // Calculate loyalty discount if applicable
+        $loyaltyService = new \App\Services\LoyaltyService();
+        $loyaltyDiscount = 0;
+        if ($loyaltyCard && $loyaltyService->canRedeem($loyaltyCard)) {
+            $loyaltyDiscount = $loyaltyService->calculateDiscountForCart($cartItems);
+        }
+        
+        \Log::info('Checkout address loading', [
+            'user_id' => $user->id,
+            'addresses_count' => $addresses->count(),
+            'default_address' => $deliveryAddress ? [
+                'id' => $deliveryAddress->id,
+                'is_default' => $deliveryAddress->is_default,
+                'street_address' => $deliveryAddress->street_address,
+                'barangay' => $deliveryAddress->barangay,
+                'city' => $deliveryAddress->city
+            ] : null,
+            'loyalty_card' => $loyaltyCard ? [
+                'stamps_count' => $loyaltyCard->stamps_count,
+                'can_redeem' => $loyaltyService->canRedeem($loyaltyCard),
+                'discount_amount' => $loyaltyDiscount
+            ] : null
+        ]);
 
         // Use passed-in shipping fee if available; otherwise, calculate
         \Log::info('PaymentMethod params', ['query' => $request->query()]);
@@ -108,22 +137,22 @@ class CheckoutController extends Controller
             }
         }
         if ($shippingFee === null) {
-        // Calculate shipping fee using the updated helper
-        $shippingFee = 30; // Default for Cordova
-        if ($deliveryAddress) {
-            $originAddress = 'Cordova, Cebu'; // Shop location
-            $destinationAddress = $deliveryAddress->street_address . ', ' . 
-                                ($deliveryAddress->barangay ?? '') . ', ' . 
-                                ($deliveryAddress->municipality ?? '') . ', ' . 
-                                ($deliveryAddress->city ?? '') . ', ' . 
-                                ($deliveryAddress->region ?? 'Region VII');
-            
-            $shippingFee = \App\Helpers\ShippingFeeHelper::calculateShippingFee($originAddress, $destinationAddress);
-        }
+            // Calculate shipping fee using the updated helper
+            $shippingFee = 30; // Default for Cordova
+            if ($deliveryAddress) {
+                $originAddress = 'Cordova, Cebu'; // Shop location
+                $destinationAddress = $deliveryAddress->street_address . ', ' . 
+                                    ($deliveryAddress->barangay ?? '') . ', ' . 
+                                    ($deliveryAddress->municipality ?? '') . ', ' . 
+                                    ($deliveryAddress->city ?? '') . ', ' . 
+                                    ($deliveryAddress->region ?? 'Region VII');
+                
+                $shippingFee = \App\Helpers\ShippingFeeHelper::calculateShippingFee($originAddress, $destinationAddress);
+            }
         }
         \Log::info('PaymentMethod resolved shipping fee', ['shipping_fee' => $shippingFee]);
 
-        return view('customer.checkout.index', compact('cartItems', 'subtotal', 'deliveryAddress', 'shippingFee', 'addresses'));
+        return view('customer.checkout.index', compact('cartItems', 'subtotal', 'deliveryAddress', 'shippingFee', 'addresses', 'loyaltyCard', 'loyaltyDiscount'));
     }
 
     public function paymentMethod(Request $request)
@@ -143,6 +172,24 @@ class CheckoutController extends Controller
             'delivery_time' => $request->input('delivery_time', ''),
             'promo_code' => $request->input('promo_code', ''),
         ];
+        
+        // Validate phone number requirement based on recipient type
+        $recipientType = $request->input('recipient_type', 'someone');
+        $phoneNumber = $request->input('recipient_phone', '');
+        
+        // If customer will receive the order, phone number is required
+        if ($recipientType === 'self' && empty($phoneNumber)) {
+            return back()->withErrors([
+                'recipient_phone' => 'Phone number is required when you will receive the order. The rider needs to contact you for delivery coordination.'
+            ])->withInput();
+        }
+        
+        // If someone else will receive, phone number is also required
+        if ($recipientType === 'someone' && empty($phoneNumber)) {
+            return back()->withErrors([
+                'recipient_phone' => 'Recipient phone number is required for delivery coordination.'
+            ])->withInput();
+        }
         
         // Store in session
         session(['checkout_data' => $checkoutData]);
@@ -246,13 +293,37 @@ class CheckoutController extends Controller
             $shippingFee = (float) $shippingFee;
         }
 
-        return view('customer.checkout.payment_method', compact('cartItems', 'subtotal', 'shippingFee'));
+        // Load loyalty card data
+        $loyaltyCard = \App\Models\LoyaltyCard::where('user_id', $user->id)->first();
+        
+        // Check if customer is eligible for automatic discount (4/5 stamps = 5th order)
+        $loyaltyDiscount = 0;
+        $discountedItem = null;
+        
+        if ($loyaltyCard && $loyaltyCard->stamps_count >= 4) {
+            // Find the most expensive item in the cart
+            $mostExpensiveItem = $cartItems->sortByDesc(function($item) {
+                return $item->product->price * $item->quantity;
+            })->first();
+            
+            if ($mostExpensiveItem) {
+                // Calculate 50% discount on the most expensive item
+                $loyaltyDiscount = ($mostExpensiveItem->product->price * $mostExpensiveItem->quantity) * 0.5;
+                $discountedItem = $mostExpensiveItem;
+            }
+        }
+        
+        // Calculate final total with loyalty discount
+        $finalTotal = $subtotal + $shippingFee - $loyaltyDiscount;
+        
+        return view('customer.checkout.payment_method', compact('cartItems', 'subtotal', 'shippingFee', 'loyaltyCard', 'loyaltyDiscount', 'discountedItem', 'finalTotal'));
     }
 
     public function processOrder(Request $request)
     {
         // Add debugging
         \Log::info('Checkout process started', ['request_data' => $request->all()]);
+        \Log::info('Payment method received', ['payment_method' => $request->input('payment_method')]);
         
         $user = Auth::user();
         
@@ -320,7 +391,12 @@ class CheckoutController extends Controller
             \Log::info('ProcessOrder - Created temp cart item for Buy Now', ['product_id' => $productId, 'quantity' => $quantity]);
         } else {
             // Regular cart flow
-        $cartItems = $user->cartItems()->with('product')->get();
+            $selectedItemIds = $request->input('selected_items', []);
+            if (!empty($selectedItemIds)) {
+                $cartItems = $user->cartItems()->with('product')->whereIn('id', $selectedItemIds)->get();
+            } else {
+                $cartItems = $user->cartItems()->with('product')->get();
+            }
 
         if ($cartItems->isEmpty()) {
             \Log::warning('Cart is empty for user', ['user_id' => $user->id]);
@@ -331,7 +407,7 @@ class CheckoutController extends Controller
         \Log::info('Cart items found', ['count' => $cartItems->count()]);
 
         $request->validate([
-            'payment_method' => 'required|in:cod,gcash,paymaya,seabank,rcbc',
+            'payment_method' => 'required|in:cod,gcash,paymaya,gotyme,rcbc_debit_card,rcbc_credit_card,seabank_debit_card,seabank_credit_card,bpi_debit_card,bpi_credit_card,bdo_debit_card,bdo_credit_card,metrobank_debit_card,metrobank_credit_card,security_bank_debit_card,security_bank_credit_card,other_debit_card,other_credit_card',
         ]);
 
         \Log::info('Validation passed');
@@ -347,7 +423,29 @@ class CheckoutController extends Controller
             $shippingFee = 30; // fallback minimum only if not provided or invalid
             \Log::info('Using fallback shipping fee', ['shipping_fee' => $shippingFee]);
         }
-        $totalPrice = $subtotal + $shippingFee;
+        // Check for automatic loyalty discount (4/5 stamps = 5th order = 50% off most expensive item)
+        $loyaltyDiscount = 0;
+        $loyaltyCard = \App\Models\LoyaltyCard::where('user_id', $user->id)->first();
+        
+        if ($loyaltyCard && $loyaltyCard->stamps_count >= 4) {
+            // Find the most expensive item in the cart
+            $mostExpensiveItem = $cartItems->sortByDesc(function($item) {
+                return $item->product->price * $item->quantity;
+            })->first();
+            
+            if ($mostExpensiveItem) {
+                // Calculate 50% discount on the most expensive item
+                $loyaltyDiscount = ($mostExpensiveItem->product->price * $mostExpensiveItem->quantity) * 0.5;
+                \Log::info('Loyalty discount applied', [
+                    'discount_amount' => $loyaltyDiscount,
+                    'discounted_item' => $mostExpensiveItem->product->name,
+                    'original_price' => $mostExpensiveItem->product->price * $mostExpensiveItem->quantity,
+                    'stamps_count' => $loyaltyCard->stamps_count
+                ]);
+            }
+        }
+        
+        $totalPrice = $subtotal + $shippingFee - $loyaltyDiscount;
 
         \Log::info('Calculated totals', ['subtotal' => $subtotal, 'shipping_fee' => $shippingFee, 'total' => $totalPrice]);
         
@@ -412,16 +510,19 @@ class CheckoutController extends Controller
         // Handle different payment methods
         if ($paymentMethod === 'cod') {
             // For COD, create order immediately
-            return $this->createOrder($request, $user, $cartItems, $totalPrice, 'cod', $deliveryDate, $deliveryTime, $deliveryAddress, $recipientName, $recipientPhone, $shippingFee);
+            return $this->createOrder($request, $user, $cartItems, $totalPrice, 'cod', $deliveryDate, $deliveryTime, $deliveryAddress, $recipientName, $recipientPhone, $shippingFee, $loyaltyDiscount, $loyaltyCard);
         } else {
-            // For GCash and PayMaya, redirect to payment gateway
-            return $this->redirectToPaymentGateway($request, $user, $cartItems, $totalPrice, $paymentMethod, $deliveryDate, $deliveryTime, $deliveryAddress, $recipientName, $recipientPhone, $shippingFee);
+            // For all online payment methods (e-wallets and cards), redirect to payment gateway
+            return $this->redirectToPaymentGateway($request, $user, $cartItems, $totalPrice, $paymentMethod, $deliveryDate, $deliveryTime, $deliveryAddress, $recipientName, $recipientPhone, $shippingFee, $loyaltyDiscount, $loyaltyCard);
         }
     }
 
-    private function createOrder(Request $request, $user, $cartItems, $totalPrice, $paymentMethod, $deliveryDate, $deliveryTime, $deliveryAddress, $recipientName, $recipientPhone, $shippingFee)
+    private function createOrder(Request $request, $user, $cartItems, $totalPrice, $paymentMethod, $deliveryDate, $deliveryTime, $deliveryAddress, $recipientName, $recipientPhone, $shippingFee, $loyaltyDiscount = 0, $loyaltyCard = null)
     {
         try {
+            // Get selected item IDs for cart clearing later
+            $selectedItemIds = $request->input('selected_items', []);
+            
             // Create the order
             $order = new Order([
                 'user_id' => $user->id,
@@ -432,10 +533,29 @@ class CheckoutController extends Controller
                 'payment_method' => $paymentMethod,
                 'type' => 'online',
                 'notes' => $request->input('notes', ''),
+                'selected_cart_item_ids' => $selectedItemIds,
             ]);
             $order->save();
 
+            // Create initial status history entry
+            $order->statusHistories()->create([
+                'status' => 'pending',
+                'message' => 'Order created and pending approval',
+            ]);
+
             \Log::info('Order created successfully', ['order_id' => $order->id]);
+
+            // Reset loyalty stamps to 0/5 if discount was applied (complete cycle reset)
+            if ($loyaltyDiscount > 0 && $loyaltyCard) {
+                $loyaltyCard->stamps_count = 0; // Reset to 0 stamps after using discount
+                $loyaltyCard->save();
+                
+                \Log::info('Loyalty stamps reset after discount', [
+                    'user_id' => $user->id,
+                    'new_stamps_count' => 0,
+                    'discount_applied' => $loyaltyDiscount
+                ]);
+            }
 
             // Create notifications
             $this->createNotifications($order);
@@ -444,6 +564,10 @@ class CheckoutController extends Controller
             foreach ($cartItems as $item) {
                 $order->products()->attach($item->product_id, ['quantity' => $item->quantity]);
             }
+
+            // Log order for inventory tracking (no stock decrease yet)
+            $inventoryService = new \App\Services\InventoryService();
+            $inventoryService->updateInventoryOnOrder($order);
 
             // Create delivery record with enhanced recipient information
             $delivery = new Delivery([
@@ -461,10 +585,18 @@ class CheckoutController extends Controller
             ]);
             $delivery->save();
 
-            // Clear the cart after order is placed
+            // Clear only the purchased items from cart after order is placed
             // Only clear cart if this is not a "Buy now" flow
             if (!$request->has('product_id')) {
-            $user->cartItems()->delete();
+                // Get the selected item IDs that were purchased
+                $selectedItemIds = $request->input('selected_items', []);
+                if (!empty($selectedItemIds)) {
+                    // Only delete the selected items that were purchased
+                    $user->cartItems()->whereIn('id', $selectedItemIds)->delete();
+                } else {
+                    // If no selected items, clear all (fallback for old behavior)
+                    $user->cartItems()->delete();
+                }
             }
 
             return redirect()->route('customer.orders.show', $order->id)
@@ -480,7 +612,7 @@ class CheckoutController extends Controller
         }
     }
 
-    private function redirectToPaymentGateway(Request $request, $user, $cartItems, $totalPrice, $paymentMethod, $deliveryDate, $deliveryTime, $deliveryAddress, $recipientName, $recipientPhone, $shippingFee)
+    private function redirectToPaymentGateway(Request $request, $user, $cartItems, $totalPrice, $paymentMethod, $deliveryDate, $deliveryTime, $deliveryAddress, $recipientName, $recipientPhone, $shippingFee, $loyaltyDiscount = 0, $loyaltyCard = null)
     {
         \Log::info('TEST: Entered redirectToPaymentGateway', [
             'user_id' => $user->id,
@@ -490,6 +622,7 @@ class CheckoutController extends Controller
             'recipient_name' => $recipientName,
             'recipient_phone' => $recipientPhone,
         ]);
+        \Log::info('Payment method check', ['is_card_method' => str_contains($paymentMethod, '_card'), 'is_ewallet' => in_array($paymentMethod, ['gcash', 'paymaya', 'gotyme', 'rcbc', 'seabank'])]);
         try {
             // Ensure delivery_date and delivery_time are not empty
             if (empty($deliveryDate)) {
@@ -498,6 +631,9 @@ class CheckoutController extends Controller
             if (empty($deliveryTime)) {
                 $deliveryTime = '09:00 AM';
             }
+            
+            // Get selected item IDs for cart clearing later
+            $selectedItemIds = $request->input('selected_items', []);
             
             // Create a temporary order for payment processing
             $order = new Order([
@@ -509,8 +645,28 @@ class CheckoutController extends Controller
                 'payment_method' => $paymentMethod,
                 'type' => 'online',
                 'notes' => $request->input('notes', ''),
+                'selected_cart_item_ids' => $selectedItemIds,
             ]);
             $order->save();
+
+            // Create initial status history entry
+            $order->statusHistories()->create([
+                'status' => 'pending',
+                'message' => 'Order created and pending approval',
+            ]);
+
+            // Reset loyalty stamps to 0/5 if discount was applied (complete cycle reset)
+            if ($loyaltyDiscount > 0 && $loyaltyCard) {
+                $loyaltyCard->stamps_count = 0; // Reset to 0 stamps after using discount
+                $loyaltyCard->save();
+                
+                \Log::info('Loyalty stamps reset after discount (payment flow)', [
+                    'user_id' => $user->id,
+                    'new_stamps_count' => 0,
+                    'discount_applied' => $loyaltyDiscount
+                ]);
+            }
+
             foreach ($cartItems as $item) {
                 $order->products()->attach($item->product_id, ['quantity' => $item->quantity]);
             }
@@ -532,14 +688,11 @@ class CheckoutController extends Controller
             ]);
             $delivery->save();
             
-            // Clear the cart after order is created (for all payment methods)
-            // Only clear cart if this is not a "Buy now" flow
-            if (!$request->has('product_id')) {
-            $user->cartItems()->delete();
-            }
+            // DON'T clear cart yet - wait for successful payment
+            // Cart will be cleared in payment callback when payment is confirmed
             
             // PayMongo integration via Checkout Sessions (shows E-Wallet page first)
-            if (in_array($paymentMethod, ['gcash', 'paymaya'])) {
+            if (in_array($paymentMethod, ['gcash', 'paymaya', 'gotyme', 'rcbc_debit_card', 'rcbc_credit_card', 'seabank_debit_card', 'seabank_credit_card', 'bpi_debit_card', 'bpi_credit_card', 'bdo_debit_card', 'bdo_credit_card', 'metrobank_debit_card', 'metrobank_credit_card', 'security_bank_debit_card', 'security_bank_credit_card', 'other_debit_card', 'other_credit_card'])) {
                 \Log::info('Creating PayMongo Checkout Session', ['payment_method' => $paymentMethod, 'amount' => $totalPrice]);
                 try {
                     $amountInCents = (int) ($totalPrice * 100);
@@ -559,8 +712,8 @@ class CheckoutController extends Controller
                                             'currency' => 'PHP'
                                         ]
                                     ],
-                                    'payment_method_types' => ['gcash', 'paymaya'],
-                                    'success_url' => route('customer.payment.callback', $order->id),
+                                    'payment_method_types' => ['card', 'gcash', 'paymaya'],
+                                    'success_url' => route('customer.payment.callback', $order->id) . (env('DEMO_PAYMENTS', false) ? '?simulate=1' : ''),
                                     'cancel_url' => route('customer.orders.show', $order->id),
                                 ]
                             ]
@@ -571,48 +724,13 @@ class CheckoutController extends Controller
                         \Log::info('Checkout Session created successfully', ['session_id' => $checkoutSessionId, 'checkout_url' => $checkoutUrl]);
                         $order->paymongo_checkout_session_id = $checkoutSessionId;
                         $order->save();
-                        return redirect()->away($checkoutUrl);
+                        \Log::info('About to redirect to PayMongo', ['url' => $checkoutUrl]);
+                        // Use JavaScript redirect to ensure it works
+                        return response()->view('customer.checkout.redirect', ['checkout_url' => $checkoutUrl]);
                     }
                     \Log::error('Checkout Session error (wallets)', ['status' => $response->status(), 'body' => $response->body()]);
                 } catch (\Throwable $e) {
                     \Log::error('Checkout Session exception (wallets)', ['error' => $e->getMessage()]);
-                }
-                return redirect()->route('customer.orders.show', $order->id)
-                    ->with('warning', 'Order created but could not start payment session.');
-            } elseif (in_array($paymentMethod, ['seabank', 'rcbc'])) {
-                // Use Checkout Sessions API for Seabank/RCBC
-                try {
-                    $amountInCents = (int) ($totalPrice * 100);
-                    $response = \Illuminate\Support\Facades\Http::withBasicAuth(env('PAYMONGO_SECRET_KEY'), '')
-                        ->post(env('PAYMONGO_BASE_URL', 'https://api.paymongo.com/v1') . '/checkout_sessions', [
-                            'data' => [
-                                'attributes' => [
-                                    'billing' => [
-                                        'name' => $user->name ?? ($user->first_name . ' ' . $user->last_name),
-                                        'email' => $user->email,
-                                    ],
-                                    'line_items' => [
-                                        [
-                                            'name' => 'Order #' . $order->id,
-                                            'quantity' => 1,
-                                            'amount' => $amountInCents,
-                                            'currency' => 'PHP'
-                                        ]
-                                    ],
-                                    'payment_method_types' => ['gcash', 'paymaya'], // PayMongo supports these payment methods
-                                    'success_url' => route('customer.payment.callback', $order->id),
-                                    'cancel_url' => route('customer.orders.show', $order->id),
-                                ]
-                            ]
-                        ]);
-                    if ($response->successful()) {
-                        $order->paymongo_checkout_session_id = $response['data']['id'] ?? null;
-                $order->save();
-                        return redirect()->away($response['data']['attributes']['checkout_url']);
-                    }
-                    \Log::error('Checkout Session error', ['body' => $response->body()]);
-                } catch (\Throwable $e) {
-                    \Log::error('Checkout Session exception', ['error' => $e->getMessage()]);
                 }
                 return redirect()->route('customer.orders.show', $order->id)
                     ->with('warning', 'Order created but could not start payment session.');

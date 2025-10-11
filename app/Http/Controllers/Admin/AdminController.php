@@ -17,18 +17,29 @@ class AdminController extends Controller
         $orderStatusService = new OrderStatusService();
         $orderCounts = $orderStatusService->getOrderCounts();
 
-        // You can keep these if needed for other parts of the dashboard not shown in the prototype
-        // $totalOrders = Order::count();
-        // $totalProducts = Product::count();
-        // $totalCustomers = User::where('role', 'customer')->count();
-        // $totalRevenue = Order::where('status', 'completed')->sum('total_price');
-        // $recentOrders = Order::with('user')->latest()->take(5)->get();
+        // Aggregate totals for dashboard analytics
+        $totalOrders = Order::count();
+        $totalProducts = Product::count();
+        $totalCustomers = User::where('role', 'customer')->count();
+
+        // Most popular products (all-time by quantity sold)
+        $popularProducts = \DB::table('order_product')
+            ->join('products', 'order_product.product_id', '=', 'products.id')
+            ->select('products.id', 'products.name', \DB::raw('SUM(order_product.quantity) as total_quantity'))
+            ->groupBy('products.id', 'products.name')
+            ->orderByDesc('total_quantity')
+            ->limit(5)
+            ->get();
 
         return view('admin.dashboard', [
             'pendingOrdersCount' => $orderCounts['pending'],
             'approvedOrdersCount' => $orderCounts['approved'],
             'onDeliveryCount' => $orderCounts['on_delivery'],
-            'completedTodayCount' => $orderCounts['completed_today']
+            'completedTodayCount' => $orderCounts['completed_today'],
+            'totalOrders' => $totalOrders,
+            'totalProducts' => $totalProducts,
+            'totalCustomers' => $totalCustomers,
+            'popularProducts' => $popularProducts,
         ]);
     }
 

@@ -53,16 +53,13 @@ class AccountController extends Controller
         return back()->with('success', 'Profile updated successfully!');
     }
 
-    public function changePassword()
-    {
-        return view('customer.account.change_password');
-    }
 
     public function updatePassword(Request $request)
     {
         $request->validate([
             'current_password' => 'required',
-            'new_password' => 'required|min:8|confirmed',
+            'new_password' => 'required|min:8|same:new_password_confirmation',
+            'new_password_confirmation' => 'required',
         ]);
 
         $user = Auth::user();

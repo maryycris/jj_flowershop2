@@ -133,11 +133,19 @@ class AuthController extends Controller
             abort(404);
         }
         if ($provider === 'facebook') {
-            // Force logout and re-authentication to allow account selection
-            return Socialite::driver('facebook')
-                ->with(['auth_type' => 'reauthenticate'])
-                ->scopes(['email'])
-                ->redirect();
+            // Use the new app ID
+            $clientId = '769015785952499';
+            $redirectUri = 'http://localhost:8000/auth/facebook/callback';
+            $state = csrf_token();
+            
+            $url = "https://www.facebook.com/v18.0/dialog/oauth?" . http_build_query([
+                'client_id' => $clientId,
+                'redirect_uri' => $redirectUri,
+                'state' => $state,
+                'response_type' => 'code'
+            ]);
+            
+            return redirect($url);
         }
         
         if ($provider === 'google') {
@@ -154,6 +162,12 @@ class AuthController extends Controller
     public function handleProviderCallback($provider)
     {
         \Log::info('Socialite callback hit', ['provider' => $provider]);
+        
+        // Handle custom Facebook OAuth flow
+        if ($provider === 'facebook') {
+            return $this->handleFacebookCallback();
+        }
+        
         try {
             $socialUser = Socialite::driver($provider)->user();
             \Log::info('Socialite user', ['email' => $socialUser->getEmail()]);
@@ -345,6 +359,107 @@ class AuthController extends Controller
         \Auth::login($user, true);
         session()->forget('pending_facebook_user_id');
         return redirect()->route('customer.dashboard')->with('success', 'Phone verified and logged in!');
+    }
+
+    // Custom Facebook callback handler
+    private function handleFacebookCallback()
+    {
+        $request = request();
+        
+        if ($request->has('error')) {
+            \Log::error('Facebook OAuth error', ['error' => $request->get('error')]);
+            return redirect('/login')->withErrors(['message' => 'Facebook login was cancelled or failed.']);
+        }
+
+        if (!$request->has('code')) {
+            \Log::error('Facebook OAuth missing code');
+            return redirect('/login')->withErrors(['message' => 'Facebook login failed - no authorization code.']);
+        }
+
+        try {
+            // Exchange code for access token
+            $clientId = '769015785952499';
+            $clientSecret = 'e3751172c5bf6451c8f2ed10656abfb0';
+            $redirectUri = 'http://localhost:8000/auth/facebook/callback';
+            $code = $request->get('code');
+
+            $tokenResponse = \Http::post('https://graph.facebook.com/v18.0/oauth/access_token', [
+                'client_id' => $clientId,
+                'client_secret' => $clientSecret,
+                'redirect_uri' => $redirectUri,
+                'code' => $code,
+            ]);
+
+            if (!$tokenResponse->successful()) {
+                throw new \Exception('Failed to get access token');
+            }
+
+            $tokenData = $tokenResponse->json();
+            $accessToken = $tokenData['access_token'];
+
+            // Get user info from Facebook
+            $userResponse = \Http::get("https://graph.facebook.com/v18.0/me", [
+                'access_token' => $accessToken,
+                'fields' => 'id,name,email,picture'
+            ]);
+
+            if (!$userResponse->successful()) {
+                throw new \Exception('Failed to get user info');
+            }
+
+            $facebookUser = $userResponse->json();
+            \Log::info('Facebook user data', ['user' => $facebookUser]);
+
+            // Check if email is available
+            if (!isset($facebookUser['email']) || empty($facebookUser['email'])) {
+                // If no email, create a temporary one or use Facebook ID
+                $email = $facebookUser['id'] . '@facebook.temp';
+                \Log::warning('Facebook user has no email, using temporary email', ['facebook_id' => $facebookUser['id']]);
+            } else {
+                $email = $facebookUser['email'];
+            }
+
+            // Find or create user
+            $user = User::where('email', $email)->first();
+            
+            if (!$user) {
+                // Create new user
+                $nameParts = explode(' ', trim($facebookUser['name']), 2);
+                $firstName = $nameParts[0] ?? '';
+                $lastName = $nameParts[1] ?? '';
+
+                $user = new User([
+                    'name' => $facebookUser['name'],
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'email' => $email,
+                    'contact_number' => null,
+                    'profile_picture' => $facebookUser['picture']['data']['url'] ?? null,
+                    'password' => \Hash::make(\Str::random(24)),
+                    'role' => 'customer',
+                    'is_verified' => true,
+                    'facebook_id' => $facebookUser['id'],
+                ]);
+                $user->save();
+                \Log::info('New user created via Facebook login', ['email' => $email]);
+            } else {
+                // Update existing user with Facebook ID
+                if (!$user->facebook_id) {
+                    $user->facebook_id = $facebookUser['id'];
+                    $user->save();
+                }
+            }
+
+            // Log in the user
+            \Auth::login($user, true);
+            
+            \Log::info('User logged in via Facebook', ['user_id' => $user->id]);
+            return redirect()->route('customer.dashboard')->with('success', 'Successfully logged in with Facebook!');
+
+        } catch (\Exception $e) {
+            \Log::error('Facebook callback error', ['error' => $e->getMessage()]);
+            return redirect('/login')->withErrors(['message' => 'Facebook login failed: ' . $e->getMessage()]);
+        }
     }
 
     // Password Reset: Show request form

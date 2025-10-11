@@ -19,14 +19,18 @@ class ClerkController extends Controller
         $orderStatusService = new OrderStatusService();
         $orderCounts = $orderStatusService->getOrderCounts();
         
-        $restockProducts = \App\Models\Product::whereColumn('stock', '<=', 'reorder_min')->get();
+        // Get low stock alerts using InventoryService
+        $inventoryService = new \App\Services\InventoryService();
+        $lowStockAlerts = $inventoryService->checkLowStock();
+        $restockRecommendations = $inventoryService->getRestockRecommendations();
         
         return view('clerk.dashboard', [
             'pendingOrdersCount' => $orderCounts['pending'],
             'approvedOrdersCount' => $orderCounts['approved'],
             'onDeliveryCount' => $orderCounts['on_delivery'],
             'completedTodayCount' => $orderCounts['completed_today'],
-            'restockProducts' => $restockProducts
+            'restockProducts' => $restockRecommendations,
+            'lowStockAlerts' => $lowStockAlerts
         ]);
     }
 
@@ -45,8 +49,11 @@ class ClerkController extends Controller
     public function inventory() {
         // Show ALL flower-related products and materials in inventory
         // Include finished products + raw materials (exclude only office supplies)
+        // Include products marked for deletion (with red border)
         $excludeCategories = ['Office Supplies'];
-        $products = \App\Models\Product::whereNotIn('category', $excludeCategories)->get();
+        $products = \App\Models\Product::whereNotIn('category', $excludeCategories)
+            ->where('status', true)
+            ->get();
         return view('clerk.inventory.index', compact('products'));
     }
 
@@ -151,14 +158,37 @@ class ClerkController extends Controller
     }
     public function orders(Request $request) {
         $status = $request->input('status', 'pending');
+        $todayOnly = (bool) $request->boolean('today');
+
+        $applyStatusFilter = function($query) use ($status) {
+            if ($status) {
+                $query->where(function($qq) use ($status) {
+                    $qq->where('order_status', $status)
+                       ->orWhere(function($sub) use ($status){
+                           $sub->whereNull('order_status')->where('status', $status);
+                       });
+                });
+            }
+        };
+
+        $applyTodayFilter = function($query) use ($todayOnly, $status) {
+            if ($todayOnly && $status === 'completed') {
+                $query->whereDate('updated_at', now()->toDateString());
+            }
+        };
+
         $onlineOrders = Order::with('user')
             ->where('type', 'online')
-            ->when($status, function ($q) use ($status) { $q->where('status', $status); })
+            ->tap($applyStatusFilter)
+            ->tap($applyTodayFilter)
             ->latest()->get();
+
         $walkInOrders = Order::with('user')
             ->where('type', 'walk-in')
-            ->when($status, function ($q) use ($status) { $q->where('status', $status); })
+            ->tap($applyStatusFilter)
+            ->tap($applyTodayFilter)
             ->latest()->get();
+
         return view('clerk.orders.index', compact('onlineOrders', 'walkInOrders', 'status'));
     }
     public function notifications(Request $request) {
@@ -314,6 +344,94 @@ class ClerkController extends Controller
                                               ->take(3)->get();
         
         return view('clerk.product_catalog.index', compact('products', 'promotedProducts'));
+    }
+
+    public function updateCatalogProduct(Request $request, $id)
+    {
+        $product = CatalogProduct::findOrFail($id);
+        
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'category' => 'required|string|in:Bouquets,Packages,Gifts',
+            'description' => 'nullable|string',
+            'image' => 'nullable|image|max:2048',
+        ]);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($product->image) {
+                \Storage::disk('public')->delete($product->image);
+            }
+            $newImagePath = $request->file('image')->store('catalog_products', 'public');
+            $validated['image'] = $newImagePath;
+        }
+
+        // Handle compositions
+        if ($request->has('compositions')) {
+            // Delete existing compositions
+            $product->compositions()->delete();
+            
+            // Add new compositions
+            foreach ($request->compositions as $composition) {
+                if (!empty($composition['component_id']) && !empty($composition['quantity']) && !empty($composition['unit'])) {
+                    $product->compositions()->create([
+                        'component_id' => $composition['component_id'],
+                        'component_name' => $composition['component_name'],
+                        'category' => $composition['category'],
+                        'quantity' => $composition['quantity'],
+                        'unit' => $composition['unit'],
+                    ]);
+                }
+            }
+        }
+
+        $product->update($validated);
+
+        return redirect()->route('clerk.product_catalog.index')->with('success', 'Product updated successfully!');
+    }
+
+    /**
+     * Get product details for review
+     */
+    public function getProductDetails($productId)
+    {
+        try {
+            $product = CatalogProduct::with(['compositions'])
+                ->findOrFail($productId);
+
+            return response()->json([
+                'success' => true,
+                'product' => $product
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching product details: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get product compositions for edit modal
+     */
+    public function getProductCompositions($productId)
+    {
+        try {
+            $product = CatalogProduct::with(['compositions'])
+                ->findOrFail($productId);
+
+            return response()->json([
+                'success' => true,
+                'compositions' => $product->compositions
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching product compositions: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroyProduct($id)
@@ -519,5 +637,39 @@ class ClerkController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to complete order: ' . $e->getMessage());
         }
+    }
+
+    public function storeInventory(Request $request) {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
+            'reorder_min' => 'nullable|integer|min:0',
+            'reorder_max' => 'nullable|integer|min:0',
+            'stock' => 'nullable|integer|min:0',
+        ]);
+
+        // Generate a unique code based on category and name
+        $code = strtoupper(substr($request->category, 0, 3)) . '-' . strtoupper(str_replace(' ', '', substr($request->name, 0, 5))) . '-' . rand(100, 999);
+
+        \App\Models\Product::create([
+            'code' => $code,
+            'name' => $request->name,
+            'category' => $request->category,
+            'price' => $request->price,
+            'cost_price' => $request->cost_price ?? 0,
+            'reorder_min' => $request->reorder_min ?? 0,
+            'reorder_max' => $request->reorder_max ?? 0,
+            'stock' => $request->stock ?? 0,
+            'description' => 'Inventory item from ' . $request->category,
+            'qty_consumed' => 0,
+            'qty_damaged' => 0,
+            'qty_sold' => 0,
+            'status' => true,
+            'is_approved' => true, // Revert to auto-approve
+        ]);
+
+        return redirect()->route('clerk.inventory.index')->with('success', 'Product added successfully!');
     }
 } 

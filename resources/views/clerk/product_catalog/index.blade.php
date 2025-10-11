@@ -137,19 +137,18 @@
                 </div>
                 @forelse($products as $product)
                 <div class="col-6 col-md-4 col-lg-3">
-                    <div class="card product-card h-100">
+                    <div class="card product-card h-100" data-product-id="{{ $product->id }}">
                         <img src="{{ $product->image ? asset('storage/' . $product->image) : '/images/logo.png' }}" class="card-img-top product-image" alt="{{ $product->name }}">
                         <div class="card-body text-center">
                             <h6 class="card-title mb-1">{{ $product->name }}</h6>
                             <p class="card-text product-price">₱{{ number_format($product->price, 2) }}</p>
                             <div class="d-flex justify-content-center gap-2 mt-2">
-                                <button class="btn btn-light btn-icon edit-product-btn" title="Edit" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product='{{ json_encode($product) }}'><i class="bi bi-pencil-square"></i></button>
-                                <button class="btn btn-light btn-icon manage-images-btn" title="Images" data-bs-toggle="modal" data-bs-target="#manageImagesModal" data-product='{{ json_encode($product) }}'><i class="bi bi-images"></i></button>
+                                <button class="btn btn-sm action-btn edit-btn edit-product-btn" title="Edit" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product='{{ json_encode($product) }}'><i class="bi bi-pencil-square"></i></button>
                                 <form action="/clerk/product_catalog/{{ $product->id }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this product and its images?');">
                                     @csrf
                                     @method('DELETE')
                                     <input type="hidden" name="id" value="{{ $product->id }}">
-                                    <button type="submit" class="btn btn-light btn-icon text-danger" title="Delete"><i class="bi bi-trash3"></i></button>
+                                    <button type="submit" class="btn btn-sm action-btn delete-btn" title="Delete"><i class="bi bi-trash3"></i></button>
                                 </form>
                             </div>
                         </div>
@@ -174,7 +173,7 @@
                 </div>
                 <form action="{{ route('clerk.product_catalog.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
-                    <div class="modal-body">
+                    <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
                         <div class="mb-3 text-center">
                             <label for="product_image" class="btn btn-outline-secondary">
                                 <i class="fas fa-upload me-2"></i>Upload Image
@@ -224,6 +223,24 @@
         </div>
     </div>
 
+    <style>
+    /* Add Product Modal scrollbar styling */
+    #addProductModal .modal-body::-webkit-scrollbar {
+        width: 6px;
+    }
+    #addProductModal .modal-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    #addProductModal .modal-body::-webkit-scrollbar-thumb {
+        background: #7bb47b;
+        border-radius: 3px;
+    }
+    #addProductModal .modal-body::-webkit-scrollbar-thumb:hover {
+        background: #7bb47b;
+    }
+    </style>
+
     <!-- Edit Product Modal -->
     <div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -235,7 +252,7 @@
                 <form id="editProductForm" method="POST" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
-                    <div class="modal-body">
+                    <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
                         <div class="mb-3 text-center">
                             <label for="edit_product_image" class="btn btn-outline-secondary">
                                 <i class="fas fa-upload me-2"></i>Upload Image
@@ -254,15 +271,26 @@
                         <div class="mb-3">
                             <label for="edit_product_category" class="form-label">Category</label>
                             <select class="form-select" id="edit_product_category" name="category" required>
-                                <option value="Fresh Flowers">Fresh Flowers</option>
-                                <option value="Dried Flowers">Dried Flowers</option>
-                                <option value="Artificial Flowers">Artificial Flowers</option>
-                                <option value="Floral Supplies">Floral Supplies</option>
-                                <option value="Packaging Materials">Packaging Materials</option>
-                                <option value="Materials, Tools, and Equipment">Materials, Tools, and Equipment</option>
-                                <option value="Office Supplies">Office Supplies</option>
-                                <option value="Other Offers">Other Offers</option>
+                                <option value="">Select Category...</option>
+                                <option value="Bouquets">Bouquets</option>
+                                <option value="Packages">Packages</option>
+                                <option value="Gifts">Gifts</option>
                             </select>
+                        </div>
+                        
+                        <!-- Product Composition Section -->
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-sm btn-outline-success" id="edit-add-composition">
+                                <i class="fas fa-plus"></i> Add Category
+                            </button>
+                            <div id="edit-composition-container" style="display: none;">
+                                <label class="form-label mt-3">Product Composition (Materials Needed)</label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_product_description" class="form-label">Description</label>
+                            <textarea class="form-control" id="edit_product_description" name="description" rows="3" placeholder="Product description..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -274,43 +302,28 @@
         </div>
     </div>
 
-    <!-- Manage Images Modal -->
-    <div class="modal fade" id="manageImagesModal" tabindex="-1" aria-labelledby="manageImagesModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+    <!-- Product Info Modal -->
+    <div class="modal fade" id="productInfoModal" tabindex="-1" aria-labelledby="productInfoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title" id="manageImagesModalLabel">Manage Product Image</h5>
+                    <h5 class="modal-title" id="productInfoModalLabel">Product Information</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="manageImagesForm" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    @method('PUT')
-                    <input type="hidden" name="delete_image" id="delete_image_flag" value="0">
-                    <div class="modal-body">
-                        <div class="text-center mb-3">
-                            <label for="manage_product_image" class="btn btn-outline-secondary">
-                                <i class="fas fa-upload me-2"></i>Upload New Image
-                                <input type="file" id="manage_product_image" name="image" style="display:none;" accept="image/*">
-                            </label>
-                        </div>
-                        <div class="text-center">
-                            <img id="current_image_preview" src="" alt="Current Image" class="img-thumbnail" style="max-width: 200px; max-height: 200px; display: none;">
-                        </div>
-                        <div class="text-center mt-2">
-                            <img id="new_image_preview" src="" alt="New Image Preview" class="img-thumbnail" style="max-width: 200px; max-height: 200px; display: none;">
+                <div class="modal-body" id="productInfoContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
                         </div>
                     </div>
-                    <div class="modal-footer d-flex justify-content-between">
-                        <button type="button" class="btn btn-danger" id="deleteImageBtn">Delete Image</button>
-                        <div>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
-                    </div>
-                </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
+
 </div>
 @endsection 
 
@@ -358,6 +371,68 @@
         box-shadow: none;
     }
     .btn-icon i { font-size: 1rem; }
+
+    /* Action Buttons Styling */
+    .action-btn {
+        width: 50px;
+        height: 40px;
+        border: none;
+        background: transparent;
+        color: #4CAF50;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        padding: 0;
+        font-size: 16px;
+        flex: 1;
+        min-width: 50px;
+        max-width: 50px;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .action-btn i {
+        transition: color 0.3s ease;
+    }
+
+    /* Edit Button */
+    .edit-btn:hover {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .edit-btn:hover i {
+        color: white;
+    }
+
+    /* Delete Button */
+    .delete-btn:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .delete-btn:hover i {
+        color: white;
+    }
+
+    /* Ensure buttons are evenly spaced and fill the column */
+    .d-flex.justify-content-center.gap-2 {
+        width: 100%;
+        max-width: 120px;
+        margin: 0 auto;
+        gap: 8px !important;
+    }
+
+    /* Make sure both buttons have exactly the same width */
+    .edit-btn, .delete-btn {
+        width: 50px !important;
+        flex: 1 1 50px;
+    }
     .nav-tabs .nav-link.active {
         border-bottom: 3px solid #8ACB88 !important;
         color: #385E42 !important;
@@ -412,6 +487,7 @@
             editProductModal.querySelector('#edit_product_name').value = product.name;
             editProductModal.querySelector('#edit_product_price').value = product.price;
             editProductModal.querySelector('#edit_product_category').value = product.category;
+            editProductModal.querySelector('#edit_product_description').value = product.description || '';
 
             // show current image if any
             var currentImg = document.getElementById('edit_current_image');
@@ -422,66 +498,36 @@
                 currentImg.src = '';
                 currentImg.style.display = 'none';
             }
+
+            // Load current compositions
+            loadCurrentCompositions(product.id);
         });
 
-        // Manage Images Modal population and functionality
-        var manageImagesModal = document.getElementById('manageImagesModal');
-        manageImagesModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget; // Button that triggered the modal
-            var product = JSON.parse(button.getAttribute('data-product'));
-            var currentImagePreview = document.getElementById('current_image_preview');
-            var newImagePreview = document.getElementById('new_image_preview');
-
-            if (product.image) {
-                currentImagePreview.src = '{{ asset('storage/') }}' + '/' + product.image;
-                currentImagePreview.style.display = 'block';
-                newImagePreview.style.display = 'none';
-            } else {
-                currentImagePreview.src = '';
-                currentImagePreview.style.display = 'none';
-                newImagePreview.style.display = 'none';
-            }
-
-            var form = manageImagesModal.querySelector('#manageImagesForm');
-            form.action = '/clerk/product_catalog/' + product.id; // Set update form action
-
-            // Set delete image button action
-            var deleteImageBtn = document.getElementById('deleteImageBtn');
-            deleteImageBtn.onclick = function() {
-                if (confirm('Are you sure you want to delete the current product image?')) {
-                    document.getElementById('delete_image_flag').value = '1';
-                    form.submit();
-                }
-            };
-
-            // Image preview for new upload
-            var manageProductImageInput = document.getElementById('manage_product_image');
-            var newImagePreview = document.getElementById('new_image_preview');
-            
-            if (manageProductImageInput) {
-                manageProductImageInput.addEventListener('change', function(event) {
-                    if (event.target.files && event.target.files[0]) {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            newImagePreview.src = e.target.result;
-                            newImagePreview.style.display = 'block';
-                        };
-                        reader.readAsDataURL(event.target.files[0]);
-                    } else {
-                        newImagePreview.src = '';
-                        newImagePreview.style.display = 'none';
-                    }
-                });
-            }
-        });
     });
 
     // Custom Searchable Dropdown Functions
     function initializeSearchableDropdown(index) {
-        const searchInput = document.getElementById(`composition-search-${index}`);
-        const optionsContainer = document.getElementById(`composition-options-${index}`);
-        const hiddenSelect = document.getElementById(`composition-select-${index}`);
-        const hiddenName = document.querySelector(`#composition-select-${index}`).parentElement.querySelector('.composition-component-name');
+        // Try both regular and edit modal element IDs
+        let searchInput = document.getElementById(`composition-search-${index}`);
+        let optionsContainer = document.getElementById(`composition-options-${index}`);
+        let hiddenSelect = document.getElementById(`composition-select-${index}`);
+        let hiddenName = null;
+        
+        // If not found, try edit modal IDs
+        if (!searchInput) {
+            searchInput = document.getElementById(`edit-composition-search-${index}`);
+        }
+        if (!optionsContainer) {
+            optionsContainer = document.getElementById(`edit-composition-options-${index}`);
+        }
+        if (!hiddenSelect) {
+            hiddenSelect = document.getElementById(`edit-composition-select-${index}`);
+        }
+        
+        // Get the hidden name input
+        if (hiddenSelect) {
+            hiddenName = hiddenSelect.parentElement.querySelector('.composition-component-name');
+        }
         
         if (!searchInput || !optionsContainer || !hiddenSelect || !hiddenName) {
             console.log('Missing elements for searchable dropdown:', {searchInput, optionsContainer, hiddenSelect, hiddenName});
@@ -572,9 +618,18 @@
     }
     
     async function refreshSearchableDropdown(index) {
-        const optionsContainer = document.getElementById(`composition-options-${index}`);
-        const categorySelect = document.getElementById(`composition-category-${index}`);
-        const category = categorySelect.value;
+        let optionsContainer = document.getElementById(`composition-options-${index}`);
+        let categorySelect = document.getElementById(`composition-category-${index}`);
+        
+        // If not found, try edit modal IDs
+        if (!optionsContainer) {
+            optionsContainer = document.getElementById(`edit-composition-options-${index}`);
+        }
+        if (!categorySelect) {
+            categorySelect = document.getElementById(`edit-composition-category-${index}`);
+        }
+        
+        const category = categorySelect ? categorySelect.value : '';
         
         // Clear existing options
         if (optionsContainer) {
@@ -607,26 +662,54 @@
 
     // Simple function to update composition name when select changes
     function updateCompositionName(index) {
-        const select = document.getElementById('composition-select-' + index);
-        const nameInput = select.parentElement.querySelector('.composition-component-name');
+        let select = document.getElementById('composition-select-' + index);
+        let nameInput = null;
         
-        if (select.value) {
-            const selectedOption = select.options[select.selectedIndex];
-            nameInput.value = selectedOption.getAttribute('data-name');
-            console.log('Selected material:', selectedOption.getAttribute('data-name'));
-        } else {
-            nameInput.value = '';
+        // If not found, try edit modal ID
+        if (!select) {
+            select = document.getElementById('edit-composition-select-' + index);
+        }
+        
+        if (select) {
+            nameInput = select.parentElement.querySelector('.composition-component-name');
+        }
+        
+        if (select && nameInput) {
+            if (select.value) {
+                const selectedOption = select.options[select.selectedIndex];
+                nameInput.value = selectedOption.getAttribute('data-name');
+                console.log('Selected material:', selectedOption.getAttribute('data-name'));
+            } else {
+                nameInput.value = '';
+            }
         }
     }
 
     // Function to update materials when category is selected in composition rows
     async function updateCompositionMaterials(index) {
         console.log('updateCompositionMaterials called for index:', index);
-        const categorySelect = document.getElementById('composition-category-' + index);
-        const materialSelect = document.getElementById('composition-select-' + index);
-        const searchInput = document.getElementById('composition-search-' + index);
-        const optionsContainer = document.getElementById('composition-options-' + index);
-        const category = categorySelect.value;
+        
+        // Try both regular and edit modal element IDs
+        let categorySelect = document.getElementById('composition-category-' + index);
+        let materialSelect = document.getElementById('composition-select-' + index);
+        let searchInput = document.getElementById('composition-search-' + index);
+        let optionsContainer = document.getElementById('composition-options-' + index);
+        
+        // If not found, try edit modal IDs
+        if (!categorySelect) {
+            categorySelect = document.getElementById('edit-composition-category-' + index);
+        }
+        if (!materialSelect) {
+            materialSelect = document.getElementById('edit-composition-select-' + index);
+        }
+        if (!searchInput) {
+            searchInput = document.getElementById('edit-composition-search-' + index);
+        }
+        if (!optionsContainer) {
+            optionsContainer = document.getElementById('edit-composition-options-' + index);
+        }
+        
+        const category = categorySelect ? categorySelect.value : '';
         
         console.log('Category selected:', category);
         console.log('Elements found:', {
@@ -698,10 +781,27 @@
     
     // Custom Searchable Dropdown Functions
     function initializeSearchableDropdown(index) {
-        const searchInput = document.getElementById(`composition-search-${index}`);
-        const optionsContainer = document.getElementById(`composition-options-${index}`);
-        const hiddenSelect = document.getElementById(`composition-select-${index}`);
-        const hiddenName = document.querySelector(`#composition-select-${index}`).parentElement.querySelector('.composition-component-name');
+        // Try both regular and edit modal element IDs
+        let searchInput = document.getElementById(`composition-search-${index}`);
+        let optionsContainer = document.getElementById(`composition-options-${index}`);
+        let hiddenSelect = document.getElementById(`composition-select-${index}`);
+        let hiddenName = null;
+        
+        // If not found, try edit modal IDs
+        if (!searchInput) {
+            searchInput = document.getElementById(`edit-composition-search-${index}`);
+        }
+        if (!optionsContainer) {
+            optionsContainer = document.getElementById(`edit-composition-options-${index}`);
+        }
+        if (!hiddenSelect) {
+            hiddenSelect = document.getElementById(`edit-composition-select-${index}`);
+        }
+        
+        // Get the hidden name input
+        if (hiddenSelect) {
+            hiddenName = hiddenSelect.parentElement.querySelector('.composition-component-name');
+        }
         
         if (!searchInput || !optionsContainer || !hiddenSelect || !hiddenName) {
             console.log('Missing elements for searchable dropdown:', {searchInput, optionsContainer, hiddenSelect, hiddenName});
@@ -792,9 +892,18 @@
     }
     
     async function refreshSearchableDropdown(index) {
-        const optionsContainer = document.getElementById(`composition-options-${index}`);
-        const categorySelect = document.getElementById(`composition-category-${index}`);
-        const category = categorySelect.value;
+        let optionsContainer = document.getElementById(`composition-options-${index}`);
+        let categorySelect = document.getElementById(`composition-category-${index}`);
+        
+        // If not found, try edit modal IDs
+        if (!optionsContainer) {
+            optionsContainer = document.getElementById(`edit-composition-options-${index}`);
+        }
+        if (!categorySelect) {
+            categorySelect = document.getElementById(`edit-composition-category-${index}`);
+        }
+        
+        const category = categorySelect ? categorySelect.value : '';
         
         // Clear existing options
         if (optionsContainer) {
@@ -827,26 +936,54 @@
 
     // Simple function to update composition name when select changes
     function updateCompositionName(index) {
-        const select = document.getElementById('composition-select-' + index);
-        const nameInput = select.parentElement.querySelector('.composition-component-name');
+        let select = document.getElementById('composition-select-' + index);
+        let nameInput = null;
         
-        if (select.value) {
-            const selectedOption = select.options[select.selectedIndex];
-            nameInput.value = selectedOption.getAttribute('data-name');
-            console.log('Selected material:', selectedOption.getAttribute('data-name'));
-        } else {
-            nameInput.value = '';
+        // If not found, try edit modal ID
+        if (!select) {
+            select = document.getElementById('edit-composition-select-' + index);
+        }
+        
+        if (select) {
+            nameInput = select.parentElement.querySelector('.composition-component-name');
+        }
+        
+        if (select && nameInput) {
+            if (select.value) {
+                const selectedOption = select.options[select.selectedIndex];
+                nameInput.value = selectedOption.getAttribute('data-name');
+                console.log('Selected material:', selectedOption.getAttribute('data-name'));
+            } else {
+                nameInput.value = '';
+            }
         }
     }
 
     // Function to update materials when category is selected in composition rows
     async function updateCompositionMaterials(index) {
         console.log('updateCompositionMaterials called for index:', index);
-        const categorySelect = document.getElementById('composition-category-' + index);
-        const materialSelect = document.getElementById('composition-select-' + index);
-        const searchInput = document.getElementById('composition-search-' + index);
-        const optionsContainer = document.getElementById('composition-options-' + index);
-        const category = categorySelect.value;
+        
+        // Try both regular and edit modal element IDs
+        let categorySelect = document.getElementById('composition-category-' + index);
+        let materialSelect = document.getElementById('composition-select-' + index);
+        let searchInput = document.getElementById('composition-search-' + index);
+        let optionsContainer = document.getElementById('composition-options-' + index);
+        
+        // If not found, try edit modal IDs
+        if (!categorySelect) {
+            categorySelect = document.getElementById('edit-composition-category-' + index);
+        }
+        if (!materialSelect) {
+            materialSelect = document.getElementById('edit-composition-select-' + index);
+        }
+        if (!searchInput) {
+            searchInput = document.getElementById('edit-composition-search-' + index);
+        }
+        if (!optionsContainer) {
+            optionsContainer = document.getElementById('edit-composition-options-' + index);
+        }
+        
+        const category = categorySelect ? categorySelect.value : '';
         
         console.log('Category selected:', category);
         console.log('Elements found:', {
@@ -912,6 +1049,136 @@
         }
     }
 
+    // Load current compositions for edit modal
+    async function loadCurrentCompositions(productId) {
+        try {
+            const response = await fetch(`/clerk/api/products/${productId}/compositions`);
+            const result = await response.json();
+            
+            const container = document.getElementById('edit-composition-container');
+            container.innerHTML = '';
+            
+            if (result.success && result.compositions && result.compositions.length > 0) {
+                container.style.display = 'block';
+                container.innerHTML = '<label class="form-label mt-3">Product Composition (Materials Needed)</label>';
+                
+                // Reset the global composition index to start after existing compositions
+                compositionIndex = result.compositions.length;
+                
+                let index = 0;
+                for (const comp of result.compositions) {
+                    await addEditCompositionRow(comp, index);
+                    index++;
+                }
+            } else {
+                container.style.display = 'none';
+                // Reset composition index if no existing compositions
+                compositionIndex = 0;
+            }
+        } catch (error) {
+            console.error('Error loading compositions:', error);
+            const container = document.getElementById('edit-composition-container');
+            container.style.display = 'none';
+            // Reset composition index on error
+            compositionIndex = 0;
+        }
+    }
+
+    // Add composition row for edit modal
+    async function addEditCompositionRow(composition = null, index = 0) {
+        const container = document.getElementById('edit-composition-container');
+        
+        const newRow = document.createElement('div');
+        newRow.className = 'composition-row row mb-2';
+        
+        // Load categories dynamically from inventory for material selection
+        let categoryOptions = '<option value="">Select Category...</option>';
+        try {
+            const categories = await loadInventoryCategories();
+            categories.forEach(category => {
+                categoryOptions += `<option value="${category}">${category}</option>`;
+            });
+        } catch (error) {
+            console.error('Error loading categories for edit:', error);
+            // Fallback to hardcoded inventory categories if API fails
+            const fallbackCategories = [
+                'Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 
+                'Floral Supplies', 'Packaging Materials', 'Wrappers', 'Ribbon', 'Greenery', 'Other Offers'
+            ];
+            fallbackCategories.forEach(category => {
+                categoryOptions += `<option value="${category}">${category}</option>`;
+            });
+        }
+        
+        newRow.innerHTML = `
+            <div class="col-4">
+                <select class="form-select composition-category mb-2" name="compositions[${index}][category]" id="edit-composition-category-${index}" onchange="updateCompositionMaterials(${index})">
+                    ${categoryOptions}
+                </select>
+                <div class="searchable-dropdown">
+                    <input type="text" class="form-control composition-search" id="edit-composition-search-${index}" placeholder="Search materials..." autocomplete="off">
+                    <select class="form-select composition-select" name="compositions[${index}][component_id]" id="edit-composition-select-${index}" style="display: none;">
+                        <option value="">Select Material...</option>
+                    </select>
+                    <input type="hidden" class="composition-component-name" name="compositions[${index}][component_name]">
+                    <div class="dropdown-options" id="edit-composition-options-${index}">
+                        <!-- Options will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+            <div class="col-3">
+                <input type="number" class="form-control" name="compositions[${index}][quantity]" placeholder="Qty" min="1" required value="${composition ? composition.quantity : ''}">
+            </div>
+            <div class="col-3">
+                <select class="form-select" name="compositions[${index}][unit]" required>
+                    <option value="">Unit</option>
+                    <option value="pieces" ${composition && composition.unit === 'pieces' ? 'selected' : ''}>Pieces</option>
+                    <option value="stems" ${composition && composition.unit === 'stems' ? 'selected' : ''}>Stems</option>
+                    <option value="bunches" ${composition && composition.unit === 'bunches' ? 'selected' : ''}>Bunches</option>
+                    <option value="grams" ${composition && composition.unit === 'grams' ? 'selected' : ''}>Grams</option>
+                    <option value="meters" ${composition && composition.unit === 'meters' ? 'selected' : ''}>Meters</option>
+                    <option value="rolls" ${composition && composition.unit === 'rolls' ? 'selected' : ''}>Rolls</option>
+                    <option value="sheets" ${composition && composition.unit === 'sheets' ? 'selected' : ''}>Sheets</option>
+                    <option value="boxes" ${composition && composition.unit === 'boxes' ? 'selected' : ''}>Boxes</option>
+                </select>
+            </div>
+            <div class="col-2">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-composition">×</button>
+            </div>
+        `;
+        container.appendChild(newRow);
+        
+        // Initialize searchable dropdown functionality
+        initializeSearchableDropdown(index);
+        
+        // If we have composition data, populate the fields
+        if (composition) {
+            // Set category
+            const categorySelect = document.getElementById(`edit-composition-category-${index}`);
+            if (categorySelect) {
+                categorySelect.value = composition.category || '';
+                // Load materials and then set the component values
+                await updateCompositionMaterials(index);
+                
+                // Set component name and ID after materials are loaded
+                const componentNameInput = document.querySelector(`#edit-composition-select-${index}`).parentElement.querySelector('.composition-component-name');
+                if (componentNameInput) {
+                    componentNameInput.value = composition.component_name || '';
+                }
+                const componentSelect = document.getElementById(`edit-composition-select-${index}`);
+                if (componentSelect) {
+                    componentSelect.value = composition.component_id || '';
+                }
+                
+                // Set the search input value to show the selected material
+                const searchInput = document.getElementById(`edit-composition-search-${index}`);
+                if (searchInput) {
+                    searchInput.value = composition.component_name || '';
+                }
+            }
+        }
+    }
+
     // Make functions global
     window.updateCompositionName = updateCompositionName;
     window.updateCompositionMaterials = updateCompositionMaterials;
@@ -948,6 +1215,14 @@
             console.log('Category options created:', categoryOptions);
         } catch (error) {
             console.error('Error loading categories:', error);
+            // Fallback to hardcoded inventory categories if API fails
+            const fallbackCategories = [
+                'Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 
+                'Floral Supplies', 'Packaging Materials', 'Wrappers', 'Ribbon', 'Greenery', 'Other Offers'
+            ];
+            fallbackCategories.forEach(category => {
+                categoryOptions += `<option value="${category}">${category}</option>`;
+            });
         }
         
         newRow.innerHTML = `
@@ -976,6 +1251,10 @@
                     <option value="stems">Stems</option>
                     <option value="bunches">Bunches</option>
                     <option value="grams">Grams</option>
+                    <option value="meters">Meters</option>
+                    <option value="rolls">Rolls</option>
+                    <option value="sheets">Sheets</option>
+                    <option value="boxes">Boxes</option>
                 </select>
             </div>
             <div class="col-2">
@@ -991,6 +1270,25 @@
         compositionIndex++;
             });
         }
+        
+        // Edit composition functionality
+        const editAddButton = document.getElementById('edit-add-composition');
+        console.log('Edit add button found:', !!editAddButton);
+        if (editAddButton) {
+            editAddButton.addEventListener('click', async function() {
+                console.log('Edit add composition button clicked');
+                const container = document.getElementById('edit-composition-container');
+                
+                // Show the composition container if it's hidden
+                if (container && container.style.display === 'none') {
+                    container.style.display = 'block';
+                }
+                
+                // Use the existing addEditCompositionRow function to maintain consistency
+                await addEditCompositionRow(null, compositionIndex);
+                compositionIndex++;
+            });
+        }
     });
 
     // Remove composition row functionality
@@ -999,5 +1297,74 @@
             e.target.closest('.composition-row').remove();
         }
     });
+
+    // Card click to open product info (ignore clicks on buttons/links)
+    document.addEventListener('click', function(e) {
+        const card = e.target.closest('.product-card');
+        if (!card) return;
+        // If clicking inside actionable controls, do nothing
+        if (e.target.closest('button, a, form, input, select, textarea, label')) return;
+        const productId = card.getAttribute('data-product-id');
+        if (productId) {
+            showProductInfo(productId);
+        }
+    });
+
+    // Show product info function
+    async function showProductInfo(productId) {
+        try {
+            const response = await fetch(`/clerk/api/products/${productId}/details`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const product = result.product;
+                const modal = new bootstrap.Modal(document.getElementById('productInfoModal'));
+                
+                // Populate modal content
+                document.getElementById('productInfoContent').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-4">
+                            <img src="/storage/${product.image}" class="img-fluid rounded" alt="${product.name}">
+                        </div>
+                        <div class="col-md-8">
+                            <h5>${product.name}</h5>
+                            <p class="text-muted">${product.category}</p>
+                            <p class="h4 text-success">₱${parseFloat(product.price).toFixed(2)}</p>
+                            <p class="mt-3">${product.description || 'No description provided'}</p>
+                            
+                            <h6 class="mt-4">Product Composition:</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Material</th>
+                                            <th>Quantity</th>
+                                            <th>Unit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${product.compositions.map(comp => `
+                                            <tr>
+                                                <td>${comp.component_name}</td>
+                                                <td>${comp.quantity}</td>
+                                                <td>${comp.unit}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                modal.show();
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error loading product info:', error);
+            alert('Error loading product details');
+        }
+    }
 </script>
 @endpush

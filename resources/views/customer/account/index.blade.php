@@ -7,7 +7,7 @@
         border-radius: 14px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.06);
         padding: 36px 40px 28px 40px;
-        max-width: 760px;
+        max-width: 980px;
         margin: 20px auto 0 auto;
         position: relative;
         border: 1px solid #eef3ef;
@@ -17,6 +17,9 @@
         font-weight: 700;
         margin-bottom: 4px;
         color: #2c3e50;
+        background: #eafbe7;
+        padding: 10px 12px;
+        border-radius: 8px;
     }
     .profile-section {
         margin-bottom: 18px;
@@ -86,44 +89,78 @@
             @include('customer.sidebar')
         </div>
         <!-- Main Content -->
-        <div class="col-md-9 col-lg-7">
+        <div class="col-md-9 col-lg-8 main-content-with-sidebar" style="margin-left: 25%; max-width: calc(75% - 30px);">
             <div class="py-4 px-3 d-flex flex-column align-items-center justify-content-start">
                 @if(session('reminder'))
                     <div class="alert alert-warning" style="max-width:700px;margin:20px auto 0 auto;">
                         {{ session('reminder') }}
                     </div>
                 @endif
-                <div class="profile-card d-flex align-items-start" style="width: 100%; margin: 0 auto;">
-                    <!-- Removed profile picture from right side -->
-                    <div class="flex-grow-1">
-                        <div class="profile-title mb-2">My Personal Info</div>
-                        <hr class="profile-divider">
-                        <div class="profile-section" style="margin-bottom: 16px;"><span class="profile-label">First Name:</span> <span class="profile-value">{{ Auth::user()->first_name ?? 'N/A' }}</span></div>
-                        <div class="profile-section" style="margin-bottom: 16px;"><span class="profile-label">Last Name:</span> <span class="profile-value">{{ Auth::user()->last_name ?? 'N/A' }}</span></div>
-                        <div class="profile-section" style="margin-bottom: 16px;"><span class="profile-label">E-mail:</span> <span class="profile-value">{{ Auth::user()->email ?? 'N/A' }}</span></div>
-                        <div class="profile-section" style="margin-bottom: 16px;"><span class="profile-label">Cellphone Number:</span> <span class="profile-value">{{ Auth::user()->contact_number ?? 'N/A' }}</span></div>
-                        <div class="profile-section" style="margin-bottom: 24px;"><span class="profile-label">Address:</span> <span class="profile-value">
-                            @php
-                                $user = Auth::user();
-                                $defaultAddress = $user->addresses()->where('is_default', true)->first() ?? $user->addresses()->first();
-                                if ($defaultAddress) {
-                                    $parts = [];
-                                    if (!empty($defaultAddress->street_address)) $parts[] = $defaultAddress->street_address;
-                                    if (!empty($defaultAddress->barangay)) $parts[] = $defaultAddress->barangay;
-                                    if (!empty($defaultAddress->municipality)) $parts[] = $defaultAddress->municipality;
-                                    if (!empty($defaultAddress->city)) $parts[] = $defaultAddress->city;
-                                    echo implode(', ', $parts);
-                                } else {
-                                    $parts = [];
-                                    if (!empty($user->street_address)) $parts[] = $user->street_address;
-                                    if (!empty($user->barangay)) $parts[] = $user->barangay;
-                                    if (!empty($user->municipality)) $parts[] = $user->municipality;
-                                    if (!empty($user->city)) $parts[] = $user->city;
-                                    echo $parts ? implode(', ', $parts) : (!empty($user->address) ? $user->address : 'N/A');
-                                }
-                            @endphp
-                        </span></div>
-                        <button class="edit-details-btn" data-bs-toggle="modal" data-bs-target="#editDetailsModal" style="background: #7bb47b; color: #fff; border: none; border-radius: 4px; padding: 8px 28px; font-weight: 600; display: block; margin: 0 auto;">EDIT DETAILS</button>
+                <div class="row" style="width: 100%; margin: 0 auto;">
+                    <!-- Left Column - My Personal Info -->
+                    <div class="col-md-6">
+                        <div class="profile-card">
+                            <div class="profile-title mb-2">My Personal Info</div>
+                            <hr class="profile-divider">
+                            <div class="profile-section" style="margin-bottom: 16px;"><span class="profile-label">First Name:</span> <span class="profile-value">{{ Auth::user()->first_name ?? 'N/A' }}</span></div>
+                            <div class="profile-section" style="margin-bottom: 16px;"><span class="profile-label">Last Name:</span> <span class="profile-value">{{ Auth::user()->last_name ?? 'N/A' }}</span></div>
+                            <div class="profile-section" style="margin-bottom: 16px;"><span class="profile-label">E-mail:</span> <span class="profile-value">{{ Auth::user()->email ?? 'N/A' }}</span></div>
+                            <div class="profile-section" style="margin-bottom: 16px;"><span class="profile-label">Cellphone Number:</span> <span class="profile-value">{{ Auth::user()->contact_number ?? 'N/A' }}</span></div>
+                            <div class="profile-section" style="margin-bottom: 24px;"><span class="profile-label">Address:</span> <span class="profile-value">
+                                @php
+                                    $user = Auth::user();
+                                    $defaultAddress = $user->addresses()->where('is_default', true)->first() ?? $user->addresses()->first();
+                                    if ($defaultAddress) {
+                                        $parts = [];
+                                        if (!empty($defaultAddress->street_address)) $parts[] = $defaultAddress->street_address;
+                                        if (!empty($defaultAddress->barangay)) $parts[] = $defaultAddress->barangay;
+                                        if (!empty($defaultAddress->municipality)) $parts[] = $defaultAddress->municipality;
+                                        if (!empty($defaultAddress->city)) $parts[] = $defaultAddress->city;
+                                        echo implode(', ', $parts);
+                                    } else {
+                                        $parts = [];
+                                        if (!empty($user->street_address)) $parts[] = $user->street_address;
+                                        if (!empty($user->barangay)) $parts[] = $user->barangay;
+                                        if (!empty($user->municipality)) $parts[] = $user->municipality;
+                                        if (!empty($user->city)) $parts[] = $user->city;
+                                        echo $parts ? implode(', ', $parts) : (!empty($user->address) ? $user->address : 'N/A');
+                                    }
+                                @endphp
+                            </span></div>
+                            <button class="edit-details-btn" data-bs-toggle="modal" data-bs-target="#editDetailsModal" style="background: #7bb47b; color: #fff; border: none; border-radius: 4px; padding: 8px 28px; font-weight: 600; display: block; margin: 0 auto;">EDIT DETAILS</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column - Change Password -->
+                    <div class="col-md-6">
+                        <div class="profile-card">
+                            <div class="profile-title mb-2">Change Password</div>
+                            <hr class="profile-divider">
+                            <form action="{{ route('customer.account.update_password') }}" method="POST">
+                                @csrf
+                                @if($errors->any())
+                                <div class="alert alert-danger py-2 px-3">
+                                    {{ $errors->first() }}
+                                </div>
+                                @endif
+                                @if(session('success'))
+                                <div class="alert alert-success py-2 px-3">{{ session('success') }}</div>
+                                @endif
+                                <div class="mb-3">
+                                    <label for="current_password" class="form-label">Current Password *</label>
+                                    <input type="password" class="form-control" id="current_password" name="current_password" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="new_password" class="form-label">New Password *</label>
+                                    <input type="password" class="form-control" id="new_password" name="new_password" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="new_password_confirmation" class="form-label">Confirm New Password *</label>
+                                    <input type="password" class="form-control" id="new_password_confirmation" name="new_password_confirmation" required>
+                                </div>
+                                <button type="submit" class="edit-details-btn" style="background: #7bb47b; color: #fff; border: none; border-radius: 4px; padding: 8px 28px; font-weight: 600; display: block; margin: 0 auto;">CHANGE PASSWORD</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -134,7 +171,7 @@
 <!-- Edit Details Modal -->
 <div class="modal fade" id="editDetailsModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content" style="background: #f8faf8;">
+        <div class="modal-content" style="background: #ffffff;">
             <div class="modal-header">
                 <h5 class="modal-title">Edit Personal Info</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -142,7 +179,7 @@
             <form action="{{ route('customer.account.update') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('POST')
-            <div class="modal-body">
+            <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
                     <div class="row mb-3">
                         <div class="col">
                             <label class="form-label">First Name *</label>
@@ -176,8 +213,8 @@
                         </div>
                 </div>
                 <div class="mb-3">
-                        <label class="form-label">Phone Number *</label>
-                        <input type="text" class="form-control" name="contact_number" value="{{ Auth::user()->contact_number ?? '' }}" required>
+                        <label class="form-label">Cellphone Number *</label>
+                        <input type="text" class="form-control" name="contact_number" value="{{ Auth::user()->contact_number ?? '' }}" required placeholder="Enter your cellphone number">
                 </div>
             </div>
             <div class="modal-footer">
@@ -270,6 +307,22 @@
     }
     .profile-card {
         box-shadow: none !important;
+    }
+    
+    /* Edit Details Modal scrollbar styling */
+    #editDetailsModal .modal-body::-webkit-scrollbar {
+        width: 6px;
+    }
+    #editDetailsModal .modal-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    #editDetailsModal .modal-body::-webkit-scrollbar-thumb {
+        background: #7bb47b;
+        border-radius: 3px;
+    }
+    #editDetailsModal .modal-body::-webkit-scrollbar-thumb:hover {
+        background: #5aa65a;
     }
 </style>
 @endpush

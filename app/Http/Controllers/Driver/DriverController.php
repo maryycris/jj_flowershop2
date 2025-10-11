@@ -15,6 +15,13 @@ class DriverController extends Controller
     {
         $driver = Auth::user();
         
+        // Get orders assigned to this driver with 'assigned' status (pending acceptance)
+        $pendingAcceptance = \App\Models\Order::where('assigned_driver_id', $driver->id)
+            ->where('order_status', 'assigned')
+            ->with(['user', 'products', 'delivery'])
+            ->latest()
+            ->get();
+        
         // Get orders assigned to this driver with 'on_delivery' status
         $toDeliver = \App\Models\Order::where('assigned_driver_id', $driver->id)
             ->where('order_status', 'on_delivery')
@@ -29,15 +36,16 @@ class DriverController extends Controller
             ->latest()
             ->get();
 
-        return view('driver.dashboard', compact('toDeliver', 'completedDeliveries'));
+        return view('driver.dashboard', compact('pendingAcceptance', 'toDeliver', 'completedDeliveries'));
     }
 
     public function orders()
     {
         $driver = Auth::user();
         
-        // Get all orders assigned to this driver
+        // Get orders that are assigned (pending acceptance) and on delivery (accepted)
         $orders = \App\Models\Order::where('assigned_driver_id', $driver->id)
+            ->whereIn('order_status', ['assigned', 'on_delivery', 'completed'])
             ->with(['user', 'products', 'delivery'])
             ->latest()
             ->get();
@@ -128,6 +136,83 @@ class DriverController extends Controller
         return redirect()->route('driver.profile')->with('success', 'Password changed successfully!');
     }
 
+    public function acceptOrder(Request $request, $orderId)
+    {
+        $order = \App\Models\Order::findOrFail($orderId);
+        
+        // Ensure the order is assigned to the authenticated driver
+        if ($order->assigned_driver_id !== Auth::id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        // Ensure the order is in 'assigned' status
+        if ($order->order_status !== 'assigned') {
+            return response()->json(['success' => false, 'message' => 'Order is not pending acceptance'], 400);
+        }
+
+        try {
+            // Use OrderStatusService to accept the order
+            $orderStatusService = new \App\Services\OrderStatusService();
+            
+            if ($orderStatusService->acceptOrder($order, Auth::id())) {
+                // Update delivery record with driver decision
+                if ($order->delivery) {
+                    $order->delivery->update([
+                        'driver_decision' => 'accepted',
+                        'decision_at' => now(),
+                    ]);
+                }
+                
+                return response()->json(['success' => true, 'message' => 'Order accepted successfully']);
+            } else {
+                return response()->json(['success' => false, 'message' => 'Failed to accept order'], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error accepting order: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function declineOrder(Request $request, $orderId)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:255'
+        ]);
+
+        $order = \App\Models\Order::findOrFail($orderId);
+        
+        // Ensure the order is assigned to the authenticated driver
+        if ($order->assigned_driver_id !== Auth::id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        // Ensure the order is in 'assigned' status
+        if ($order->order_status !== 'assigned') {
+            return response()->json(['success' => false, 'message' => 'Order is not pending acceptance'], 400);
+        }
+
+        try {
+            // Use OrderStatusService to decline the order
+            $orderStatusService = new \App\Services\OrderStatusService();
+            
+            if ($orderStatusService->declineOrder($order, Auth::id(), $request->reason)) {
+                // Update delivery record with driver decision
+                if ($order->delivery) {
+                    $order->delivery->update([
+                        'driver_decision' => 'declined',
+                        'decline_reason' => $request->reason,
+                        'decision_at' => now(),
+                    ]);
+                }
+                
+                return response()->json(['success' => true, 'message' => 'Order declined successfully']);
+            } else {
+                return response()->json(['success' => false, 'message' => 'Failed to decline order'], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error declining order: ' . $e->getMessage()], 500);
+        }
+    }
+
     public function completeOrder(Request $request, $orderId)
     {
         $order = \App\Models\Order::findOrFail($orderId);
@@ -153,6 +238,103 @@ class DriverController extends Controller
             }
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error completing order: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function returnOrder(Request $request, $orderId)
+    {
+        $order = \App\Models\Order::findOrFail($orderId);
+        
+        // Ensure the order is assigned to the authenticated driver
+        if ($order->assigned_driver_id !== Auth::id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        // Ensure the order is in 'on_delivery' status
+        if ($order->order_status !== 'on_delivery') {
+            return response()->json(['success' => false, 'message' => 'Order is not in delivery status'], 400);
+        }
+
+        $request->validate([
+            'reason' => 'required|string|max:500'
+        ]);
+
+        try {
+            // Get order details for notification
+            $orderDetails = [
+                'order_id' => $order->id,
+                'customer_name' => $order->user->first_name . ' ' . $order->user->last_name,
+                'customer_contact' => $order->user->contact_number,
+                'delivery_address' => $order->delivery_address,
+                'total_amount' => '₱' . number_format($order->total_price, 2),
+                'order_date' => $order->created_at->format('M d, Y'),
+                'return_reason' => $request->reason,
+                'driver_name' => Auth::user()->first_name . ' ' . Auth::user()->last_name,
+                'returned_at' => now()->format('M d, Y H:i')
+            ];
+
+            // Get order products
+            $products = $order->products->map(function($product) {
+                return [
+                    'name' => $product->name,
+                    'quantity' => $product->pivot->quantity,
+                    'price' => '₱' . number_format($product->price, 2)
+                ];
+            });
+
+            // Create notification for admin
+            $notification = \App\Models\Message::create([
+                'sender_id' => Auth::id(),
+                'receiver_id' => \App\Models\User::where('role', 'admin')->first()->id,
+                'message' => "🚨 ORDER RETURN NOTIFICATION\n\n" .
+                           "Order #{$order->id} has been returned by driver.\n\n" .
+                           "Customer: {$orderDetails['customer_name']}\n" .
+                           "Contact: {$orderDetails['customer_contact']}\n" .
+                           "Address: {$orderDetails['delivery_address']}\n" .
+                           "Total: {$orderDetails['total_amount']}\n" .
+                           "Order Date: {$orderDetails['order_date']}\n" .
+                           "Driver: {$orderDetails['driver_name']}\n" .
+                           "Returned: {$orderDetails['returned_at']}\n\n" .
+                           "Products:\n" . $products->map(function($product) {
+                               return "• {$product['name']} x{$product['quantity']} - {$product['price']}";
+                           })->join("\n") . "\n\n" .
+                           "Return Reason: {$request->reason}",
+                'type' => 'return_notification',
+                'is_read' => false,
+                'created_at' => now()
+            ]);
+
+            // Update order status to 'returned'
+            $order->update([
+                'order_status' => 'returned',
+                'returned_at' => now(),
+                'return_reason' => $request->reason,
+                'returned_by' => Auth::id()
+            ]);
+
+            // Create status history only if the same status wasn't created recently (within 1 minute)
+            $recentHistory = $order->statusHistories()
+                ->where('status', 'returned')
+                ->where('created_at', '>=', now()->subMinute())
+                ->first();
+                
+            if (!$recentHistory) {
+                $order->statusHistories()->create([
+                    'status' => 'returned',
+                    'message' => "Order returned by driver. Reason: {$request->reason}",
+                ]);
+            }
+
+            return response()->json([
+                'success' => true, 
+                'message' => 'Return notification sent to admin successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Error sending return notification: ' . $e->getMessage()
+            ], 500);
         }
     }
 

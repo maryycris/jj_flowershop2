@@ -8,8 +8,8 @@ class ShippingFeeHelper
 {
     public static function calculateShippingFee($originAddress, $destinationAddress)
     {
-        $baseFee = 30; // Flat within Cordova
-        $additionalRatePerKm = 5; // Outside Cordova, add ₱5 per 2 km
+        $baseFee = 30; // P30.00 within Cordova
+        $additionalRatePerKm = 10; // P10.00 per kilometer beyond Cordova
 
         // If destination is within Cordova, always return base fee
         if (self::containsCordova($destinationAddress)) {
@@ -25,9 +25,9 @@ class ShippingFeeHelper
                 $distance = self::getDistanceFromOSRM($originCoords, $destCoords);
                 if ($distance > 0) {
                     $distanceInKm = $distance / 1000.0;
-                    // Charge per started 2 km block
-                    $blocksOfTwoKm = (int) ceil($distanceInKm / 2);
-                    return $baseFee + ($blocksOfTwoKm * $additionalRatePerKm);
+                    // Add P10.00 for every kilometer beyond Cordova
+                    $additionalFee = $distanceInKm * $additionalRatePerKm;
+                    return $baseFee + $additionalFee;
                 }
             }
         } catch (\Throwable $e) {
@@ -35,8 +35,8 @@ class ShippingFeeHelper
         }
 
         // Fallback: if OSRM fails, use fallback calculation
-            return self::calculateFallbackFee($destinationAddress, $baseFee, $additionalRatePerKm);
-        }
+        return self::calculateFallbackFee($destinationAddress, $baseFee, $additionalRatePerKm);
+    }
 
     /**
      * Geocode address to coordinates using Nominatim (OpenStreetMap)
@@ -89,74 +89,74 @@ class ShippingFeeHelper
         } catch (\Throwable $e) {
             \Log::error('OSRM API error: '.$e->getMessage());
         }
-
+        
         return 0;
     }
 
-    private static function calculateFallbackFee($destinationAddress, $baseFee, $additionalRatePerKm)
+    /**
+     * Check if address contains Cordova
+     */
+    private static function containsCordova($address)
     {
-        $normalized = strtolower($destinationAddress);
-        
-        // Enhanced area detection with specific puroks, barangays, and streets
-        $areaDistances = [
-            // Cordova areas (0km - within service area)
-            'cordova' => 0, 'bang-bang' => 0, 'poblacion' => 0, 'catarman' => 0, 'gabi' => 0, 
-            'pilipog' => 0, 'day-as' => 0, 'buagsong' => 0, 'san miguel' => 0,
-            
-            // Lapu-Lapu City areas (12km from Cordova)
-            'lapu-lapu' => 12, 'mactan' => 12, 'basak' => 12, 'agus' => 12, 'babag' => 12,
-            'buaya' => 12, 'calawisan' => 12, 'canjulao' => 12, 'gun-ob' => 12, 'ibabao' => 12,
-            'looc' => 12, 'maribago' => 12, 'marigondon' => 12, 'pajac' => 12, 'pajo' => 12,
-            'punta engano' => 12, 'pusok' => 12, 'subabasbas' => 12, 'tigbao' => 12, 'tungasan' => 12,
-            
-            // Mandaue City areas (20km from Cordova)
-            'mandaue' => 20, 'canduman' => 20, 'casili' => 20, 'casuntingan' => 20, 'centro' => 20,
-            'cubacub' => 20, 'guizo' => 20, 'jagobiao' => 20, 'labogon' => 20, 'maguikay' => 20,
-            'mantuyong' => 20, 'paknaan' => 20, 'pagsabungan' => 20, 'subangdaku' => 20, 'tabok' => 20,
-            'tawason' => 20, 'tingub' => 20, 'tipolo' => 20, 'ubajo' => 20, 'umapad' => 20,
-            
-            // Cebu City areas (25km from Cordova)
-            'cebu city' => 25, 'downtown' => 25, 'colon' => 25, 'ayala' => 25, 'it park' => 25,
-            'as fortuna' => 25, 'banilad' => 25, 'lahug' => 25, 'capitol' => 25, 'jones' => 25,
-            'fuente' => 25, 'mabolo' => 25, 'kalubihan' => 25, 'sambag' => 25, 'tejero' => 25,
-            't. padilla' => 25, 'carreta' => 25, 'ermita' => 25, 'san nicolas' => 25, 'parian' => 25,
-            'sto. niño' => 25, 'san roque' => 25, 'sawang calero' => 25, 'suba' => 25, 'pasil' => 25,
-            'tisa' => 25, 'labangon' => 25, 'punta princesa' => 25, 'guadalupe' => 25, 'kalunasan' => 25,
-            'busay' => 25, 'adlaon' => 25, 'sirao' => 25, 'pamutan' => 25, 'budlaan' => 25,
-            'tabunan' => 25, 'pung-ol' => 25, 'sapangdaku' => 25, 'talamban' => 25, 'pit-os' => 25,
-            'apas' => 25, 'luz' => 25, 'cambaro' => 25, 'hipodromo' => 25, 'camputhaw' => 25,
-            'cogon ramos' => 25, 'cogon pardo' => 25, 'bulacao' => 25, 'inayawan' => 25,
-            'poblacion pardo' => 25, 'quiot' => 25, 'kinasang-an' => 25, 'san jose' => 25,
-            'basak pardo' => 25, 'mambaling' => 25, 'punta' => 25,
-            
-            // Talisay City areas (30km from Cordova)
-            'talisay' => 30, 'biasong' => 30, 'cansojong' => 30, 'camp 4' => 30, 'candulawan' => 30,
-            'carmen' => 30, 'dumlog' => 30, 'jaclupan' => 30, 'lagtang' => 30, 'lawaan' => 30,
-            'linao' => 30, 'maghaway' => 30, 'manunggal' => 30, 'mohon' => 30, 'pooc' => 30,
-            'san isidro' => 30, 'santander' => 30, 'tangke' => 30, 'tapul' => 30, 'tinaan' => 30,
-            'tomog' => 30,
-            
-            // Consolacion areas (22km from Cordova)
-            'consolacion' => 22, 'cabuyao' => 22, 'garing' => 22, 'pitogo' => 22, 'polo' => 22,
-            'pulangbato' => 22, 'tayud' => 22, 'tilhaong' => 22, 'tugbongan' => 22, 'panoypoy' => 22
-        ];
-        
-        foreach ($areaDistances as $area => $km) {
-            if (strpos($normalized, $area) !== false) {
-                $blocks = (int) ceil($km / 2);
-                return $baseFee + ($blocks * $additionalRatePerKm);
-            }
-        }
-        
-        // Default for unknown areas within service area - assume 20km
-        $defaultBlocks = (int) ceil(20 / 2);
-        return $baseFee + ($defaultBlocks * $additionalRatePerKm);
+        $address = strtolower($address);
+        return strpos($address, 'cordova') !== false;
     }
 
-    private static function containsCordova(string $address): bool
+    /**
+     * Calculate fallback shipping fee based on address keywords
+     * Using estimated distances from Cordova to different areas
+     */
+    private static function calculateFallbackFee($destinationAddress, $baseFee, $additionalRatePerKm)
     {
-        $normalized = strtolower($address);
-        // match common variants
-        return strpos($normalized, 'cordova') !== false;
+        $address = strtolower($destinationAddress);
+        
+        // Specific areas with more accurate distances from Bangbang, Cordova
+        
+        // Minglanilla - approximately 25-30km from Cordova
+        if (strpos($address, 'minglanilla') !== false) {
+            $estimatedKm = 28; // Distance to Minglanilla
+            return $baseFee + ($estimatedKm * $additionalRatePerKm);
+        }
+        
+        // Kalawisan, Lapu-Lapu - approximately 12-15km from Cordova
+        if (strpos($address, 'kalawisan') !== false) {
+            $estimatedKm = 13; // Distance to Kalawisan
+            return $baseFee + ($estimatedKm * $additionalRatePerKm);
+        }
+        
+        // Lapu-Lapu City - approximately 8-12km from Cordova
+        if (strpos($address, 'lapu-lapu') !== false || 
+            strpos($address, 'lapulapu') !== false) {
+            $estimatedKm = 10; // Average distance to Lapu-Lapu
+            return $baseFee + ($estimatedKm * $additionalRatePerKm);
+        }
+        
+        // Mandaue City - approximately 12-15km from Cordova
+        if (strpos($address, 'mandaue') !== false) {
+            $estimatedKm = 14; // Average distance to Mandaue
+            return $baseFee + ($estimatedKm * $additionalRatePerKm);
+        }
+        
+        // Talisay City - approximately 20-25km from Cordova
+        if (strpos($address, 'talisay') !== false) {
+            $estimatedKm = 22; // Average distance to Talisay
+            return $baseFee + ($estimatedKm * $additionalRatePerKm);
+        }
+        
+        // Cebu City (general) - approximately 15-20km from Cordova
+        if (strpos($address, 'cebu city') !== false) {
+            $estimatedKm = 18; // Average distance to Cebu City
+            return $baseFee + ($estimatedKm * $additionalRatePerKm);
+        }
+        
+        // Other Cebu areas - use a moderate estimated distance
+        if (strpos($address, 'cebu') !== false) {
+            $estimatedKm = 20; // Conservative estimate for other Cebu areas
+            return $baseFee + ($estimatedKm * $additionalRatePerKm);
+        }
+        
+        // Other areas - use a higher estimated distance
+        $estimatedKm = 25; // Conservative estimate for other areas
+        return $baseFee + ($estimatedKm * $additionalRatePerKm);
     }
-} 
+}

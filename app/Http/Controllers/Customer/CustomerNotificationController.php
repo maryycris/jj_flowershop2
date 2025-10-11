@@ -9,7 +9,7 @@ class CustomerNotificationController extends Controller
 {
     public function index()
     {
-        $notifications = auth()->user()->notifications()->latest()->paginate(10);
+        $notifications = auth()->user()->notifications()->latest()->get();
         return view('customer.notifications.index', compact('notifications'));
     }
 
@@ -19,9 +19,14 @@ class CustomerNotificationController extends Controller
         return response()->json($notifications);
     }
 
-    public function markAllAsRead()
+    public function markAllAsRead(Request $request)
     {
         auth()->user()->unreadNotifications->markAsRead();
+        
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'All notifications marked as read.']);
+        }
+        
         return back()->with('success', 'All notifications marked as read.');
     }
 
@@ -31,10 +36,15 @@ class CustomerNotificationController extends Controller
         return back()->with('success', 'All notifications deleted.');
     }
 
-    public function markAsRead($id)
+    public function markAsRead(Request $request, $id)
     {
         $notification = auth()->user()->notifications()->findOrFail($id);
         $notification->markAsRead();
+        
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Notification marked as read.']);
+        }
+        
         return back()->with('success', 'Notification marked as read.');
     }
 

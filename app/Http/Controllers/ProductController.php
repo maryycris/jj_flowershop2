@@ -7,6 +7,7 @@ use App\Models\CatalogProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -42,14 +43,31 @@ class ProductController extends Controller
      */
     public function getCategories()
     {
-        $categories = Product::select('category')
-            ->where('category', 'NOT LIKE', '%Office Supplies%')
+        // Only return the specific inventory categories used for material selection
+        $inventoryCategories = [
+            'Fresh Flowers',
+            'Dried Flowers', 
+            'Artificial Flowers',
+            'Greenery',
+            'Floral Supplies',
+            'Packaging Materials',
+            'Wrappers',
+            'Ribbon',
+            'Other Offers'
+        ];
+        
+        // Filter to only include categories that actually exist in the database
+        $existingCategories = Product::select('category')
+            ->whereIn('category', $inventoryCategories)
             ->where('status', true)
             ->distinct()
-            ->orderBy('category')
-            ->pluck('category');
+            ->pluck('category')
+            ->toArray();
         
-        return response()->json($categories);
+        // Return the intersection of expected and existing categories
+        $categories = array_intersect($inventoryCategories, $existingCategories);
+        
+        return response()->json(array_values($categories));
     }
 
     /**
@@ -74,6 +92,7 @@ class ProductController extends Controller
                     'category' => $product->category,
                     'stock' => $product->stock ?? 0,
                     'price' => $product->price ?? 0,
+                    'description' => $product->description ?? '',
                     'unit' => $this->getDefaultUnit($product->category),
                     'is_approved' => $product->is_approved
                 ];
@@ -177,7 +196,38 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'category' => 'required|string|in:Bouquets,Packages,Gifts',
+            'description' => 'nullable|string',
+            'image' => 'nullable|image|max:2048',
         ]);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $newImagePath = $request->file('image')->store('catalog_products', 'public');
+            $validated['image'] = $newImagePath;
+        }
+
+        // Handle compositions
+        if ($request->has('compositions')) {
+            // Delete existing compositions
+            $product->compositions()->delete();
+            
+            // Add new compositions
+            foreach ($request->compositions as $composition) {
+                if (!empty($composition['component_id']) && !empty($composition['quantity']) && !empty($composition['unit'])) {
+                    $product->compositions()->create([
+                        'component_id' => $composition['component_id'],
+                        'component_name' => $composition['component_name'],
+                        'category' => $composition['category'],
+                        'quantity' => $composition['quantity'],
+                        'unit' => $composition['unit'],
+                    ]);
+                }
+            }
+        }
 
         $product->update($validated);
 
@@ -254,15 +304,17 @@ class ProductController extends Controller
     {
         // Show ALL flower-related products and materials in inventory
         // Include finished products + raw materials (exclude only office supplies)
+        // Include pending products for admin approval
         $excludeCategories = ['Office Supplies'];
-        $products = Product::whereNotIn('category', $excludeCategories)->get();
+        $products = Product::whereNotIn('category', $excludeCategories)
+            ->where('status', true)
+            ->get();
         return view('admin.inventory', compact('products'));
     }
 
     public function storeInventory(Request $request)
     {
         $request->validate([
-            'code' => 'required|string|max:255|unique:products,code',
             'name' => 'required|string|max:255',
             'category' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
@@ -272,8 +324,11 @@ class ProductController extends Controller
             'stock' => 'nullable|integer|min:0',
         ]);
 
+        // Generate a unique code based on category and name
+        $code = strtoupper(substr($request->category, 0, 3)) . '-' . strtoupper(str_replace(' ', '', substr($request->name, 0, 5))) . '-' . rand(100, 999);
+
         Product::create([
-            'code' => $request->code,
+            'code' => $code,
             'name' => $request->name,
             'category' => $request->category,
             'price' => $request->price,
@@ -294,7 +349,7 @@ class ProductController extends Controller
     public function updateInventory(Request $request, Product $product)
     {
         $request->validate([
-            'code' => 'required|string|max:255|unique:products,code,' . $product->id,
+            'code' => 'nullable|string|max:255|unique:products,code,' . $product->id,
             'name' => 'required|string|max:255',
             'category' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
@@ -302,10 +357,13 @@ class ProductController extends Controller
             'reorder_min' => 'nullable|integer|min:0',
             'reorder_max' => 'nullable|integer|min:0',
             'stock' => 'nullable|integer|min:0',
+            'qty_consumed' => 'nullable|integer|min:0',
+            'qty_damaged' => 'nullable|integer|min:0',
+            'qty_sold' => 'nullable|integer|min:0',
         ]);
 
         $product->update([
-            'code' => $request->code,
+            'code' => $request->input('code', $product->code),
             'name' => $request->name,
             'category' => $request->category,
             'price' => $request->price,
@@ -313,6 +371,9 @@ class ProductController extends Controller
             'reorder_min' => $request->reorder_min ?? 0,
             'reorder_max' => $request->reorder_max ?? 0,
             'stock' => $request->stock ?? 0,
+            'qty_consumed' => $request->qty_consumed ?? $product->qty_consumed,
+            'qty_damaged' => $request->qty_damaged ?? $product->qty_damaged,
+            'qty_sold' => $request->qty_sold ?? $product->qty_sold,
         ]);
 
         // Return JSON response for AJAX requests
@@ -321,5 +382,95 @@ class ProductController extends Controller
         }
 
         return redirect()->route('admin.inventory.index')->with('success', 'Product updated successfully!');
+    }
+
+    public function destroyInventory(Product $product)
+    {
+        try {
+            // Check if product is used in any catalog compositions
+            $usedInCompositions = \App\Models\CatalogProductComposition::where('component_id', $product->id)->exists();
+            
+            if ($usedInCompositions) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete product. It is being used in product compositions.'
+                ], 400);
+            }
+            
+            // Check if request is from clerk (mark/unmark for deletion) or admin (hard delete)
+            if (auth()->user()->role === 'clerk') {
+                // Clerk toggle mark for deletion - add/remove red border for admin oversight
+                $isCurrentlyMarked = $product->is_marked_for_deletion;
+                
+                $product->update([
+                    'is_marked_for_deletion' => !$isCurrentlyMarked,
+                    'marked_for_deletion_by' => !$isCurrentlyMarked ? auth()->id() : null,
+                    'marked_for_deletion_at' => !$isCurrentlyMarked ? now() : null
+                ]);
+                
+                $message = !$isCurrentlyMarked ? 
+                    'Product marked for deletion! Admin will review.' : 
+                    'Product unmarked for deletion.';
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => $message
+                ]);
+            } else {
+                // Admin hard delete
+                $product->forceDelete();
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Product deleted permanently!'
+                ]);
+            }
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting product: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function reviews($id)
+    {
+        try {
+            $product = Product::findOrFail($id);
+            
+            // Get reviews from order_product pivot table
+            $reviews = DB::table('order_product')
+                ->join('orders', 'order_product.order_id', '=', 'orders.id')
+                ->join('users', 'orders.user_id', '=', 'users.id')
+                ->where('order_product.product_id', $id)
+                ->where('order_product.reviewed', true)
+                ->whereNotNull('order_product.rating')
+                ->select([
+                    'users.name as user_name',
+                    'order_product.rating',
+                    'order_product.review_comment as comment',
+                    'order_product.reviewed_at as created_at'
+                ])
+                ->orderBy('order_product.reviewed_at', 'desc')
+                ->get();
+
+            // Calculate average rating
+            $averageRating = $reviews->avg('rating') ?? 0;
+            $totalReviews = $reviews->count();
+
+            return response()->json([
+                'reviews' => $reviews,
+                'average_rating' => round($averageRating, 1),
+                'total_reviews' => $totalReviews
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'reviews' => [],
+                'average_rating' => 0,
+                'total_reviews' => 0
+            ]);
+        }
     }
 } 

@@ -19,7 +19,7 @@
         .navbar-admin-logo { height: 70px; width: 70px; background: transparent; }
         .navbar-admin-hr { border: none; border-top: 2px solid #fff; opacity: 0.7; margin: 0; width: 88%; margin-left: 6%; margin-top: 10px;}
         .navbar-admin-links-row { width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); background: #5E8458; position: fixed; top: 70px; z-index: 999; }
-        .navbar-admin-links { display: flex; justify-content: center; align-items: center; gap: 10rem; padding: 0.5rem 0 0.7rem 0; padding-top: 20px;}
+        .navbar-admin-links { display: flex; justify-content: center; align-items: center; gap: 3rem; padding: 0.5rem 0 0.7rem 0; padding-top: 20px;}
         .navbar-admin-links .nav-link { color: #fff !important; font-weight: 500; font-size: 1.08rem; display: flex; align-items: center; gap: 0.5rem; padding: 0; border-radius: 0; border-bottom: 2px solid transparent; transition: border 0.2s; }
         .navbar-admin-links .nav-link.active, .navbar-admin-links .nav-link:hover { color: #fff !important; border-bottom: 2px solid #fff; }
         .navbar-admin .bi { font-size: 1.2rem; }
@@ -184,10 +184,11 @@
 <div class="navbar-admin-links-row">
     <div class="navbar-admin-links">
         <a href="{{ route('admin.products.index') }}" class="nav-link @if(request()->routeIs('admin.products.*')) active @endif"><i class="bi bi-grid"></i> Product catalog</a>
-        <a href="{{ route('admin.inventory.index') }}" class="nav-link @if(request()->routeIs('admin.inventory.*')) active @endif"><i class="bi bi-box"></i> Inventory</a>
+        <a href="{{ route('admin.inventory.index') }}" class="nav-link @if(request()->routeIs('admin.inventory.index')) active @endif"><i class="bi bi-box"></i> Inventory</a>
+        <a href="{{ route('admin.inventory.reports') }}" class="nav-link @if(request()->routeIs('admin.inventory.reports')) active @endif"><i class="bi bi-graph-up"></i> Inventory Reports</a>
         <div class="nav-link dropdown d-inline-block @if(request()->routeIs('admin.orders.*') || request()->routeIs('admin.walkInOrders.*')) active @endif" style="padding: 0;">
             <a href="#" class="dropdown-toggle text-decoration-none text-white" id="salesOrdersDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="padding: 0.5rem 1rem; display: inline-block;">
-                <i class="bi bi-cart"></i> Sales Orders <i class="bi bi-chevron-down ms-1"></i>
+                <i class="bi bi-cart"></i> Sales Orders
             </a>
             <ul class="dropdown-menu" aria-labelledby="salesOrdersDropdown" style="background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                 <li><a class="dropdown-item" href="{{ route('admin.orders.index', ['type' => 'online']) }}" style="padding: 0.75rem 1rem; color: #333; transition: background-color 0.2s;">
@@ -198,13 +199,14 @@
                 </a></li>
             </ul>
         </div>
+        <a href="{{ route('admin.customize.index') }}" class="nav-link @if(request()->routeIs('admin.customize.*')) active @endif"><i class="bi bi-palette"></i> Customize</a>
         <a href="{{ route('admin.chatbox') }}" class="nav-link @if(request()->routeIs('admin.chatbox')) active @endif"><i class="bi bi-chat"></i> Chat</a>
     </div>
 </div>
-@if(!(request()->routeIs('admin.orders.*') || request()->routeIs('admin.walkInOrders.*') || request()->routeIs('admin.products.*') || request()->routeIs('admin.inventory.index') || request()->routeIs('admin.chatbox')))
+@if(!(request()->routeIs('admin.orders.*') || request()->routeIs('admin.walkInOrders.*') || request()->routeIs('admin.products.*') || request()->routeIs('admin.inventory.*') || request()->routeIs('admin.chatbox') || request()->routeIs('admin.customize.*')))
 <div class="d-flex" id="wrapper">
     <!-- Sidebar -->
-    <div class="sidebar-container sidebar-clean d-flex flex-column align-items-center py-4" style="background: #F6FBF4; min-width: 220px; max-width: 260px; height: 100vh; ">
+    <div class="sidebar-container sidebar-clean d-flex flex-column align-items-center" style="background: #F6FBF4; min-width: 220px; max-width: 260px; height: 100vh; padding-top: 48px; ">
         <div class="sidebar-profile text-center mb-4">
             <div class="sidebar-profile-icon mx-auto mb-2">
                 @if(auth()->user()->profile_picture)
@@ -220,20 +222,18 @@
                 <li class="nav-item w-100 mb-1">
                     <a href="{{ route('admin.dashboard') }}" class="sidebar-link @if(request()->routeIs('admin.dashboard')) active @endif">Dashboard</a>
                 </li>
-                <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.analytics') }}" class="sidebar-link @if(request()->routeIs('admin.analytics')) active @endif">Analytics</a>
-                </li>
+                
                 <li class="nav-item w-100 mb-1">
                     <a href="{{ route('admin.users.index') }}" class="sidebar-link @if(request()->routeIs('admin.users.*')) active @endif">Manage Accounts</a>
-                </li>
-                <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.customize.index') }}" class="sidebar-link @if(request()->routeIs('admin.customize.*')) active @endif">Customize</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
                     <a href="{{ route('admin.reports.sales') }}" class="sidebar-link @if(request()->routeIs('admin.reports.sales')) active @endif">Sales Report</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
                     <a href="{{ route('admin.notifications.index') }}" class="sidebar-link @if(request()->routeIs('admin.notifications.index')) active @endif">Notifications</a>
+                </li>
+                <li class="nav-item w-100 mb-1">
+                    <a href="{{ route('admin.loyalty.index') }}" class="sidebar-link @if(request()->routeIs('admin.loyalty.*')) active @endif">Loyalty Cards</a>
                 </li>
             </ul>
         </nav>

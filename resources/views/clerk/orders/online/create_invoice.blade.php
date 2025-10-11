@@ -10,7 +10,6 @@
                         <a href="{{ route('clerk.orders.index') }}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center" title="Back" aria-label="Back" style="width:34px;height:34px;padding:0;">
                             <i class="bi bi-arrow-left"></i>
                         </a>
-                        <span class="badge bg-warning text-dark">Pending</span>
                         <div class="ms-2 small text-muted">Order Number</div>
                         <div class="fw-semibold">00{{ $order->id }}</div>
                         <div class="ms-auto d-flex align-items-center gap-3">

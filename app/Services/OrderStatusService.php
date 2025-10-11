@@ -43,12 +43,18 @@ class OrderStatusService
                 ]);
             }
 
-            // Create status history
-            $order->statusHistories()->create([
-                'status' => 'approved',
-                'notes' => 'Order approved by ' . auth()->user()->name,
-                'changed_by' => $approvedBy,
-            ]);
+            // Create status history only if the same status wasn't created recently (within 1 minute)
+            $recentHistory = $order->statusHistories()
+                ->where('status', 'approved')
+                ->where('created_at', '>=', now()->subMinute())
+                ->first();
+                
+            if (!$recentHistory) {
+                $order->statusHistories()->create([
+                    'status' => 'approved',
+                    'message' => 'Order approved by ' . auth()->user()->name,
+                ]);
+            }
 
             DB::commit();
             
@@ -63,42 +69,150 @@ class OrderStatusService
     }
 
     /**
-     * Assign driver and update order to on_delivery status
+     * Assign driver and update order to assigned status (pending acceptance)
      */
     public function assignDriver(Order $order, $driverId, $assignedBy)
     {
         DB::beginTransaction();
         try {
-            // Update order status
+            // Update order status to 'assigned' (pending driver acceptance)
             $order->update([
-                'order_status' => 'on_delivery',
-                'on_delivery_at' => now(),
+                'order_status' => 'assigned',
                 'assigned_driver_id' => $driverId,
+                'assigned_at' => now(),
             ]);
 
             // Update delivery record
             if ($order->delivery) {
                 $order->delivery->update([
                     'driver_id' => $driverId,
-                    'status' => 'on_delivery',
+                    'status' => 'assigned',
                 ]);
             }
 
-            // Create status history
-            $order->statusHistories()->create([
-                'status' => 'on_delivery',
-                'notes' => 'Driver assigned and order is now on delivery',
-                'changed_by' => $assignedBy,
-            ]);
+            // Create status history only if the same status wasn't created recently (within 1 minute)
+            $recentHistory = $order->statusHistories()
+                ->where('status', 'assigned')
+                ->where('created_at', '>=', now()->subMinute())
+                ->first();
+                
+            if (!$recentHistory) {
+                $order->statusHistories()->create([
+                    'status' => 'assigned',
+                    'message' => 'Driver assigned - pending acceptance',
+                ]);
+            }
 
             DB::commit();
             
-            Log::info("Order {$order->id} assigned to driver {$driverId} by user {$assignedBy}");
+            Log::info("Order {$order->id} assigned to driver {$driverId} by user {$assignedBy} - pending acceptance");
             
             return true;
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Failed to assign driver to order {$order->id}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Driver accepts the assigned order
+     */
+    public function acceptOrder(Order $order, $driverId)
+    {
+        DB::beginTransaction();
+        try {
+            // Ensure the order is assigned to this driver and in 'assigned' status
+            if ($order->assigned_driver_id !== $driverId || $order->order_status !== 'assigned') {
+                return false;
+            }
+
+            // Update order status to 'on_delivery'
+            $order->update([
+                'order_status' => 'on_delivery',
+                'on_delivery_at' => now(),
+            ]);
+
+            // Update delivery record
+            if ($order->delivery) {
+                $order->delivery->update([
+                    'status' => 'on_delivery',
+                ]);
+            }
+
+            // Create status history only if the same status wasn't created recently (within 1 minute)
+            $recentHistory = $order->statusHistories()
+                ->where('status', 'on_delivery')
+                ->where('created_at', '>=', now()->subMinute())
+                ->first();
+                
+            if (!$recentHistory) {
+                $order->statusHistories()->create([
+                    'status' => 'on_delivery',
+                    'message' => 'Driver accepted the order and is now on delivery',
+                ]);
+            }
+
+            DB::commit();
+            
+            Log::info("Order {$order->id} accepted by driver {$driverId}");
+            
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Failed to accept order {$order->id} by driver {$driverId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Driver declines the assigned order
+     */
+    public function declineOrder(Order $order, $driverId, $reason = null)
+    {
+        DB::beginTransaction();
+        try {
+            // Ensure the order is assigned to this driver and in 'assigned' status
+            if ($order->assigned_driver_id !== $driverId || $order->order_status !== 'assigned') {
+                return false;
+            }
+
+            // Update order status back to 'approved' (ready for reassignment)
+            $order->update([
+                'order_status' => 'approved',
+                'assigned_driver_id' => null,
+                'assigned_at' => null,
+            ]);
+
+            // Update delivery record
+            if ($order->delivery) {
+                $order->delivery->update([
+                    'driver_id' => null,
+                    'status' => 'pending',
+                ]);
+            }
+
+            // Create status history only if the same status wasn't created recently (within 1 minute)
+            $recentHistory = $order->statusHistories()
+                ->where('status', 'approved')
+                ->where('created_at', '>=', now()->subMinute())
+                ->first();
+                
+            if (!$recentHistory) {
+                $order->statusHistories()->create([
+                    'status' => 'approved',
+                    'message' => 'Driver declined the order' . ($reason ? " - Reason: {$reason}" : ''),
+                ]);
+            }
+
+            DB::commit();
+            
+            Log::info("Order {$order->id} declined by driver {$driverId}" . ($reason ? " - Reason: {$reason}" : ''));
+            
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Failed to decline order {$order->id} by driver {$driverId}: " . $e->getMessage());
             return false;
         }
     }
@@ -122,14 +236,36 @@ class OrderStatusService
                 ]);
             }
 
-            // Create status history
-            $order->statusHistories()->create([
-                'status' => 'completed',
-                'notes' => 'Order completed',
-                'changed_by' => $completedBy,
-            ]);
+            // Create status history only if the same status wasn't created recently (within 1 minute)
+            $recentHistory = $order->statusHistories()
+                ->where('status', 'completed')
+                ->where('created_at', '>=', now()->subMinute())
+                ->first();
+                
+            if (!$recentHistory) {
+                $order->statusHistories()->create([
+                    'status' => 'completed',
+                    'message' => 'Order completed',
+                ]);
+            }
 
             DB::commit();
+
+            // Trigger inventory decrease when order is completed/received
+            try {
+                $inventoryService = new \App\Services\InventoryService();
+                $inventoryService->updateInventoryOnReceived($order->fresh('products'));
+            } catch (\Throwable $e) {
+                Log::error("Inventory update on completion failed for order {$order->id}: {$e->getMessage()}");
+            }
+
+            // Issue loyalty stamp if eligible once order is completed/received
+            try {
+                $loyaltyService = new \App\Services\LoyaltyService();
+                $loyaltyService->issueStampIfEligible($order->fresh(['products']));
+            } catch (\Throwable $e) {
+                Log::error("Loyalty issuance on completion failed for order {$order->id}: {$e->getMessage()}");
+            }
             
             Log::info("Order {$order->id} completed by user {$completedBy}");
             
@@ -165,12 +301,18 @@ class OrderStatusService
                 'payment_status' => 'paid',
             ]);
 
-            // Create status history
-            $order->statusHistories()->create([
-                'status' => 'paid',
-                'notes' => 'Payment registered: ' . strtoupper($paymentData['payment_method']) . ' - ₱' . number_format($paymentData['amount'], 2),
-                'changed_by' => $recordedBy,
-            ]);
+            // Create status history only if the same status wasn't created recently (within 1 minute)
+            $recentHistory = $order->statusHistories()
+                ->where('status', 'paid')
+                ->where('created_at', '>=', now()->subMinute())
+                ->first();
+                
+            if (!$recentHistory) {
+                $order->statusHistories()->create([
+                    'status' => 'paid',
+                    'message' => 'Payment registered: ' . strtoupper($paymentData['payment_method']) . ' - ₱' . number_format($paymentData['amount'], 2),
+                ]);
+            }
 
             DB::commit();
             
@@ -211,12 +353,37 @@ class OrderStatusService
                 return 'approved';
             case 'on_delivery':
                 return 'on_delivery';
+            case 'delivered':
+                return 'delivered';
             case 'completed':
                 return 'completed';
             case 'cancelled':
                 return 'cancelled';
             default:
                 return 'pending';
+        }
+    }
+
+    /**
+     * Get status label for display
+     */
+    public static function getStatusLabel($status)
+    {
+        switch (strtolower($status)) {
+            case 'pending':
+                return 'Pending Approval';
+            case 'approved':
+                return 'Approved';
+            case 'on_delivery':
+                return 'On Delivery';
+            case 'delivered':
+                return 'Received';
+            case 'completed':
+                return 'Received';
+            case 'cancelled':
+                return 'Cancelled';
+            default:
+                return 'Pending Approval';
         }
     }
 }

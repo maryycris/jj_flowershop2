@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'code',
@@ -18,10 +19,14 @@ class Product extends Model
         'stock',
         'category',
         'image',
+        'is_marked_for_deletion',
+        'marked_for_deletion_by',
+        'marked_for_deletion_at',
         'image2',
         'image3',
         'status',
         'is_approved',
+        'is_customize_item',
         'cost_price',
         'reorder_min',
         'reorder_max',
@@ -66,5 +71,16 @@ class Product extends Model
     public function scopeInStock($query)
     {
         return $query->where('stock', '>', 0);
+    }
+
+    /**
+     * Get the full URL for the product image
+     */
+    public function getImageUrlAttribute()
+    {
+        if ($this->image) {
+            return asset('storage/' . $this->image);
+        }
+        return null;
     }
 }

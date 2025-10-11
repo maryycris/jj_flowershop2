@@ -3,154 +3,243 @@
 namespace App\Services;
 
 use App\Models\Product;
-use App\Models\ProductComposition;
-use Illuminate\Support\Facades\DB;
+use App\Models\Order;
+use App\Models\InventoryTransaction;
 use Illuminate\Support\Facades\Log;
 
 class InventoryService
 {
     /**
-     * Deduct materials from inventory when a product is sold
+     * Update inventory when order is placed (reserve stock only)
      */
-    public static function deductMaterialsForProduct(Product $product, int $quantity)
+    public function updateInventoryOnOrder(Order $order)
     {
         try {
-            DB::beginTransaction();
-
-            // Get the product composition (materials needed)
-            $compositions = $product->compositions;
+            $order->load('products');
             
-            if ($compositions->isEmpty()) {
-                Log::info("No composition found for product: {$product->name}");
-                DB::rollBack();
+            foreach ($order->products as $product) {
+                $quantity = $product->pivot->quantity;
+                
+                // Only log the order - don't decrease stock yet
+                $this->logInventoryTransaction($product, $quantity, 'ordered', $order->id);
+                
+                Log::info("Order placed - stock reserved for order {$order->id}", [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'quantity_ordered' => $quantity,
+                    'current_stock' => $product->stock
+                ]);
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Failed to log order for inventory tracking {$order->id}", [
+                'error' => $e->getMessage(),
+                'order_id' => $order->id
+            ]);
                 return false;
             }
+    }
+    
+    /**
+     * Update inventory when order is delivered (no stock change yet)
+     */
+    public function updateInventoryOnDelivery(Order $order)
+    {
+        try {
+            $order->load('products');
+            
+            foreach ($order->products as $product) {
+                $quantity = $product->pivot->quantity;
+                
+                // Log delivery - no stock change yet
+                $this->logInventoryTransaction($product, $quantity, 'delivered', $order->id);
+                
+                Log::info("Order delivered - waiting for customer confirmation {$order->id}", [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'quantity_delivered' => $quantity
+                ]);
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Failed to log delivery for order {$order->id}", [
+                'error' => $e->getMessage(),
+                'order_id' => $order->id
+            ]);
+            return false;
+        }
+    }
+    
+    /**
+     * Update inventory when order is received by customer (ACTUAL STOCK DECREASE)
+     */
+    public function updateInventoryOnReceived(Order $order)
+    {
+        try {
+            $order->load('products');
+            
+            foreach ($order->products as $product) {
+                $quantity = $product->pivot->quantity;
 
-            $deductedMaterials = [];
-            $insufficientMaterials = [];
-
-            foreach ($compositions as $composition) {
-                // Find the inventory item by component ID (more accurate than name matching)
-                $inventoryItem = Product::where('id', $composition->component_id)
-                    ->where('category', 'NOT LIKE', '%Office Supplies%') // Exclude office supplies
-                    ->where('status', true)
+                // If this purchased item corresponds to a CatalogProduct with compositions,
+                // consume the component materials instead of the finished product stock.
+                $catalog = \App\Models\CatalogProduct::where('name', $product->name)
+                    ->where('category', $product->category)
                     ->first();
 
-                if (!$inventoryItem) {
-                    Log::warning("Inventory item not found for component ID: {$composition->component_id}");
-                    $insufficientMaterials[] = [
-                        'component' => $composition->component_name,
-                        'needed' => $composition->quantity * $quantity,
-                        'available' => 0,
-                        'reason' => 'Item not found in inventory'
-                    ];
-                    continue;
+                if ($catalog && $catalog->compositions && $catalog->compositions()->count() > 0) {
+                    foreach ($catalog->compositions as $comp) {
+                        $component = \App\Models\Product::find($comp->component_id);
+                        if (!$component) { continue; }
+                        // Idempotency: if we already logged a consumption for this order+product, skip
+                        $already = \App\Models\InventoryTransaction::where('order_id', $order->id)
+                            ->where('product_id', $component->id)
+                            ->where('type', 'consumed')
+                            ->exists();
+                        if ($already) { continue; }
+                        $consumeQty = (int) $comp->quantity * (int) $quantity; // total consumption
+                        // Decrease component stock and track consumed
+                        $component->decrement('stock', $consumeQty);
+                        $component->increment('qty_consumed', $consumeQty);
+                        $this->logInventoryTransaction($component, $consumeQty, 'consumed', $order->id);
+                    }
+
+                    Log::info("Customer received order {$order->id} - components consumed via composition", [
+                        'catalog_product_id' => $catalog->id,
+                        'product_name' => $product->name,
+                        'order_quantity' => $quantity
+                    ]);
+                } else {
+                    // Fallback: treat as standalone product sale
+                    $alreadySold = \App\Models\InventoryTransaction::where('order_id', $order->id)
+                        ->where('product_id', $product->id)
+                        ->where('type', 'sold')
+                        ->exists();
+                    if (!$alreadySold) {
+                        $product->decrement('stock', $quantity);
+                        $product->increment('qty_sold', $quantity);
+                        $this->logInventoryTransaction($product, $quantity, 'sold', $order->id);
+                    }
+
+                    Log::info("Customer received order {$order->id} - inventory updated (standalone)", [
+                        'product_id' => $product->id,
+                        'product_name' => $product->name,
+                        'quantity_sold' => $quantity,
+                        'remaining_stock' => $product->fresh()->stock
+                    ]);
                 }
-
-                $neededQuantity = $composition->quantity * $quantity;
-                $availableQuantity = $inventoryItem->stock ?? 0;
-
-                if ($availableQuantity < $neededQuantity) {
-                    Log::warning("Insufficient stock for {$composition->component_name}. Needed: {$neededQuantity}, Available: {$availableQuantity}");
-                    $insufficientMaterials[] = [
-                        'component' => $composition->component_name,
-                        'needed' => $neededQuantity,
-                        'available' => $availableQuantity,
-                        'reason' => 'Insufficient stock'
-                    ];
-                    continue;
-                }
-
-                // Deduct from inventory
-                $inventoryItem->stock = max(0, $inventoryItem->stock - $neededQuantity);
-                $inventoryItem->qty_consumed = ($inventoryItem->qty_consumed ?? 0) + $neededQuantity;
-                $inventoryItem->save();
-
-                $deductedMaterials[] = [
-                    'component' => $composition->component_name,
-                    'deducted' => $neededQuantity,
-                    'remaining' => $inventoryItem->stock
-                ];
-
-                Log::info("Deducted {$neededQuantity} {$composition->component_name} from inventory. Remaining: {$inventoryItem->stock}");
             }
-
-            // If there are insufficient materials, rollback and return error
-            if (!empty($insufficientMaterials)) {
-                DB::rollBack();
-                return [
-                    'success' => false,
-                    'message' => 'Insufficient materials in inventory',
-                    'insufficient_materials' => $insufficientMaterials
-                ];
-            }
-
-            DB::commit();
             
-            return [
-                'success' => true,
-                'message' => 'Materials successfully deducted from inventory',
-                'deducted_materials' => $deductedMaterials
-            ];
-
+            return true;
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("Error deducting materials for product {$product->name}: " . $e->getMessage());
-            return [
-                'success' => false,
-                'message' => 'Error processing inventory deduction: ' . $e->getMessage()
-            ];
+            Log::error("Failed to update inventory for received order {$order->id}", [
+                'error' => $e->getMessage(),
+                'order_id' => $order->id
+            ]);
+            return false;
         }
     }
 
     /**
-     * Check if there are enough materials in inventory for a product
+     * Check for low stock and generate alerts
      */
-    public static function checkMaterialAvailability(Product $product, int $quantity)
+    public function checkLowStock()
     {
-        $compositions = $product->compositions;
-        $availability = [];
-
-        foreach ($compositions as $composition) {
-            $inventoryItem = Product::where('id', $composition->component_id)
-                ->where('category', 'NOT LIKE', '%Office Supplies%')
-                ->where('status', true)
-                ->first();
-
-            $neededQuantity = $composition->quantity * $quantity;
-            $availableQuantity = $inventoryItem ? ($inventoryItem->stock ?? 0) : 0;
-
-            $availability[] = [
-                'component' => $composition->component_name,
-                'needed' => $neededQuantity,
-                'available' => $availableQuantity,
-                'sufficient' => $availableQuantity >= $neededQuantity,
-                'inventory_item' => $inventoryItem
+        $lowStockProducts = Product::whereColumn('stock', '<=', 'reorder_min')
+            ->where('reorder_min', '>', 0)
+            ->get();
+            
+        $alerts = [];
+        
+        foreach ($lowStockProducts as $product) {
+            $needed = $product->reorder_max - $product->stock;
+            $alerts[] = [
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'current_stock' => $product->stock,
+                'reorder_min' => $product->reorder_min,
+                'reorder_max' => $product->reorder_max,
+                'qty_to_purchase' => max(0, $needed),
+                'category' => $product->category
             ];
         }
-
-        return $availability;
+        
+        return $alerts;
     }
-
+    
     /**
-     * Get available inventory items for product composition
+     * Get products that need restocking
      */
-    public static function getAvailableInventoryItems()
+    public function getRestockRecommendations()
     {
-        return Product::where('category', 'NOT LIKE', '%Office Supplies%')
-            ->where('status', true)
-            ->where('stock', '>', 0)
-            ->orderBy('name')
+        return Product::whereColumn('stock', '<=', 'reorder_min')
+            ->where('reorder_min', '>', 0)
+            ->select([
+                'id', 'name', 'category', 'stock', 'reorder_min', 'reorder_max',
+                'price', 'cost_price'
+            ])
             ->get()
-            ->map(function($product) {
-                return [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'category' => $product->category,
-                    'stock' => $product->stock ?? 0,
-                    'price' => $product->price ?? 0
-                ];
-            })
-            ->toArray();
+            ->map(function ($product) {
+                $needed = $product->reorder_max - $product->stock;
+                $product->qty_to_purchase = max(0, $needed);
+                $product->estimated_cost = $product->cost_price ? $product->cost_price * $product->qty_to_purchase : 0;
+                return $product;
+            });
+    }
+    
+    /**
+     * Log inventory transactions
+     */
+    private function logInventoryTransaction(Product $product, int $quantity, string $type, int $orderId)
+    {
+        InventoryTransaction::create([
+            'product_id' => $product->id,
+            'order_id' => $orderId,
+            'quantity' => $quantity,
+            'type' => $type, // 'sold', 'consumed', 'completed', 'damaged', 'returned'
+            'stock_before' => $product->stock + $quantity,
+            'stock_after' => $product->stock,
+            'created_by' => auth()->id()
+        ]);
+    }
+    
+    /**
+     * Restore inventory when order is cancelled
+     */
+    public function restoreInventoryOnCancellation(Order $order)
+    {
+        try {
+            $order->load('products');
+            
+            foreach ($order->products as $product) {
+                $quantity = $product->pivot->quantity;
+                
+                // Restore stock
+                $product->increment('stock', $quantity);
+                
+                // Decrease qty_sold
+                $product->decrement('qty_sold', $quantity);
+                
+                // Log inventory transaction
+                $this->logInventoryTransaction($product, $quantity, 'returned', $order->id);
+                
+                Log::info("Inventory restored for cancelled order {$order->id}", [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'quantity_restored' => $quantity,
+                    'new_stock' => $product->fresh()->stock
+                ]);
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Failed to restore inventory for cancelled order {$order->id}", [
+                'error' => $e->getMessage(),
+                'order_id' => $order->id
+            ]);
+            return false;
+        }
     }
 }

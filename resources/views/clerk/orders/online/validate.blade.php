@@ -7,7 +7,17 @@
             <div class="card shadow-sm">
                 <div class="card-body p-0">
                     <div class="p-3 d-flex align-items-center gap-3" style="border-bottom:1px solid #e6f0e6;">
-                        <span class="badge bg-warning text-dark">Pending</span>
+                        @php
+                            $status = $order->order_status ?? $order->status ?? 'pending';
+                            $statusMap = [
+                                'approved' => ['class' => 'bg-success', 'text' => 'Approved'],
+                                'on_delivery' => ['class' => 'bg-info', 'text' => 'On Delivery'],
+                                'completed' => ['class' => 'bg-primary', 'text' => 'Completed'],
+                                'cancelled' => ['class' => 'bg-danger', 'text' => 'Cancelled'],
+                                'pending' => ['class' => 'bg-warning text-dark', 'text' => 'Pending'],
+                            ];
+                            $badge = $statusMap[$status] ?? $statusMap['pending'];
+                        @endphp
                         <div class="ms-2 small text-muted">{{ sprintf('%05d', $order->id) }}</div>
                         <div class="ms-2 small text-muted">OUT / 0001</div>
                         <div class="ms-auto d-flex align-items-center gap-2">
@@ -19,7 +29,9 @@
                     </div>
 
                     <div class="px-3 py-2 d-flex align-items-center gap-2" style="border-bottom:1px solid #e6f0e6;">
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#confirmModal">Validate</button>
+                        @if(($order->order_status ?? $order->status) === 'pending')
+                            <button type="button" class="btn btn-success" onclick="showConfirmAlert()">Validate</button>
+                        @endif
                         <button type="button" class="btn btn-light" onclick="window.print()">Print</button>
                             <a href="{{ route('clerk.orders.index') }}" class="btn btn-outline-secondary">Cancel</a>
                         <div class="ms-auto d-flex align-items-center gap-2">
@@ -94,26 +106,10 @@
     </div>
 </div>
 
-<!-- Confirmation Modal -->
-<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-body text-center p-4">
-                <div class="mb-3 fw-semibold" id="confirmModalLabel">Are you sure you want to proceed?</div>
-                <div class="mb-3 text-muted">
-                    <small>This will validate the order and assign a driver for delivery.</small>
-                </div>
-                <div class="d-flex justify-content-center gap-3">
-                    <form method="POST" action="{{ route('clerk.orders.online.validate.confirm', $order) }}" class="m-0" id="validateForm">
-                        @csrf
-                        <button type="submit" class="btn btn-success" onclick="showValidateAlert()">Confirm</button>
-                    </form>
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Hidden form for validation -->
+<form method="POST" action="{{ route('clerk.orders.online.validate.confirm', $order) }}" class="d-none" id="validateForm">
+    @csrf
+</form>
 
 <!-- Moves Modal -->
 <div class="modal fade" id="movesModal" tabindex="-1" aria-labelledby="movesModalLabel" aria-hidden="true">
@@ -201,6 +197,23 @@ function showMoves() {
     movesModal.show();
 }
 
+function showConfirmAlert() {
+    Swal.fire({
+        title: 'Are you sure you want to proceed?',
+        text: 'This will validate the order and assign a driver for delivery.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Confirm',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            showValidateAlert();
+        }
+    });
+}
+
 function markAsReady() {
     const readyModal = new bootstrap.Modal(document.getElementById('readyModal'));
     readyModal.show();
@@ -215,10 +228,11 @@ function showValidateAlert() {
     event.preventDefault(); // Prevent form submission
     
     Swal.fire({
-        title: 'Validating Order...',
+        title: 'Validating Orders',
         text: 'Order is being validated and moved to Ready status',
         icon: 'info',
-        showConfirmButton: false,
+        showConfirmButton: true,
+        confirmButtonText: 'OK',
         allowOutsideClick: false,
         timer: 2000,
         timerProgressBar: true,

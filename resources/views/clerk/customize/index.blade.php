@@ -48,11 +48,11 @@
                                         <div class="fw-semibold">{{ $item->name }}</div>
                                         <div class="text-muted small">₱{{ number_format($item->price ?? 0,2) }}</div>
                                     </div>
-                                    <div class="card-footer d-flex justify-content-between p-2">
-                                        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}">Edit</button>
-                                        <form method="POST" action="{{ route('clerk.customize.destroy',$item->id) }}" onsubmit="return confirm('Delete this item?')">
+                                    <div class="card-footer d-flex justify-content-center gap-2 p-2">
+                                        <button class="btn btn-sm action-btn edit-btn" data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}" title="Edit"><i class="bi bi-pencil-square"></i></button>
+                                        <form method="POST" action="{{ route('clerk.customize.destroy',$item->id) }}" onsubmit="return confirm('Delete this item?')" class="d-inline">
                                             @csrf @method('DELETE')
-                                            <button class="btn btn-outline-danger btn-sm">Delete</button>
+                                            <button class="btn btn-sm action-btn delete-btn" title="Delete"><i class="bi bi-trash3"></i></button>
                                         </form>
                                     </div>
                                 </div>
@@ -65,15 +65,34 @@
                                   @csrf @method('PUT')
                                   <div class="modal-header"><h5 class="modal-title">Edit {{ $cat }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                                   <div class="modal-body">
-                                    <div class="mb-2"><label class="form-label">Name</label><input name="name" class="form-control" value="{{ $item->name }}" required></div>
-                                    <div class="mb-2"><label class="form-label">Category</label>
-                                        <select name="category" class="form-select">
-                                            @foreach($categories as $c)<option value="{{ $c }}" @if($item->category==$c) selected @endif>{{ $c }}</option>@endforeach
+                                    <div class="mb-2">
+                                        <label class="form-label">Category</label>
+                                        <select name="category" class="form-select" required onchange="loadInventoryItemsEdit({{ $item->id }})">
+                                            <option value="">Select Category</option>
+                                            <option value="Fresh Flowers" @if($item->category=='Fresh Flowers') selected @endif>Fresh Flowers</option>
+                                            <option value="Artificial Flowers" @if($item->category=='Artificial Flowers') selected @endif>Artificial Flowers</option>
+                                            <option value="Wrappers" @if($item->category=='Wrappers') selected @endif>Wrappers</option>
+                                            <option value="Greenery" @if($item->category=='Greenery') selected @endif>Greenery</option>
+                                            <option value="Ribbon" @if($item->category=='Ribbon') selected @endif>Ribbon</option>
                                         </select>
                                     </div>
-                                    <div class="mb-2"><label class="form-label">Price (optional)</label><input type="number" step="0.01" name="price" class="form-control" value="{{ $item->price }}"></div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Item Name</label>
+                                        <div class="searchable-dropdown">
+                                            <input type="text" id="itemSearchInputEdit{{ $item->id }}" class="form-control" placeholder="Search items..." autocomplete="off" required value="{{ $item->name }}">
+                                            <input type="hidden" name="name" id="selectedItemNameEdit{{ $item->id }}" value="{{ $item->name }}">
+                                            <input type="hidden" name="inventory_item_id" id="selectedItemIdEdit{{ $item->id }}" value="{{ $item->inventory_item_id ?? '' }}">
+                                            <div class="dropdown-options" id="itemDropdownOptionsEdit{{ $item->id }}" style="display: none;">
+                                                <!-- Options will be populated dynamically -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Price</label>
+                                        <input type="number" step="0.01" name="price" id="itemPriceEdit{{ $item->id }}" class="form-control" readonly value="{{ $item->price }}">
+                                        <small class="text-muted">Price will be auto-filled from inventory</small>
+                                    </div>
                                     <div class="mb-2"><label class="form-label">Image</label><input type="file" name="image" class="form-control"></div>
-                                    <div class="mb-2"><label class="form-label">Description</label><textarea name="description" class="form-control" rows="3">{{ $item->description }}</textarea></div>
                                   </div>
                                   <div class="modal-footer"><button type="submit" class="btn btn-primary">Save</button></div>
                                 </form>
@@ -95,16 +114,35 @@
     <form class="modal-content" method="POST" action="{{ route('clerk.customize.store') }}" enctype="multipart/form-data">
       @csrf
       <div class="modal-header"><h5 class="modal-title">Add Item</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body">
-        <div class="mb-2"><label class="form-label">Name</label><input name="name" class="form-control" required></div>
-        <div class="mb-2"><label class="form-label">Category</label>
-            <select name="category" id="addCategorySelect" class="form-select">
-                @foreach($categories as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach
+      <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+        <div class="mb-2">
+            <label class="form-label">Category</label>
+            <select name="category" id="addCategorySelect" class="form-select" required onchange="loadInventoryItems()">
+                <option value="">Select Category</option>
+                <option value="Fresh Flowers">Fresh Flowers</option>
+                <option value="Artificial Flowers">Artificial Flowers</option>
+                <option value="Wrappers">Wrappers</option>
+                <option value="Greenery">Greenery</option>
+                <option value="Ribbon">Ribbon</option>
             </select>
         </div>
-        <div class="mb-2"><label class="form-label">Price (optional)</label><input type="number" step="0.01" name="price" class="form-control"></div>
+        <div class="mb-2">
+            <label class="form-label">Item Name</label>
+            <div class="searchable-dropdown">
+                <input type="text" id="itemSearchInput" class="form-control" placeholder="Search items..." autocomplete="off" required>
+                <input type="hidden" name="name" id="selectedItemName">
+                <input type="hidden" name="inventory_item_id" id="selectedItemId">
+                <div class="dropdown-options" id="itemDropdownOptions" style="display: none;">
+                    <!-- Options will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+        <div class="mb-2">
+            <label class="form-label">Price</label>
+            <input type="number" step="0.01" name="price" id="itemPrice" class="form-control" readonly>
+            <small class="text-muted">Price will be auto-filled from inventory</small>
+        </div>
         <div class="mb-2"><label class="form-label">Image</label><input type="file" name="image" class="form-control" required></div>
-        <div class="mb-2"><label class="form-label">Description</label><textarea name="description" class="form-control" rows="3"></textarea></div>
       </div>
       <div class="modal-footer"><button type="submit" class="btn btn-primary">Add</button></div>
     </form>
@@ -113,6 +151,56 @@
 
 @push('styles')
 <style>
+/* Add Item Modal scrollbar styling */
+#addModal .modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+#addModal .modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+#addModal .modal-body::-webkit-scrollbar-thumb {
+    background: #7bb47b;
+    border-radius: 3px;
+}
+#addModal .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #7bb47b;
+}
+
+/* Searchable Dropdown Styles */
+.searchable-dropdown {
+    position: relative;
+}
+
+.dropdown-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ced4da;
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.dropdown-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.dropdown-option:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown-option:last-child {
+    border-bottom: none;
+}
+
 .item-checkbox {
     width: 18px !important;
     height: 18px !important;
@@ -131,6 +219,110 @@
 .removeSelectedBtn {
     transition: all 0.3s ease;
 }
+
+/* Action Buttons Styling */
+.action-btn,
+.action-btn.btn,
+.action-btn.btn-sm {
+    width: 50px;
+    height: 40px;
+    border: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    color: #4CAF50 !important;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 16px;
+    flex: 1;
+    min-width: 50px;
+    max-width: 50px;
+    box-shadow: none !important;
+    text-decoration: none !important;
+    vertical-align: baseline !important;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+}
+
+.action-btn:focus,
+.action-btn:active,
+.action-btn:focus-visible,
+.action-btn:not(:hover),
+.action-btn.btn:focus,
+.action-btn.btn:active,
+.action-btn.btn:focus-visible,
+.action-btn.btn:not(:hover) {
+    background-color: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.action-btn i {
+    transition: color 0.3s ease;
+}
+
+/* Edit Button */
+.action-btn.edit-btn:hover,
+.btn.action-btn.edit-btn:hover {
+    background-color: #007bff !important;
+    color: white !important;
+}
+
+.action-btn.edit-btn:hover i,
+.btn.action-btn.edit-btn:hover i {
+    color: white !important;
+}
+
+/* Delete Button */
+.action-btn.delete-btn:hover,
+.btn.action-btn.delete-btn:hover {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+.action-btn.delete-btn:hover i,
+.btn.action-btn.delete-btn:hover i {
+    color: white !important;
+}
+
+/* Ensure buttons are evenly spaced and fill the column */
+.d-flex.justify-content-center.gap-2 {
+    width: 100%;
+    max-width: 120px;
+    margin: 0 auto;
+    gap: 8px !important;
+}
+
+/* Make sure both buttons have exactly the same width */
+.edit-btn, .delete-btn {
+    width: 50px !important;
+    flex: 1 1 50px;
+}
+
+/* Card footer styling for better integration */
+.card-footer {
+    background: transparent !important;
+    border-top: none !important;
+    padding: 8px 12px !important;
+}
+
+/* Ensure buttons blend with card background */
+.card .action-btn {
+    background: transparent !important;
+    background-color: transparent !important;
+}
 </style>
 @endpush
 
@@ -140,8 +332,197 @@ document.getElementById('addModal')?.addEventListener('show.bs.modal', function 
     const btn = e.relatedTarget;
     if (btn && btn.dataset.category) {
         document.getElementById('addCategorySelect').value = btn.dataset.category;
+        loadInventoryItems(); // Load items when modal opens with pre-selected category
     }
 });
+
+// Load inventory items based on selected category
+async function loadInventoryItems() {
+    const categorySelect = document.getElementById('addCategorySelect');
+    const searchInput = document.getElementById('itemSearchInput');
+    const dropdownOptions = document.getElementById('itemDropdownOptions');
+    const selectedItemName = document.getElementById('selectedItemName');
+    const selectedItemId = document.getElementById('selectedItemId');
+    const itemPrice = document.getElementById('itemPrice');
+    
+    const category = categorySelect.value;
+    
+    // Clear previous selections
+    searchInput.value = '';
+    selectedItemName.value = '';
+    selectedItemId.value = '';
+    itemPrice.value = '';
+    dropdownOptions.innerHTML = '';
+    dropdownOptions.style.display = 'none';
+    
+    if (!category) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/clerk/api/inventory/${category}`);
+        const items = await response.json();
+        
+        // Set up search functionality
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const filteredItems = items.filter(item => 
+                item.name.toLowerCase().includes(query)
+            );
+            
+            displayItems(filteredItems);
+        });
+        
+        // Show all items initially
+        displayItems(items);
+        
+    } catch (error) {
+        console.error('Error loading inventory items:', error);
+    }
+}
+
+// Display items in dropdown
+function displayItems(items) {
+    const dropdownOptions = document.getElementById('itemDropdownOptions');
+    
+    if (items.length === 0) {
+        dropdownOptions.innerHTML = '<div class="dropdown-option text-muted">No items found</div>';
+        dropdownOptions.style.display = 'block';
+        return;
+    }
+    
+    dropdownOptions.innerHTML = '';
+    items.forEach(item => {
+        const option = document.createElement('div');
+        option.className = 'dropdown-option';
+        option.innerHTML = `
+            <div class="fw-bold">${item.name}</div>
+            <small class="text-muted">Price: ₱${item.price} | Stock: ${item.stock}</small>
+        `;
+        
+        option.addEventListener('click', function() {
+            selectItem(item);
+        });
+        
+        dropdownOptions.appendChild(option);
+    });
+    
+    dropdownOptions.style.display = 'block';
+}
+
+// Select an item
+function selectItem(item) {
+    const searchInput = document.getElementById('itemSearchInput');
+    const selectedItemName = document.getElementById('selectedItemName');
+    const selectedItemId = document.getElementById('selectedItemId');
+    const itemPrice = document.getElementById('itemPrice');
+    const dropdownOptions = document.getElementById('itemDropdownOptions');
+    
+    searchInput.value = item.name;
+    selectedItemName.value = item.name;
+    selectedItemId.value = item.id;
+    itemPrice.value = item.price;
+    
+    dropdownOptions.style.display = 'none';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const searchableDropdown = document.querySelector('.searchable-dropdown');
+    if (searchableDropdown && !searchableDropdown.contains(e.target)) {
+        document.getElementById('itemDropdownOptions').style.display = 'none';
+    }
+});
+
+// Load inventory items for edit modal
+async function loadInventoryItemsEdit(itemId) {
+    const categorySelect = document.querySelector(`#editModal${itemId} select[name="category"]`);
+    const searchInput = document.getElementById(`itemSearchInputEdit${itemId}`);
+    const dropdownOptions = document.getElementById(`itemDropdownOptionsEdit${itemId}`);
+    const selectedItemName = document.getElementById(`selectedItemNameEdit${itemId}`);
+    const selectedItemId = document.getElementById(`selectedItemIdEdit${itemId}`);
+    const itemPrice = document.getElementById(`itemPriceEdit${itemId}`);
+    
+    const category = categorySelect.value;
+    
+    // Clear previous selections
+    searchInput.value = '';
+    selectedItemName.value = '';
+    selectedItemId.value = '';
+    itemPrice.value = '';
+    dropdownOptions.innerHTML = '';
+    dropdownOptions.style.display = 'none';
+    
+    if (!category) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/clerk/api/inventory/${category}`);
+        const items = await response.json();
+        
+        // Set up search functionality
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const filteredItems = items.filter(item => 
+                item.name.toLowerCase().includes(query)
+            );
+            
+            displayItemsEdit(filteredItems, itemId);
+        });
+        
+        // Show all items initially
+        displayItemsEdit(items, itemId);
+        
+    } catch (error) {
+        console.error('Error loading inventory items:', error);
+    }
+}
+
+// Display items in edit dropdown
+function displayItemsEdit(items, itemId) {
+    const dropdownOptions = document.getElementById(`itemDropdownOptionsEdit${itemId}`);
+    
+    if (items.length === 0) {
+        dropdownOptions.innerHTML = '<div class="dropdown-option text-muted">No items found</div>';
+        dropdownOptions.style.display = 'block';
+        return;
+    }
+    
+    dropdownOptions.innerHTML = '';
+    items.forEach(item => {
+        const option = document.createElement('div');
+        option.className = 'dropdown-option';
+        option.innerHTML = `
+            <div class="fw-bold">${item.name}</div>
+            <small class="text-muted">Price: ₱${item.price} | Stock: ${item.stock}</small>
+        `;
+        
+        option.addEventListener('click', function() {
+            selectItemEdit(item, itemId);
+        });
+        
+        dropdownOptions.appendChild(option);
+    });
+    
+    dropdownOptions.style.display = 'block';
+}
+
+// Select an item in edit modal
+function selectItemEdit(item, itemId) {
+    const searchInput = document.getElementById(`itemSearchInputEdit${itemId}`);
+    const selectedItemName = document.getElementById(`selectedItemNameEdit${itemId}`);
+    const selectedItemId = document.getElementById(`selectedItemIdEdit${itemId}`);
+    const itemPrice = document.getElementById(`itemPriceEdit${itemId}`);
+    const dropdownOptions = document.getElementById(`itemDropdownOptionsEdit${itemId}`);
+    
+    searchInput.value = item.name;
+    selectedItemName.value = item.name;
+    selectedItemId.value = item.id;
+    itemPrice.value = item.price;
+    
+    dropdownOptions.style.display = 'none';
+}
 
 // Initialize the remove button state on page load
 document.addEventListener('DOMContentLoaded', function() {

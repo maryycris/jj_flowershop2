@@ -243,6 +243,10 @@
                     <i class="bi bi-cart"></i>
                     <span>Sales Orders</span>
                 </a>
+                <a href="<?php echo e(route('clerk.loyalty.index')); ?>" class="clerk-navbar-link <?php if(request()->routeIs('clerk.loyalty.*')): ?> active <?php endif; ?>">
+                    <i class="bi bi-gift"></i>
+                    <span>Loyalty Cards</span>
+                </a>
                 <a href="#" class="clerk-navbar-link">
                     <i class="bi bi-chat"></i>
                     <span>Chat</span>

@@ -1,30 +1,54 @@
 @extends('layouts.admin_app')
 
 @section('admin_content')
-<div class="container-fluid">
+<div class="container-fluid pt-4">
     <h1 class="h3 mb-4 text-gray-800">Notifications</h1>
+
+    <!-- Simple Search Bar (button inside the input, no surrounding box) -->
+    <form method="GET" action="{{ route('admin.notifications.index') }}" class="mb-3">
+        <div class="position-relative">
+            <input type="text" class="form-control search-input-with-button" id="search" name="search"
+                   value="{{ request('search') }}"
+                   placeholder="Search by date, user name, or notification type (e.g., Product_added)...">
+            <button type="submit" class="btn btn-primary position-absolute top-0 end-0 h-100 px-4 rounded-start-0">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+    </form>
 
     <div class="card shadow mb-4">
         <div class="card-body">
-            <div class="list-group list-group-flush">
+            <div class="notifications-container">
+                <div class="list-group list-group-flush">
                 @forelse($notifications as $notification)
-                <div class="list-group-item d-flex justify-content-between align-items-start {{ $notification->read() ? 'bg-light text-muted' : '' }}">
+                @php
+                    $type = $notification->data['type'] ?? '';
+                    $productId = $notification->data['product_id'] ?? null;
+                    $targetUrl = null;
+                    if (\Illuminate\Support\Str::startsWith($type, 'product_')) {
+                        $targetUrl = route('admin.products.index', ['highlight' => 'pending', 'product_id' => $productId]);
+                    }
+                @endphp
+                <a href="{{ $targetUrl ?? 'javascript:void(0)' }}" class="list-group-item d-flex justify-content-between align-items-start text-decoration-none {{ $notification->read() ? 'bg-light text-muted' : '' }}">
                     <div class="ms-2 me-auto">
-                        <div class="fw-bold">{{ ucfirst($notification->data['type'] ?? 'N/A') }}</div>
-                        {{ $notification->data['message'] ?? 'N/A' }}
+                        <div class="fw-bold">{{ ucfirst($type ?: 'N/A') }}</div>
+                        <span class="text-reset">{{ $notification->data['message'] ?? 'N/A' }}</span>
                         <div class="text-muted small">Date: {{ $notification->created_at->format('Y-m-d') }}</div>
                     </div>
-                    <div class="form-check">
+                    <div class="form-check align-self-center">
                         <input class="form-check-input mark-as-read-checkbox" type="checkbox" data-notification-id="{{ $notification->id }}" {{ $notification->read() ? 'checked disabled' : '' }}>
                         <label class="form-check-label" for="notificationCheck{{ $notification->id }}"></label>
                     </div>
-                </div>
+                </a>
                 @empty
                 <div class="list-group-item">
                     <p class="text-center mb-0">No new notifications.</p>
                 </div>
                 @endforelse
+                </div>
             </div>
+            
+            
         </div>
     </div>
 </div>
@@ -74,18 +98,69 @@
 
 @push('styles')
 <style>
+    .notifications-container {
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #e3e6f0;
+        border-radius: 0.5rem;
+        background: #fff;
+    }
+
+    /* Search input with button inside */
+    .search-input-with-button {
+        padding-right: 3.25rem; /* space for the button */
+        box-shadow: none;
+    }
+    
+    /* Custom scrollbar styling */
+    .notifications-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .notifications-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .notifications-container::-webkit-scrollbar-thumb {
+        background: #5E8458;
+        border-radius: 4px;
+    }
+    
+    .notifications-container::-webkit-scrollbar-thumb:hover {
+        background: #4a6b45;
+    }
+    
     .list-group-item {
         border-color: #e3e6f0;
         padding: 1rem 1.25rem;
         margin-bottom: 0.5rem;
         border-radius: 0.5rem;
         transition: background-color 0.2s ease;
+        border-left: none;
+        border-right: none;
     }
+    
+    .list-group-item:first-child {
+        border-top: none;
+    }
+    
+    .list-group-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
     .list-group-item:hover {
         background-color: #f8f9fc;
     }
+    
     .list-group-item .fw-bold {
         color: #385E42; /* Dark green for headings */
+    }
+    
+    .search-form .form-label {
+        font-weight: 600;
+        color: #385E42;
     }
 </style>
 @endpush 

@@ -1,17 +1,18 @@
 @extends('layouts.customer_app')
 
 @section('content')
-<div class="container-fluid py-4" style="min-height: 100vh;">
+<div class="container-fluid py-1" style="min-height: 100vh;">
     <div class="row justify-content-center">
         <div class="col-10 col-xl-10"><div class="row justify-content-center">
             <div class="py-4" style="background: #CDE7C9; min-height: 100vh; border-radius: 1rem;">
                 <div class="row h-100">
         <!-- Left Panel - Customization -->
-        <div class="col-lg-6" style="background: #CDE7C9; padding: 2rem; overflow-y: auto; max-height: 100vh;">
+        <div class="col-lg-6" style="background: #CDE7C9; padding: 0.5rem 2rem; overflow-y: auto; max-height: 100vh;">
             <div class="h-100 d-flex flex-column">
                 <!-- Header -->
-                <div class="text-center mb-4">
+                <div class="text-center mb-2">
                     <h3 class="fw-bold text-dark mb-2">Customize your Desired Bouquet</h3>
+                    <br>
                     <div class="d-flex justify-content-center mb-3">
                         <button class="btn btn-success btn-sm">
                             <i class="bi bi-info-circle me-1"></i>Notice to Customers
@@ -19,7 +20,7 @@
                     </div>
                 </div>
                 
-                <hr class="my-4">
+                <hr class="my-3">
                 
                 <!-- Customization Form -->
                 <form id="bouquetCustomizationForm" class="flex-grow-1 d-flex flex-column">

@@ -22,4 +22,12 @@ class CatalogProductComposition extends Model
     {
         return $this->belongsTo(CatalogProduct::class);
     }
+
+    /**
+     * Get the component product.
+     */
+    public function componentProduct()
+    {
+        return $this->belongsTo(Product::class, 'component_id');
+    }
 }

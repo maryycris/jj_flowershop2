@@ -24,6 +24,16 @@
                     <h5>Delivery Information:</h5>
                     <p><strong>Address:</strong> {{ $order->delivery ? $order->delivery->delivery_address : 'N/A' }}</p>
                     <p><strong>Date:</strong> {{ $order->delivery ? \Carbon\Carbon::parse($order->delivery->delivery_date)->format('M d, Y') : 'N/A' }}</p>
+                    @if($order->delivery && $order->delivery->driver_decision)
+                        <p><strong>Driver Decision:</strong> 
+                            <span class="badge bg-{{ $order->delivery->driver_decision === 'accepted' ? 'success' : 'danger' }}">
+                                {{ ucfirst($order->delivery->driver_decision) }}
+                            </span>
+                            @if($order->delivery->driver_decision === 'declined' && $order->delivery->decline_reason)
+                                <br><small class="text-muted">Reason: {{ $order->delivery->decline_reason }}</small>
+                            @endif
+                        </p>
+                    @endif
                 </div>
             </div>
         </div>
@@ -51,7 +61,18 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Relationship to Recipient</label>
-                            <input type="text" class="form-control" value="{{ $order->delivery ? ucfirst($order->delivery->recipient_relationship ?? 'Not specified') : 'Not specified' }}" readonly>
+                            @php
+                                $relationshipMap = [
+                                    'family' => 'Family Member',
+                                    'friend' => 'Friend',
+                                    'colleague' => 'Colleague',
+                                    'partner' => 'Partner/Spouse',
+                                    'other' => 'Other',
+                                ];
+                                $relationshipCode = optional($order->delivery)->recipient_relationship;
+                                $relationshipLabel = $relationshipMap[$relationshipCode] ?? ($relationshipCode ? ucfirst($relationshipCode) : 'Not specified');
+                            @endphp
+                            <input type="text" class="form-control" value="{{ $relationshipLabel }}" readonly>
                         </div>
                     </div>
                     <div class="col-md-6">

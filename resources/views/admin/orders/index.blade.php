@@ -1,6 +1,7 @@
 @extends('layouts.admin_app')
 @section('content')
 <div class="container-fluid">
+    <div class="mx-auto" style="max-width: 1200px;">
     @php $type = request('type', 'online'); @endphp
     <div class="card shadow mb-4">
         <div class="card-body">
@@ -27,38 +28,59 @@
                     <input type="date" class="form-control">
                 </div>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive orders-table-container">
                 <table class="table table-hover">
                     <thead>
                         <tr>
                             <th>Name</th>
                             <th>Order Number</th>
                             <th>Date</th>
-                            <th>Total</th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th>Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         @if($type == 'online')
                             @forelse($onlineOrders as $order)
-                                <tr class="cursor-pointer" onclick="window.location='{{ route('admin.orders.online.invoice', $order) }}'">
+                                @php
+                                    $statusClass = 'bg-warning text-dark';
+                                    $statusText = ucfirst($order->status ?? 'pending');
+                                    $redirectUrl = route('admin.orders.online.invoice', $order); // default like clerk
+
+                                    if ($order->order_status) {
+                                        switch($order->order_status) {
+                                            case 'approved':
+                                                $statusClass = 'bg-success';
+                                                $statusText = 'Approved';
+                                                $redirectUrl = route('admin.orders.online.done', $order);
+                                                break;
+                                            case 'on_delivery':
+                                                $statusClass = 'bg-info';
+                                                $statusText = 'On Delivery';
+                                                $redirectUrl = route('admin.orders.online.done', $order);
+                                                break;
+                                            case 'completed':
+                                                $statusClass = 'bg-primary';
+                                                $statusText = 'Completed';
+                                                $redirectUrl = route('admin.orders.online.done', $order);
+                                                break;
+                                            case 'cancelled':
+                                                $statusClass = 'bg-danger';
+                                                $statusText = 'Cancelled';
+                                                $redirectUrl = route('admin.orders.online.done', $order);
+                                                break;
+                                            default:
+                                                $statusClass = 'bg-warning text-dark';
+                                                $statusText = 'Pending';
+                                        }
+                                    }
+                                @endphp
+                                <tr class="cursor-pointer" onclick="window.location='{{ $redirectUrl }}'">
                                     <td>{{ $order->user->name ?? 'N/A' }}</td>
                                     <td>{{ $order->id }}</td>
                                     <td>{{ $order->created_at->format('m/d/Y') }}</td>
+                                    <td><span class="badge {{ $statusClass }}">{{ $statusText }}</span></td>
                                     <td>₱{{ number_format($order->total_price, 2) }}</td>
-                                    <td><span class="badge bg-warning text-dark">{{ ucfirst($order->status) }}</span></td>
-                                    <td>
-                                        @if($order->status === 'pending')
-                                            <form action="{{ route('admin.orders.approve', $order->id) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                                            </form>
-                                        @elseif($order->status === 'approved')
-                                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignDeliveryModal{{ $order->id }}">Assign for Delivery</button>
-                                        @endif
-                                        <a href="{{ route('admin.orders.show', $order->id) }}" class="btn btn-sm btn-info">View</a>
-                                    </td>
                                 </tr>
                             @empty
                                 <tr><td colspan="6" class="text-center">No online orders found.</td></tr>
@@ -211,6 +233,8 @@
         </div>
     @endif
 @endforeach
+    </div>
+</div>
 @endsection
 
 @push('styles')
@@ -229,6 +253,33 @@
     }
     .cursor-pointer {
         cursor: pointer;
+    }
+    
+    /* Orders table scrollbar styling */
+    .orders-table-container {
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #e3e6f0;
+        border-radius: 0.5rem;
+        background: #fff;
+    }
+    
+    .orders-table-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .orders-table-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .orders-table-container::-webkit-scrollbar-thumb {
+        background: #5E8458;
+        border-radius: 4px;
+    }
+    
+    .orders-table-container::-webkit-scrollbar-thumb:hover {
+        background: #4a6b45;
     }
 </style>
 @endpush

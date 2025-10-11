@@ -57,12 +57,12 @@
         <div class="row g-2 product-grid" style="padding-left: 15px; padding-right: 15px;">
                 @forelse($products as $product)
                 <div class="col-6 col-md-4 col-lg-3">
-                    <a href="#" class="text-decoration-none text-dark" onclick='openProductModal({
+                    <a href="#" class="text-decoration-none text-dark" onclick='console.log("Clicking product:", {{ $product->id }}); openProductModal({
                         id: {{ $product->id }},
-                        name: "{{ addslashes($product->name) }}",
+                        name: {!! json_encode($product->name) !!},
                         price: "{{ $product->price }}",
                         image: "{{ asset('storage/' . $product->image) }}",
-                        description: "{{ addslashes($product->description ?? '') }}"
+                        description: {!! json_encode($product->description ?? '') !!}
                     }); return false;'>
                         <div class="card product-card h-100" style="border: none; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; background: transparent;">
                             <img src="{{ asset('storage/' . $product->image) }}" class="card-img-top product-image" alt="{{ $product->name }}" style="height: 240px; object-fit: cover; border-radius: 8px 8px 0 0;">
