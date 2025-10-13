@@ -42,6 +42,12 @@ class Order extends Model
     protected $casts = [
         'selected_cart_item_ids' => 'array',
         'total_price' => 'decimal:2',
+        'completed_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'on_delivery_at' => 'datetime',
+        'invoice_generated_at' => 'datetime',
+        'invoice_paid_at' => 'datetime',
+        'returned_at' => 'datetime',
     ];
 
     /**
@@ -129,4 +135,5 @@ class Order extends Model
     {
         return $this->hasMany(PaymentTracking::class);
     }
+
 }

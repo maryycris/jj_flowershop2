@@ -135,6 +135,7 @@ class MapController extends Controller
                 $request->dest_lat
             );
 
+            $timeout = 10; // 10 seconds timeout
             $response = Http::timeout($timeout)->get($url);
             $data = $response->json();
 

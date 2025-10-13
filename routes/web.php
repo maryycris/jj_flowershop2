@@ -139,6 +139,12 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     Route::resource('users', UserController::class);
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/mark-as-read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+    
+    // Inventory Logs
+    Route::get('/inventory-logs', [\App\Http\Controllers\Admin\InventoryLogController::class, 'index'])->name('inventory-logs.index');
+    Route::get('/inventory-logs/{inventoryLog}', [\App\Http\Controllers\Admin\InventoryLogController::class, 'show'])->name('inventory-logs.show');
+    Route::get('/inventory-logs/product/{product}', [\App\Http\Controllers\Admin\InventoryLogController::class, 'productLogs'])->name('inventory-logs.product');
+    Route::get('/inventory-logs/export/csv', [\App\Http\Controllers\Admin\InventoryLogController::class, 'export'])->name('inventory-logs.export');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::post('/reports/sales', [ReportController::class, 'generateSalesReport'])->name('reports.sales');
     Route::post('/reports/order-status', [ReportController::class, 'generateOrderStatusReport'])->name('reports.orderStatus');
@@ -167,6 +173,8 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     Route::post('/chatbox/send', [AdminController::class, 'sendMessage'])->name('chatbox.send');
     Route::get('orders/{order}/status-history', [OrderController::class, 'statusHistory'])->name('orders.statusHistory');
     Route::post('orders/{order}/assign-delivery', [OrderController::class, 'assignDelivery'])->name('orders.assignDelivery');
+    Route::post('orders/{order}/mark-ready', [OrderController::class, 'markReady'])->name('orders.mark-ready');
+    Route::post('orders/{order}/mark-done', [OrderController::class, 'markDone'])->name('orders.mark-done');
     Route::get('/inventory', [ProductController::class, 'inventory'])->name('inventory.index');
     Route::post('/inventory', [ProductController::class, 'storeInventory'])->name('inventory.store');
     Route::put('/inventory/{product}', [ProductController::class, 'updateInventory'])->name('inventory.update');
@@ -196,6 +204,8 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     Route::get('loyalty', [\App\Http\Controllers\Admin\LoyaltyController::class, 'index'])->name('loyalty.index');
     Route::put('loyalty/{card}/adjust', [\App\Http\Controllers\Admin\LoyaltyController::class, 'adjust'])->name('loyalty.adjust');
     Route::get('loyalty/{card}/history', [\App\Http\Controllers\Admin\LoyaltyController::class, 'history'])->name('loyalty.history');
+    
+    // Payment Verification Management
 });
 
 // Clerk Routes
@@ -391,6 +401,8 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\CustomerMiddleware::class
     Route::post('/orders/submit-review', [OrderController::class, 'submitReview'])->name('orders.submitReview');
     Route::post('/orders/{order}/update-delivery-schedule', [OrderController::class, 'updateDeliverySchedule'])->name('orders.update-delivery-schedule');
     Route::get('/track-orders', [OrderController::class, 'trackOrdersPage'])->name('trackOrders.page');
+    
+    // Payment Verification Routes
 });
 
 // Customer Login Routes
@@ -448,6 +460,8 @@ Route::post('phone/verify-code', [PhoneAuthController::class, 'verifyCode']);
 // Social authentication routes
 Route::get('auth/{provider}', [App\Http\Controllers\AuthController::class, 'redirectToProvider'])->name('auth.provider');
 Route::get('auth/{provider}/callback', [App\Http\Controllers\AuthController::class, 'handleProviderCallback'])->name('auth.provider.callback');
+
+// Test route for notifications (remove in production)
 
 // Social verification routes
 Route::get('auth/social/verify', [App\Http\Controllers\AuthController::class, 'showSocialVerifyForm'])->name('social.verify.form');

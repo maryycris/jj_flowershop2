@@ -233,6 +233,9 @@
                     <a href="<?php echo e(route('admin.notifications.index')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.notifications.index')): ?> active <?php endif; ?>">Notifications</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
+                    <a href="<?php echo e(route('admin.inventory-logs.index')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.inventory-logs.*')): ?> active <?php endif; ?>">Inventory Logs</a>
+                </li>
+                <li class="nav-item w-100 mb-1">
                     <a href="<?php echo e(route('admin.loyalty.index')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.loyalty.*')): ?> active <?php endif; ?>">Loyalty Cards</a>
                 </li>
             </ul>

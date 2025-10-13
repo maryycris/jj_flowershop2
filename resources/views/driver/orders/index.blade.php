@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="fw-bold">My Orders</h4>
+    <h4 class="fw-bold">Orders to Deliver</h4>
     <span class="badge bg-primary">{{ $orders->count() }} assigned</span>
 </div>
 
@@ -78,8 +78,8 @@
                         @endif
                     @elseif($order->order_status === 'on_delivery')
                     <div class="d-flex gap-2">
-                        <button class="btn btn-success btn-sm" onclick="updateOrderStatus({{ $order->id }}, 'completed')">
-                            <i class="bi bi-check me-1"></i>Mark Complete
+                        <button class="btn btn-success btn-sm" onclick="showCompleteModal({{ $order->id }})">
+                            <i class="bi bi-camera me-1"></i>Mark Complete
                         </button>
                         <button class="btn btn-warning btn-sm" onclick="showReturnModal({{ $order->id }}, '{{ $order->user->first_name }} {{ $order->user->last_name }}', '{{ $order->delivery_address }}', '₱{{ number_format($order->total_price, 2) }}', '{{ $order->created_at->format('M d, Y') }}')">
                             <i class="bi bi-arrow-return-left me-1"></i>Return
@@ -184,6 +184,66 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-warning" onclick="confirmReturn()">
                     <i class="bi bi-arrow-return-left me-1"></i>Send Return Notification
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Complete Order Modal with Photo Upload -->
+<div class="modal fade" id="completeModal" tabindex="-1" aria-labelledby="completeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="completeModalLabel">
+                    <i class="bi bi-camera me-2"></i>Complete Delivery
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Proof of Delivery Required:</strong> Please take a photo of the delivered item at the customer's location as proof of delivery.
+                </div>
+                
+                <form id="completeForm" enctype="multipart/form-data">
+                    @csrf
+                    <input type="hidden" id="completeOrderId" name="order_id">
+                    
+                    <div class="mb-3">
+                        <label for="proofOfDelivery" class="form-label">
+                            <i class="bi bi-camera me-1"></i>Proof of Delivery Photo <span class="text-danger">*</span>
+                        </label>
+                        <input type="file" class="form-control" id="proofOfDelivery" name="proof_of_delivery" 
+                               accept="image/*" capture="environment" required>
+                        <div class="form-text">
+                            Take a clear photo showing the delivered item at the customer's location. 
+                            Maximum file size: 5MB. Supported formats: JPEG, PNG, JPG, GIF.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="deliveryNotes" class="form-label">
+                            <i class="bi bi-chat-text me-1"></i>Delivery Notes (Optional)
+                        </label>
+                        <textarea class="form-control" id="deliveryNotes" name="delivery_notes" rows="3" 
+                                  placeholder="Any additional notes about the delivery..."></textarea>
+                    </div>
+                    
+                    <!-- Image Preview -->
+                    <div id="imagePreview" class="mb-3" style="display: none;">
+                        <label class="form-label">Photo Preview:</label>
+                        <div class="text-center">
+                            <img id="previewImage" src="" alt="Proof of Delivery Preview" 
+                                 class="img-fluid rounded" style="max-height: 300px; border: 2px solid #dee2e6;">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="completeDeliveryBtn" style="cursor: pointer; pointer-events: auto; z-index: 9999; position: relative;">
+                    <i class="bi bi-check-circle me-1"></i>Complete Delivery
                 </button>
             </div>
         </div>
@@ -319,26 +379,121 @@ function submitDecline() {
     modal.hide();
 }
 
-function updateOrderStatus(orderId, status) {
-    if (confirm('Are you sure you want to mark this order as completed?')) {
-        fetch(`/driver/orders/${orderId}/complete`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify({ status: status })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
+// Complete Order Functions
+let completeOrderId = null;
+
+function showCompleteModal(orderId) {
+    completeOrderId = orderId;
+    document.getElementById('completeOrderId').value = orderId;
+    
+    // Reset form
+    document.getElementById('completeForm').reset();
+    document.getElementById('imagePreview').style.display = 'none';
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('completeModal'));
+    modal.show();
+}
+
+// Simple and direct approach
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, setting up Complete Delivery button');
+    
+    // Image preview functionality
+    const proofOfDeliveryInput = document.getElementById('proofOfDelivery');
+    if (proofOfDeliveryInput) {
+        proofOfDeliveryInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImage').src = e.target.result;
+                    document.getElementById('imagePreview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
             } else {
-                alert('Error updating order status');
+                document.getElementById('imagePreview').style.display = 'none';
             }
         });
     }
+    
+    // Complete Delivery button - direct approach
+    const completeBtn = document.getElementById('completeDeliveryBtn');
+    if (completeBtn) {
+        console.log('Complete Delivery button found');
+        
+        // Remove any existing event listeners
+        completeBtn.onclick = null;
+        
+        // Add new click handler
+        completeBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Complete Delivery clicked!');
+            alert('Complete Delivery button clicked!');
+            
+            // Simple test first
+            if (confirm('Do you want to complete this delivery?')) {
+                handleCompleteDelivery();
+            }
+        };
+        
+        console.log('Complete Delivery button setup complete');
+    } else {
+        console.log('Complete Delivery button NOT found!');
+    }
+});
+
+// Simple function to handle complete delivery
+function handleCompleteDelivery() {
+    console.log('handleCompleteDelivery called');
+    
+    // Check if photo is selected
+    const proofOfDelivery = document.getElementById('proofOfDelivery').files[0];
+    if (!proofOfDelivery) {
+        alert('Please select a photo as proof of delivery!');
+        return;
+    }
+    
+    // Get form data
+    const form = document.getElementById('completeForm');
+    const formData = new FormData(form);
+    
+    console.log('Submitting form with order ID:', completeOrderId);
+    
+    // Show loading
+    alert('Completing delivery... Please wait...');
+    
+    // Submit the form
+    fetch(`/driver/orders/${completeOrderId}/complete`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response:', data);
+        if (data.success) {
+            alert('✅ Delivery completed successfully!');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + (data.message || 'Failed to complete delivery'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error: Something went wrong');
+    });
 }
+
+// Keep the old function for compatibility
+function submitCompleteOrder() {
+    handleCompleteDelivery();
+}
+
+// Old updateOrderStatus function removed - now using modal approach
 
 // Return Order Functions
 let returnOrderId = null;

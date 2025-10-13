@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Show success message
                         console.log('Success:', data.message);
-                        alert(data.message);
+                        showChangesReminder();
                     } else {
                         alert(data.message);
                     }
@@ -368,6 +368,37 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
+<!-- Changes Reminder Modal -->
+<div class="modal fade" id="changesReminderModal" tabindex="-1" aria-labelledby="changesReminderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title" id="changesReminderModalLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>Changes Pending Update
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center mb-3">
+          <i class="fas fa-edit fa-3x text-warning mb-3"></i>
+          <h6 class="text-dark">You have unsaved changes!</h6>
+          <p class="text-muted">Don't forget to click the <strong>"Update"</strong> button to save your changes and notify the admin.</p>
+        </div>
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Reminder:</strong> Your changes are currently staged and will be lost if you navigate away without clicking "Update".
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">I'll Update Later</button>
+        <button type="button" class="btn btn-success" id="updateNowBtn">
+          <i class="fas fa-save me-2"></i>Update Now
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 @if($products->count())
     <!-- Bootstrap Nav Tabs -->
     <ul class="nav nav-tabs mb-3" id="inventoryTabs" role="tablist">
@@ -383,7 +414,7 @@ document.addEventListener('DOMContentLoaded', function() {
         @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Greenery', 'Floral Supplies', 'Packaging Materials', 'Wrappers', 'Ribbon', 'Other Offers'] as $category)
             <div class="tab-pane fade @if($loop->first) show active @endif" id="{{ Str::slug($category) }}" role="tabpanel">
                 <div class="table-responsive inventory-scroll">
-                    <table class="table table-bordered table-striped align-middle">
+                    <table class="table table-bordered align-middle">
                         <thead>
                             <tr>
                                 <th>Product Code</th>
@@ -528,16 +559,45 @@ document.addEventListener('DOMContentLoaded', function() {
 @endif
 
 <style>
+/* Override Bootstrap table-striped styling */
+.table tbody tr:nth-of-type(odd) {
+    background-color: transparent !important;
+}
+
+.table tbody tr:nth-of-type(even) {
+    background-color: transparent !important;
+}
+
+/* Ensure full row background coverage */
+.table tbody tr {
+    background-color: transparent !important;
+}
+
+.table tbody tr td {
+    background-color: transparent !important;
+    border-color: #dee2e6 !important;
+}
+
 .product-row-edited {
     background-color: rgba(135, 206, 235, 0.7) !important; /* 70% transparent sky-blue - more visible */
     transition: background-color 0.3s ease;
     border: 2px solid #87CEEB !important; /* Add border to make it more visible */
 }
 
+.product-row-edited td {
+    background-color: rgba(135, 206, 235, 0.7) !important; /* Blue background for all cells */
+    border-color: #87CEEB !important;
+}
+
 .product-row-deleted {
     background-color: rgba(255, 99, 99, 0.7) !important; /* 70% transparent red - more visible */
     transition: background-color 0.3s ease;
     border: 2px solid #FF6363 !important; /* Add border to make it more visible */
+}
+
+.product-row-deleted td {
+    background-color: rgba(255, 99, 99, 0.7) !important; /* Red background for all cells */
+    border-color: #FF6363 !important;
 }
 </style>
 <style>
@@ -577,10 +637,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Track edited and deleted products
     let editedProducts = new Set();
     let deletedProducts = new Set();
+    let stagedEdits = {};
     
     // Load highlighted products from session storage
     const savedEdited = sessionStorage.getItem('editedProducts');
     const savedDeleted = sessionStorage.getItem('deletedProducts');
+    const savedStagedEdits = sessionStorage.getItem('stagedEdits');
     
     if (savedEdited) {
         editedProducts = new Set(JSON.parse(savedEdited));
@@ -590,6 +652,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (savedDeleted) {
         deletedProducts = new Set(JSON.parse(savedDeleted));
         console.log('Loaded deleted products from session:', Array.from(deletedProducts));
+    }
+    
+    if (savedStagedEdits) {
+        try {
+            stagedEdits = JSON.parse(savedStagedEdits);
+            console.log('Loaded staged edits from session:', stagedEdits);
+        } catch(e) {
+            console.error('Error parsing staged edits:', e);
+            stagedEdits = {};
+        }
     }
     
     // Apply highlighting to loaded products
@@ -838,8 +910,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     };
 
                     // Persist staged values in sessionStorage so they survive refresh
-                    let stagedEdits = {};
-                    try { stagedEdits = JSON.parse(sessionStorage.getItem('stagedEdits') || '{}'); } catch(e) { stagedEdits = {}; }
                     stagedEdits[productId] = newValues;
                     sessionStorage.setItem('stagedEdits', JSON.stringify(stagedEdits));
 
@@ -866,7 +936,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     submitBtn.disabled = false;
                     const modal = bootstrap.Modal.getInstance(document.getElementById('editProductModal' + productId));
                     if (modal) { modal.hide(); }
-                    alert('Staged for review. Click the green Update button to submit to admin.');
+                    
+                    // Show reminder modal instead of alert
+                    showChangesReminder();
                 } else {
                     console.error('Row or productId not found:', { row, productId });
                 }
@@ -879,10 +951,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle Update button click
     const updateBtn = document.getElementById('submitInventoryBtn');
     if (updateBtn) {
+        console.log('Update button found, adding event listener');
         updateBtn.addEventListener('click', function() {
             console.log('Main Update button clicked');
             console.log('Edited products:', Array.from(editedProducts));
             console.log('Deleted products:', Array.from(deletedProducts));
+            console.log('Staged edits:', stagedEdits);
+            
+            // Check if there are any changes to submit
+            if (editedProducts.size === 0 && deletedProducts.size === 0) {
+                alert('No changes to submit. Please make some changes first.');
+                return;
+            }
             
             // Create summary message
             let summaryMessage = 'Your request for updating the inventory has been send to the Admin. Please wait for the Admin\'s approval.';
@@ -908,6 +988,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     console.log('Changes submitted successfully:', data);
                     
+                    // Clear session storage and reset variables
+                    sessionStorage.removeItem('editedProducts');
+                    sessionStorage.removeItem('deletedProducts');
+                    sessionStorage.removeItem('stagedEdits');
+                    editedProducts.clear();
+                    deletedProducts.clear();
+                    stagedEdits = {};
+                    
+                    // Remove all highlighting
+                    document.querySelectorAll('.product-row-edited, .product-row-deleted').forEach(row => {
+                        row.classList.remove('product-row-edited', 'product-row-deleted');
+                        row.style.backgroundColor = '';
+                        row.style.border = '';
+                    });
+                    
+                    // Hide pending icon
+                    const pendingIcon = document.getElementById('pendingIcon');
+                    if (pendingIcon) {
+                        pendingIcon.style.display = 'none';
+                    }
+                    
                     // Show confirmation modal with summary
                     const modal = document.getElementById('inventorySubmittedModal');
                     if (modal) {
@@ -921,42 +1022,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         const bootstrapModal = new bootstrap.Modal(modal);
                         bootstrapModal.show();
                 
-                        // Add event listener for OK button to maintain highlighting
+                        // Add event listener for OK button
                         const okButton = modal.querySelector('button[data-bs-dismiss="modal"]');
                         if (okButton) {
                             console.log('OK button found, adding click handler');
                             
                             // Use a simple click handler
                             okButton.onclick = function() {
-                                console.log('OK button clicked - maintaining highlights');
-                                
-                                // Show pending icon
-                                const pendingIcon = document.getElementById('pendingIcon');
-                                if (pendingIcon) {
-                                    pendingIcon.style.display = 'inline-block';
-                                    console.log('Pending icon shown');
-                                }
-                                
-                                // Keep all highlighted rows visible
-                                editedProducts.forEach(productId => {
-                                    const row = document.getElementById('product-row-' + productId);
-                                    if (row) {
-                                        row.classList.add('product-row-edited');
-                                        row.style.backgroundColor = 'rgba(135, 206, 235, 0.7)';
-                                        row.style.border = '2px solid #87CEEB';
-                                        console.log('Maintained blue highlight for product:', productId);
-                                    }
-                                });
-                                
-                                deletedProducts.forEach(productId => {
-                                    const row = document.getElementById('product-row-' + productId);
-                                    if (row) {
-                                        row.classList.add('product-row-deleted');
-                                        row.style.backgroundColor = 'rgba(255, 99, 99, 0.7)';
-                                        row.style.border = '2px solid #FF6363';
-                                        console.log('Maintained red highlight for product:', productId);
-                                    }
-                                });
+                                console.log('OK button clicked - changes submitted successfully');
                             };
                         } else {
                             console.error('OK button not found in modal');
@@ -973,6 +1046,50 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+    
+    // Function to show changes reminder modal
+    function showChangesReminder() {
+        const reminderModal = new bootstrap.Modal(document.getElementById('changesReminderModal'));
+        reminderModal.show();
+        
+        // Handle "Update Now" button click
+        const updateNowBtn = document.getElementById('updateNowBtn');
+        if (updateNowBtn) {
+            updateNowBtn.addEventListener('click', function() {
+                reminderModal.hide();
+                // Trigger the main update button click
+                const mainUpdateBtn = document.getElementById('submitInventoryBtn');
+                if (mainUpdateBtn) {
+                    mainUpdateBtn.click();
+                }
+            });
+        }
+    }
+    
+    // Show reminder when user tries to navigate away with unsaved changes
+    window.addEventListener('beforeunload', function(e) {
+        const editedProducts = new Set(JSON.parse(sessionStorage.getItem('editedProducts') || '[]'));
+        const deletedProducts = new Set(JSON.parse(sessionStorage.getItem('deletedProducts') || '[]'));
+        
+        if (editedProducts.size > 0 || deletedProducts.size > 0) {
+            e.preventDefault();
+            e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+            return e.returnValue;
+        }
+    });
+    
+    // Show reminder when user clicks on navigation links with unsaved changes
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('a[href]') && !e.target.href.includes('#')) {
+            const editedProducts = new Set(JSON.parse(sessionStorage.getItem('editedProducts') || '[]'));
+            const deletedProducts = new Set(JSON.parse(sessionStorage.getItem('deletedProducts') || '[]'));
+            
+            if (editedProducts.size > 0 || deletedProducts.size > 0) {
+                e.preventDefault();
+                showChangesReminder();
+            }
+        }
+    });
 });
 </script>
 @endsection

@@ -267,6 +267,13 @@ class OrderStatusService
                 Log::error("Loyalty issuance on completion failed for order {$order->id}: {$e->getMessage()}");
             }
             
+            // Trigger sales report update when order is completed/received
+            try {
+                $this->updateSalesReport($order);
+            } catch (\Throwable $e) {
+                Log::error("Sales report update failed for order {$order->id}: {$e->getMessage()}");
+            }
+            
             Log::info("Order {$order->id} completed by user {$completedBy}");
             
             return true;
@@ -342,25 +349,55 @@ class OrderStatusService
     }
 
     /**
+     * Update sales report when order is completed/received
+     */
+    public function updateSalesReport(Order $order)
+    {
+        try {
+            // Update order status to ensure it's marked as completed in sales reports
+            $order->update([
+                'status' => 'completed', // Update legacy status field for sales reports
+            ]);
+            
+            // Log the sales report update
+            Log::info("Sales report updated for completed order {$order->id} - Total: ₱{$order->total_price}");
+            
+            // You can add additional sales report logic here, such as:
+            // - Updating daily/monthly sales totals
+            // - Sending notifications to management
+            // - Updating analytics dashboards
+            // - Creating sales summaries
+            
+        } catch (\Exception $e) {
+            Log::error("Failed to update sales report for order {$order->id}: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
      * Get customer display status for order
      */
     public static function getCustomerDisplayStatus($status)
     {
         switch (strtolower($status)) {
             case 'pending':
-                return 'pending';
+                return 'Pending Approval';
             case 'approved':
-                return 'approved';
+                return 'Approved';
+            case 'assigned':
+                return 'Driver Assigned';
             case 'on_delivery':
-                return 'on_delivery';
+                return 'On Delivery';
             case 'delivered':
-                return 'delivered';
+                return 'Delivered';
             case 'completed':
-                return 'completed';
+                return 'Completed';
             case 'cancelled':
-                return 'cancelled';
+                return 'Cancelled';
+            case 'returned':
+                return 'Returned';
             default:
-                return 'pending';
+                return 'Pending Approval';
         }
     }
 

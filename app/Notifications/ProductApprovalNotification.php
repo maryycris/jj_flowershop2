@@ -45,20 +45,23 @@ class ProductApprovalNotification extends Notification
         return ['database'];
     }
 
-    public function toDatabase($notifiable)
+    public function toArray($notifiable)
     {
         return [
-            'type' => 'product_' . $this->action,
+            'type' => 'product_approval',
+            'title' => 'Product ' . ucfirst($this->action),
+            'message' => $this->action === 'added'
+                ? "Clerk {$this->clerk->name} submitted a new product for approval: {$this->product->name}."
+                : "Clerk {$this->clerk->name} edited product {$this->product->name}. Changes: " . json_encode($this->changes),
             'product_id' => $this->product->id,
             'clerk_id' => $this->clerk->id,
             'clerk_name' => $this->clerk->name,
             'action' => $this->action,
             'product_name' => $this->product->name,
-            'product_details' => $this->product->toArray(),
-            'changes' => $this->changes,
-            'message' => $this->action === 'added'
-                ? "Clerk {$this->clerk->name} submitted a new product for approval: {$this->product->name}."
-                : "Clerk {$this->clerk->name} edited product {$this->product->name}. Changes: " . json_encode($this->changes),
+            'action_url' => route('admin.products.show', $this->product->id),
+            'icon' => 'fas fa-box',
+            'color' => 'primary',
+            'created_at' => now()->toISOString()
         ];
     }
 } 

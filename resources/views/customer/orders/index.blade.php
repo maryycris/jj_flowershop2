@@ -36,9 +36,32 @@
         border-bottom: 1px solid #e0e0e0;
         padding: 18px 0;
         align-items: center;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        transition: all 0.3s ease;
     }
     .order-list-row:last-child {
         border-bottom: none;
+    }
+    .order-list-row:hover {
+        background-color: #f8f9fa !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+        border-radius: 8px;
+        border: 1px solid #e3f2fd;
+    }
+    .order-list-row.clickable {
+        position: relative;
+    }
+    .order-list-row.clickable::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: transparent;
+        z-index: 1;
     }
     .order-product-img {
         width: 60px;
@@ -270,10 +293,12 @@
                         <div id="orderList">
                             @foreach ($orders as $order)
                                 @foreach ($order->products as $product)
-                                    <div class="row order-list-row order-row" 
+                                    <div class="row order-list-row order-row clickable" 
                                         data-status="{{ \App\Services\OrderStatusService::getCustomerDisplayStatus($order->order_status ?? $order->status) }}"
                                         data-product="{{ strtolower($product->name) }}"
-                                        data-review="{{ isset($product->pivot->reviewed) && $product->pivot->reviewed ? 'reviewed' : 'to_be_review' }}">
+                                        data-review="{{ isset($product->pivot->reviewed) && $product->pivot->reviewed ? 'reviewed' : 'to_be_review' }}"
+                                        style="cursor: pointer; transition: all 0.3s ease;"
+                                        onclick="window.location.href='{{ route('customer.orders.show', $order->id) }}'">
                                         <div class="col-md-1 d-flex align-items-center justify-content-center">
                                             @if($product->image_url)
                                                 <img src="{{ $product->image_url }}" class="order-product-img" alt="{{ $product->name }}">
@@ -298,21 +323,26 @@
                                                 $statusLabel = \App\Services\OrderStatusService::getStatusLabel($orderStatus);
                                             @endphp
                                             
-                                            @if($orderStatus === 'pending')
-                                                <span class="btn btn-sm btn-warning order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
-                                            @elseif($orderStatus === 'approved')
-                                                <span class="btn btn-sm btn-info order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
-                                            @elseif($orderStatus === 'on_delivery')
-                                                <span class="btn btn-sm btn-primary order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
-                                            @elseif($orderStatus === 'delivered')
-                                                <span class="btn btn-sm btn-success order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
-                                            @elseif($orderStatus === 'completed')
-                                                <span class="btn btn-sm btn-success order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
-                                            @elseif($orderStatus === 'cancelled')
-                                                <span class="btn btn-sm btn-danger order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
-                                            @else
-                                                <span class="btn btn-sm btn-secondary order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
-                                            @endif
+                                            <div class="d-flex flex-column align-items-end">
+                                                @if($orderStatus === 'pending')
+                                                    <span class="btn btn-sm btn-warning order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
+                                                @elseif($orderStatus === 'approved')
+                                                    <span class="btn btn-sm btn-info order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
+                                                @elseif($orderStatus === 'on_delivery')
+                                                    <span class="btn btn-sm btn-primary order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
+                                                @elseif($orderStatus === 'delivered')
+                                                    <span class="btn btn-sm btn-success order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
+                                                @elseif($orderStatus === 'completed')
+                                                    <span class="btn btn-sm btn-success order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
+                                                @elseif($orderStatus === 'cancelled')
+                                                    <span class="btn btn-sm btn-danger order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
+                                                @else
+                                                    <span class="btn btn-sm btn-secondary order-status-btn" style="font-weight:bold;">{{ $statusLabel }}</span>
+                                                @endif
+                                                <small class="text-muted mt-1" style="font-size: 0.7rem;">
+                                                    <i class="fas fa-eye me-1"></i>Click to view details
+                                                </small>
+                                            </div>
                                         </div>
                                     </div>
                                 @endforeach

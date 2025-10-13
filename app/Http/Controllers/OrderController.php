@@ -111,7 +111,10 @@ class OrderController extends Controller
                 $walkInOrders = $walkInOrdersQuery->latest()->get();
                 $onlineOrders = collect();
             } else {
+                // Admin online orders - default to pending status like clerk
+                $status = $request->input('status', 'pending');
                 $onlineOrdersQuery = Order::with(['user', 'products'])->where('type', 'online');
+                
                 if ($search) {
                     $onlineOrdersQuery->where(function($q) use ($search) {
                         $q->whereHas('user', function($uq) use ($search) {
@@ -120,20 +123,22 @@ class OrderController extends Controller
                         ->orWhere('id', 'like', "%$search%");
                     });
                 }
-                // Apply dashboard-style status filters
-                if ($request->filled('status')) {
-                    $status = $request->input('status');
-                    $onlineOrdersQuery->where(function($q) use ($status) {
-                        $q->where('order_status', $status)
-                          ->orWhere(function($sub) use ($status){
-                              $sub->whereNull('order_status')->where('status', $status);
-                          });
+                
+                // Apply status filter (same logic as clerk)
+                if ($status) {
+                    $onlineOrdersQuery->where(function($qq) use ($status) {
+                        $qq->where('order_status', $status)
+                           ->orWhere(function($sub) use ($status){
+                               $sub->whereNull('order_status')->where('status', $status);
+                           });
                     });
                 }
+                
                 // Complete today filter
-                if ($request->boolean('today') && $request->input('status') === 'completed') {
+                if ($request->boolean('today') && $status === 'completed') {
                     $onlineOrdersQuery->whereDate('updated_at', now()->toDateString());
                 }
+                
                 $onlineOrders = $onlineOrdersQuery->latest()->get();
                 $walkInOrders = collect();
             }
@@ -562,7 +567,7 @@ class OrderController extends Controller
 
         $orderStatusService = new \App\Services\OrderStatusService();
         
-        // Use OrderStatusService to assign driver (moves to On Delivery)
+        // Use OrderStatusService to assign driver (sets status to 'assigned' - pending acceptance)
         if ($orderStatusService->assignDriver($order, $request->driver_id, auth()->id())) {
             // Create or update delivery record
             $delivery = $order->delivery;
@@ -572,13 +577,13 @@ class OrderController extends Controller
             }
             $delivery->driver_id = $request->driver_id;
             $delivery->delivery_date = $request->delivery_date;
-            $delivery->status = 'on_delivery';
+            $delivery->status = 'assigned'; // Keep as 'assigned' until driver accepts
             $delivery->recipient_name = $order->user->name;
             $delivery->recipient_phone = $order->user->contact_number ?? 'N/A';
             $delivery->delivery_address = $order->delivery_address ?? 'N/A';
             $delivery->save();
 
-            return redirect()->back()->with('success', 'Driver assigned successfully. Order moved to On Delivery.');
+            return redirect()->back()->with('success', 'Driver assigned successfully. Order is now pending driver acceptance.');
         } else {
             return redirect()->back()->with('error', 'Failed to assign driver. Please try again.');
         }
@@ -747,6 +752,55 @@ class OrderController extends Controller
                 
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Failed to update delivery schedule. Please try again.']);
+        }
+    }
+
+    /**
+     * Mark order as ready for delivery
+     */
+    public function markReady(Order $order)
+    {
+        try {
+            $orderStatusService = new \App\Services\OrderStatusService();
+            
+            // First approve the order if not already approved
+            if ($order->order_status !== 'approved') {
+                $orderStatusService->approveOrder($order, auth()->id());
+            }
+            
+            // Get available drivers
+            $drivers = \App\Models\Driver::with('user')->where('is_active', true)->get();
+            
+            // Auto-assign the first available driver
+            if ($drivers->isNotEmpty()) {
+                $driver = $drivers->first();
+                $orderStatusService->assignDriver($order, $driver->user_id, auth()->id());
+            }
+            
+            return redirect()->back()->with('success', 'Order marked as ready and driver assigned successfully.');
+        } catch (\Exception $e) {
+            \Log::error('Error marking order as ready: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to mark order as ready.');
+        }
+    }
+
+    /**
+     * Mark order as done (completed processing)
+     */
+    public function markDone(Order $order)
+    {
+        try {
+            $orderStatusService = new \App\Services\OrderStatusService();
+            
+            // Complete the order
+            if ($orderStatusService->completeOrder($order, auth()->id())) {
+                return redirect()->back()->with('success', 'Order processing completed successfully.');
+            } else {
+                return redirect()->back()->with('error', 'Failed to complete order processing.');
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error completing order: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to complete order processing.');
         }
     }
 }

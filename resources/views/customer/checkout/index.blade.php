@@ -217,7 +217,7 @@
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span style="color: #888;">Shipping Fee</span>
-                        <span style="color: #222;">₱<span id="shippingFeeDisplay">—</span></span>
+                        <span style="color: #222;">₱<span id="shippingFeeDisplay">{{ number_format($shippingFee ?? 0, 2) }}</span></span>
                     </div>
                     @if($loyaltyDiscount > 0)
                     <div class="d-flex justify-content-between mb-2">
@@ -228,7 +228,7 @@
                     <hr>
                     <div class="d-flex justify-content-between mb-3">
                         <span style="font-weight: 600;">Total</span>
-                        <span style="color: #7bb47b; font-weight: 600; font-size: 1.15rem;">₱<span id="cartTotalFinal">{{ number_format($subtotal - ($loyaltyDiscount ?? 0), 2) }}</span></span>
+                        <span style="color: #7bb47b; font-weight: 600; font-size: 1.15rem;">₱<span id="cartTotalFinal">{{ number_format($subtotal - ($loyaltyDiscount ?? 0) + ($shippingFee ?? 0), 2) }}</span></span>
                     </div>
                     
                     <!-- Delivery Schedule Section -->

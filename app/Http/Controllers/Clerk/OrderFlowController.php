@@ -29,7 +29,8 @@ class OrderFlowController extends Controller
     {
         // If this is a GET request, redirect to the done page (for page refreshes)
         if ($request->isMethod('get')) {
-            return redirect()->route('clerk.orders.online.done', $order->id);
+            $route = auth()->user()->role === 'admin' ? 'admin.orders.online.done' : 'clerk.orders.online.done';
+            return redirect()->route($route, $order->id);
         }
         
         $orderStatusService = new OrderStatusService();
@@ -44,7 +45,8 @@ class OrderFlowController extends Controller
         // Don't auto-assign driver - let clerk manually assign
         
         // Redirect to the done page instead of returning view directly
-        return redirect()->route('clerk.orders.online.done', $order->id)
+        $route = auth()->user()->role === 'admin' ? 'admin.orders.online.done' : 'clerk.orders.online.done';
+        return redirect()->route($route, $order->id)
             ->with('success', 'Order validated successfully! Please assign a driver for delivery.');
     }
 

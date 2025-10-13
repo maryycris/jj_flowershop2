@@ -46,8 +46,8 @@
         </button>
                         </div>
 
-    <div id="mapContainer" style="height: 300px; border-radius: 8px; overflow: hidden; display: none;">
-        <div id="map" style="height: 100%; width: 100%;"></div>
+    <div id="mapContainer" style="height: 400px; border-radius: 8px; border: 1px solid #ddd; display: none;">
+        <div id="map" style="height: 100%; width: 100%; border-radius: 8px;"></div>
                     </div>
 
     <div id="routeInfo" class="mt-3" style="display: none;">
@@ -98,6 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let map = null;
     let marker = null;
+    let shopMarker = null;
     let routeLayer = null;
     
     const mapContainer = document.getElementById('mapContainer');
@@ -120,23 +121,51 @@ document.addEventListener('DOMContentLoaded', function() {
     function initMap() {
         if (map) return;
 
-        map = L.map('map').setView([10.3157, 123.8854], 13);
+        map = L.map('map', {
+            preferCanvas: false,
+            zoomControl: true,
+            attributionControl: true
+        }).setView([10.3157, 123.8854], 13);
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18
         }).addTo(map);
 
-        // Add shop marker - Bangbang, Cordova
-        const shopMarker = L.marker([10.3157, 123.8854]).addTo(map);
-        shopMarker.bindPopup('<b>J&J Flower Shop</b><br>Bangbang, Cordova, Cebu').openPopup();
+        // Add shop marker - Bangbang, Cordova (blue marker)
+        const shopIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: "<div style='background-color:blue;width:24px;height:24px;border-radius:50%;border:4px solid white;box-shadow:0 3px 6px rgba(0,0,0,0.4);z-index:1000;'></div>",
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        shopMarker = L.marker([10.3157, 123.8854], {icon: shopIcon, zIndexOffset: 1000}).addTo(map);
+        shopMarker.bindPopup('<b>🏪 J&J Flower Shop</b><br>📍 Bangbang, Cordova, Cebu').openPopup();
+        
+        // Ensure map fits properly in container
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
     }
     
     // Show map button click
     showMapBtn.addEventListener('click', function() {
         initMap();
-        mapContainer.style.display = 'block';
+            mapContainer.style.display = 'block';
         showMapBtn.style.display = 'none';
         hideMapBtn.style.display = 'inline-block';
+            
+        // Ensure map resizes properly when shown
+            setTimeout(() => {
+            if (map) {
+                map.invalidateSize();
+            }
+        }, 200);
+        
+        // Make sure shop marker is visible
+        if (shopMarker) {
+            shopMarker.openPopup();
+        }
     });
     
     // Hide map button click
@@ -228,18 +257,57 @@ document.addEventListener('DOMContentLoaded', function() {
     function addMarkerToMap(lat, lng, address) {
         initMap();
         
-        // Remove existing marker
+        // Ensure shop marker exists
+        if (!shopMarker) {
+            console.log('Creating shop marker...');
+            const shopIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: "<div style='background-color:blue;width:24px;height:24px;border-radius:50%;border:4px solid white;box-shadow:0 3px 6px rgba(0,0,0,0.4);z-index:1000;'></div>",
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+            shopMarker = L.marker([10.3157, 123.8854], {icon: shopIcon, zIndexOffset: 1000}).addTo(map);
+            shopMarker.bindPopup('<b>🏪 J&J Flower Shop</b><br>📍 Bangbang, Cordova, Cebu');
+            console.log('Shop marker created:', shopMarker);
+        } else {
+            console.log('Shop marker already exists:', shopMarker);
+        }
+        
+        // Remove existing delivery marker
         if (marker) {
             map.removeLayer(marker);
         }
         
-        // Add new marker
-        marker = L.marker([lat, lng]).addTo(map);
-        marker.bindPopup(`<b>Delivery Address</b><br>${address}`).openPopup();
+        // Add new delivery marker (blue marker)
+        console.log('Creating delivery marker at:', lat, lng, 'for address:', address);
         
-        // Fit map to show both markers
-        const group = new L.featureGroup([map.getLayers()[1], marker]);
-        map.fitBounds(group.getBounds().pad(0.1));
+        // If delivery coordinates are the same as shop coordinates, offset slightly
+        let deliveryLat = lat;
+        let deliveryLng = lng;
+        if (Math.abs(lat - 10.3157) < 0.001 && Math.abs(lng - 123.8854) < 0.001) {
+            deliveryLat = lat + 0.001; // Offset by ~100 meters
+            deliveryLng = lng + 0.001;
+            console.log('Offsetting delivery marker to:', deliveryLat, deliveryLng);
+        }
+        
+        const deliveryIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: "<div style='background-color:red;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);'></div>",
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+        marker = L.marker([deliveryLat, deliveryLng], {icon: deliveryIcon}).addTo(map);
+        marker.bindPopup(`<b>🚚 Delivery Address</b><br>📍 ${address}`).openPopup();
+        console.log('Delivery marker created:', marker);
+        
+        // Don't auto-fit map bounds - let user control zoom
+        
+        // Ensure map resizes properly after adding markers
+        setTimeout(() => {
+            if (map) {
+                map.invalidateSize();
+            }
+        }, 100);
     }
     
     // Calculate route
@@ -388,13 +456,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (address.includes('talisay')) {
                     fallbackFee = 30 + (22 * 10); // P250.00 for Talisay
                     estimatedDistance = 22;
-                } else {
+        } else {
                     fallbackFee = 30 + (25 * 10); // P280.00 for other areas
                     estimatedDistance = 25;
                 }
             }
             
             console.log('Using fallback shipping fee:', fallbackFee, 'Distance:', estimatedDistance);
+            
+            // Add delivery marker with fallback coordinates
+            let fallbackLat, fallbackLng;
+            if (address.includes('cordova') || address.includes('bangbang')) {
+                fallbackLat = 10.3157; fallbackLng = 123.8854; // Cordova/Bangbang coordinates (same as shop)
+            } else if (address.includes('minglanilla')) {
+                fallbackLat = 10.2333; fallbackLng = 123.7833; // Minglanilla coordinates
+            } else if (address.includes('kalawisan')) {
+                fallbackLat = 10.3103; fallbackLng = 123.9494; // Kalawisan coordinates (Lapu-Lapu area)
+            } else if (address.includes('cebu city') || address.includes('cebu')) {
+                fallbackLat = 10.3157; fallbackLng = 123.8854; // Cebu City coordinates
+            } else if (address.includes('mandaue')) {
+                fallbackLat = 10.3333; fallbackLng = 123.9333; // Mandaue coordinates
+            } else if (address.includes('lapu-lapu') || address.includes('lapulapu')) {
+                fallbackLat = 10.3103; fallbackLng = 123.9494; // Lapu-Lapu coordinates
+            } else if (address.includes('talisay')) {
+                fallbackLat = 10.2442; fallbackLng = 123.8422; // Talisay coordinates
+            } else {
+                fallbackLat = 10.3157; fallbackLng = 123.8854; // Default Cebu coordinates
+            }
+            
+            // Add delivery marker to map
+            addMarkerToMap(fallbackLat, fallbackLng, address);
             
             // Show shipping info section
             const shippingInfo = document.getElementById('shippingInfo');
@@ -415,8 +506,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Update the shipping fee display in checkout summary
-            const checkoutShippingDisplay = document.getElementById('shippingFeeDisplay');
-            if (checkoutShippingDisplay) {
+        const checkoutShippingDisplay = document.getElementById('shippingFeeDisplay');
+        if (checkoutShippingDisplay) {
                 checkoutShippingDisplay.textContent = fallbackFee.toFixed(2);
             }
             

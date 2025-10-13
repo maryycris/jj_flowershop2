@@ -17,12 +17,12 @@ class CheckoutController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        
+
         // Check if this is a "Buy now" flow (product_id and quantity provided)
         $productId = $request->input('product_id');
         $catalogProductId = $request->input('catalog_product_id');
         $quantity = $request->input('quantity', 1);
-        
+
         if ($productId) {
             // "Buy now" flow with regular product ID
             $product = \App\Models\Product::find($productId);
@@ -35,13 +35,13 @@ class CheckoutController extends Controller
             if (!$catalog) {
                 return redirect()->route('customer.dashboard')->with('error', 'Product not found.');
             }
-            
+
             // Find existing product or create new one
             $product = \App\Models\Product::where('name', $catalog->name)
                 ->where('price', $catalog->price)
                 ->where('category', $catalog->category)
                 ->first();
-                
+
             if (!$product) {
                 $product = new \App\Models\Product([
                     'code' => null,
@@ -60,21 +60,21 @@ class CheckoutController extends Controller
             }
             $productId = $product->id;
         }
-        
+
         if ($productId) {
-            
+
             // Create a temporary cart item object for the checkout process
             $tempCartItem = new \stdClass();
             $tempCartItem->id = 'temp_' . $productId;
             $tempCartItem->product_id = $productId;
             $tempCartItem->quantity = $quantity;
             $tempCartItem->product = $product;
-            
+
             $cartItems = collect([$tempCartItem]);
         } else {
             // Regular cart flow
             $selectedItemIds = $request->input('selected_items', []);
-        
+
             if (!empty($selectedItemIds)) {
                 $cartItems = $user->cartItems()->with('product')->whereIn('id', $selectedItemIds)->get();
             } else {
@@ -95,19 +95,19 @@ class CheckoutController extends Controller
         $addresses = $user->addresses()->get();
         // Use default address (or first) for initial calculation
         $deliveryAddress = $addresses->where('is_default', true)->first() ?? $addresses->first();
-        
+
         // Get user's loyalty card
         $loyaltyCard = \App\Models\LoyaltyCard::where('user_id', $user->id)
             ->where('status', 'active')
             ->first();
-        
+
         // Calculate loyalty discount if applicable
         $loyaltyService = new \App\Services\LoyaltyService();
         $loyaltyDiscount = 0;
         if ($loyaltyCard && $loyaltyService->canRedeem($loyaltyCard)) {
             $loyaltyDiscount = $loyaltyService->calculateDiscountForCart($cartItems);
         }
-        
+
         \Log::info('Checkout address loading', [
             'user_id' => $user->id,
             'addresses_count' => $addresses->count(),
@@ -141,12 +141,12 @@ class CheckoutController extends Controller
             $shippingFee = 30; // Default for Cordova
             if ($deliveryAddress) {
                 $originAddress = 'Cordova, Cebu'; // Shop location
-                $destinationAddress = $deliveryAddress->street_address . ', ' . 
-                                    ($deliveryAddress->barangay ?? '') . ', ' . 
-                                    ($deliveryAddress->municipality ?? '') . ', ' . 
-                                    ($deliveryAddress->city ?? '') . ', ' . 
+                $destinationAddress = $deliveryAddress->street_address . ', ' .
+                                    ($deliveryAddress->barangay ?? '') . ', ' .
+                                    ($deliveryAddress->municipality ?? '') . ', ' .
+                                    ($deliveryAddress->city ?? '') . ', ' .
                                     ($deliveryAddress->region ?? 'Region VII');
-                
+
                 $shippingFee = \App\Helpers\ShippingFeeHelper::calculateShippingFee($originAddress, $destinationAddress);
             }
         }
@@ -158,7 +158,7 @@ class CheckoutController extends Controller
     public function paymentMethod(Request $request)
     {
         $user = Auth::user();
-        
+
         // Store recipient information in session for later use
         $checkoutData = [
             'recipient_type' => $request->input('recipient_type', 'someone'),
@@ -172,35 +172,35 @@ class CheckoutController extends Controller
             'delivery_time' => $request->input('delivery_time', ''),
             'promo_code' => $request->input('promo_code', ''),
         ];
-        
+
         // Validate phone number requirement based on recipient type
         $recipientType = $request->input('recipient_type', 'someone');
         $phoneNumber = $request->input('recipient_phone', '');
-        
+
         // If customer will receive the order, phone number is required
         if ($recipientType === 'self' && empty($phoneNumber)) {
             return back()->withErrors([
                 'recipient_phone' => 'Phone number is required when you will receive the order. The rider needs to contact you for delivery coordination.'
             ])->withInput();
         }
-        
+
         // If someone else will receive, phone number is also required
         if ($recipientType === 'someone' && empty($phoneNumber)) {
             return back()->withErrors([
                 'recipient_phone' => 'Recipient phone number is required for delivery coordination.'
             ])->withInput();
         }
-        
+
         // Store in session
         session(['checkout_data' => $checkoutData]);
-        
+
         \Log::info('Checkout data stored in session', $checkoutData);
-        
+
         // Check if this is a "Buy now" flow (product_id and quantity provided)
         $productId = $request->input('product_id');
         $catalogProductId = $request->input('catalog_product_id');
         $quantity = $request->input('quantity', 1);
-        
+
         if ($productId) {
             // "Buy now" flow with regular product ID
             $product = \App\Models\Product::find($productId);
@@ -213,13 +213,13 @@ class CheckoutController extends Controller
             if (!$catalog) {
                 return redirect()->route('customer.dashboard')->with('error', 'Product not found.');
             }
-            
+
             // Find existing product or create new one
             $product = \App\Models\Product::where('name', $catalog->name)
                 ->where('price', $catalog->price)
                 ->where('category', $catalog->category)
                 ->first();
-                
+
             if (!$product) {
                 $product = new \App\Models\Product([
                     'code' => null,
@@ -238,21 +238,21 @@ class CheckoutController extends Controller
             }
             $productId = $product->id;
         }
-        
+
         if ($productId) {
-            
+
             // Create a temporary cart item object for the checkout process
             $tempCartItem = new \stdClass();
             $tempCartItem->id = 'temp_' . $productId;
             $tempCartItem->product_id = $productId;
             $tempCartItem->quantity = $quantity;
             $tempCartItem->product = $product;
-            
+
             $cartItems = collect([$tempCartItem]);
         } else {
             // Regular cart flow
             $selectedItemIds = $request->input('selected_items', []);
-        
+
         if (!empty($selectedItemIds)) {
             $cartItems = $user->cartItems()->with('product')->whereIn('id', $selectedItemIds)->get();
         } else {
@@ -270,7 +270,7 @@ class CheckoutController extends Controller
         }
 
         // Get user's default address or first address
-        $deliveryAddress = $user->addresses()->where('is_default', true)->first() 
+        $deliveryAddress = $user->addresses()->where('is_default', true)->first()
                           ?? $user->addresses()->first();
 
         // Use shipping fee from URL parameter if available, otherwise calculate
@@ -281,12 +281,12 @@ class CheckoutController extends Controller
             $shippingFee = 30; // Default for Cordova
             if ($deliveryAddress) {
                 $originAddress = 'Cordova, Cebu'; // Shop location
-                $destinationAddress = $deliveryAddress->street_address . ', ' . 
-                                    ($deliveryAddress->barangay ?? '') . ', ' . 
-                                    ($deliveryAddress->municipality ?? '') . ', ' . 
-                                    ($deliveryAddress->city ?? '') . ', ' . 
+                $destinationAddress = $deliveryAddress->street_address . ', ' .
+                                    ($deliveryAddress->barangay ?? '') . ', ' .
+                                    ($deliveryAddress->municipality ?? '') . ', ' .
+                                    ($deliveryAddress->city ?? '') . ', ' .
                                     ($deliveryAddress->region ?? 'Region VII');
-                
+
                 $shippingFee = \App\Helpers\ShippingFeeHelper::calculateShippingFee($originAddress, $destinationAddress);
             }
         } else {
@@ -295,27 +295,27 @@ class CheckoutController extends Controller
 
         // Load loyalty card data
         $loyaltyCard = \App\Models\LoyaltyCard::where('user_id', $user->id)->first();
-        
+
         // Check if customer is eligible for automatic discount (4/5 stamps = 5th order)
         $loyaltyDiscount = 0;
         $discountedItem = null;
-        
+
         if ($loyaltyCard && $loyaltyCard->stamps_count >= 4) {
             // Find the most expensive item in the cart
             $mostExpensiveItem = $cartItems->sortByDesc(function($item) {
                 return $item->product->price * $item->quantity;
             })->first();
-            
+
             if ($mostExpensiveItem) {
                 // Calculate 50% discount on the most expensive item
                 $loyaltyDiscount = ($mostExpensiveItem->product->price * $mostExpensiveItem->quantity) * 0.5;
                 $discountedItem = $mostExpensiveItem;
             }
         }
-        
+
         // Calculate final total with loyalty discount
         $finalTotal = $subtotal + $shippingFee - $loyaltyDiscount;
-        
+
         return view('customer.checkout.payment_method', compact('cartItems', 'subtotal', 'shippingFee', 'loyaltyCard', 'loyaltyDiscount', 'discountedItem', 'finalTotal'));
     }
 
@@ -324,14 +324,14 @@ class CheckoutController extends Controller
         // Add debugging
         \Log::info('Checkout process started', ['request_data' => $request->all()]);
         \Log::info('Payment method received', ['payment_method' => $request->input('payment_method')]);
-        
+
         $user = Auth::user();
-        
+
         // Check if this is a "Buy now" flow (product_id and quantity provided)
         $productId = $request->input('product_id');
         $catalogProductId = $request->input('catalog_product_id');
         $quantity = $request->input('quantity', 1);
-        
+
         \Log::info('ProcessOrder - Buy now flow check', [
             'product_id' => $productId,
             'catalog_product_id' => $catalogProductId,
@@ -339,7 +339,7 @@ class CheckoutController extends Controller
             'has_product_id' => !empty($productId),
             'has_catalog_product_id' => !empty($catalogProductId)
         ]);
-        
+
         if ($productId) {
             // "Buy now" flow with regular product ID
             $product = \App\Models\Product::find($productId);
@@ -352,13 +352,13 @@ class CheckoutController extends Controller
             if (!$catalog) {
                 return redirect()->route('customer.dashboard')->with('error', 'Product not found.');
             }
-            
+
             // Find existing product or create new one
             $product = \App\Models\Product::where('name', $catalog->name)
                 ->where('price', $catalog->price)
                 ->where('category', $catalog->category)
                 ->first();
-                
+
             if (!$product) {
                 $product = new \App\Models\Product([
                     'code' => null,
@@ -377,16 +377,16 @@ class CheckoutController extends Controller
             }
             $productId = $product->id;
         }
-        
+
         if ($productId) {
-            
+
             // Create a temporary cart item object for the checkout process
             $tempCartItem = new \stdClass();
             $tempCartItem->id = 'temp_' . $productId;
             $tempCartItem->product_id = $productId;
             $tempCartItem->quantity = $quantity;
             $tempCartItem->product = $product;
-            
+
             $cartItems = collect([$tempCartItem]);
             \Log::info('ProcessOrder - Created temp cart item for Buy Now', ['product_id' => $productId, 'quantity' => $quantity]);
         } else {
@@ -413,8 +413,8 @@ class CheckoutController extends Controller
         \Log::info('Validation passed');
 
         // Calculate total
-        $subtotal = $cartItems->sum(function($item) { 
-            return $item->quantity * $item->product->price; 
+        $subtotal = $cartItems->sum(function($item) {
+            return $item->quantity * $item->product->price;
         });
         // Use shipping_fee from form if present
         $shippingFee = $request->input('shipping_fee');
@@ -426,13 +426,13 @@ class CheckoutController extends Controller
         // Check for automatic loyalty discount (4/5 stamps = 5th order = 50% off most expensive item)
         $loyaltyDiscount = 0;
         $loyaltyCard = \App\Models\LoyaltyCard::where('user_id', $user->id)->first();
-        
+
         if ($loyaltyCard && $loyaltyCard->stamps_count >= 4) {
             // Find the most expensive item in the cart
             $mostExpensiveItem = $cartItems->sortByDesc(function($item) {
                 return $item->product->price * $item->quantity;
             })->first();
-            
+
             if ($mostExpensiveItem) {
                 // Calculate 50% discount on the most expensive item
                 $loyaltyDiscount = ($mostExpensiveItem->product->price * $mostExpensiveItem->quantity) * 0.5;
@@ -444,11 +444,11 @@ class CheckoutController extends Controller
                 ]);
             }
         }
-        
+
         $totalPrice = $subtotal + $shippingFee - $loyaltyDiscount;
 
         \Log::info('Calculated totals', ['subtotal' => $subtotal, 'shipping_fee' => $shippingFee, 'total' => $totalPrice]);
-        
+
         \Log::info('Delivery details before processing', [
             'delivery_address_input' => $request->input('delivery_address'),
             'recipient_name_input' => $request->input('recipient_name'),
@@ -465,7 +465,7 @@ class CheckoutController extends Controller
         $deliveryDate = $request->input('delivery_date') ?? $checkoutData['delivery_date'] ?? now()->addDays(2)->format('Y-m-d');
         $deliveryTime = $request->input('delivery_time') ?? $checkoutData['delivery_time'] ?? '09:00 AM';
         $deliveryAddress = $request->input('delivery_address') ?? $checkoutData['delivery_address'] ?? $user->addresses()->where('is_default', true)->first()?->street_address ?? 'Bang-bang Cordova, Cebu';
-        
+
         // Ensure delivery_date and delivery_time are not empty
         if (empty($deliveryDate)) {
             $deliveryDate = now()->addDays(2)->format('Y-m-d');
@@ -473,7 +473,7 @@ class CheckoutController extends Controller
         if (empty($deliveryTime)) {
             $deliveryTime = '09:00 AM';
         }
-        
+
         // Use recipient information from session if available, otherwise fall back to user info
         $recipientType = $checkoutData['recipient_type'] ?? 'someone';
         if ($recipientType === 'someone') {
@@ -483,22 +483,22 @@ class CheckoutController extends Controller
             $recipientName = $user->first_name . ' ' . $user->last_name;
             $recipientPhone = $user->contact_number;
         }
-        
+
         // Ensure delivery address is not null
         if (empty($deliveryAddress)) {
             $deliveryAddress = 'Bang-bang Cordova, Cebu';
         }
-        
+
         // Ensure recipient name is not null
         if (empty($recipientName)) {
             $recipientName = $user->first_name . ' ' . $user->last_name;
         }
-        
+
         // Ensure recipient phone is not null
         if (empty($recipientPhone)) {
             $recipientPhone = $user->contact_number ?? 'N/A';
         }
-        
+
         \Log::info('Final delivery details', [
             'delivery_address' => $deliveryAddress,
             'recipient_name' => $recipientName,
@@ -522,7 +522,7 @@ class CheckoutController extends Controller
         try {
             // Get selected item IDs for cart clearing later
             $selectedItemIds = $request->input('selected_items', []);
-            
+
             // Create the order
             $order = new Order([
                 'user_id' => $user->id,
@@ -549,7 +549,7 @@ class CheckoutController extends Controller
             if ($loyaltyDiscount > 0 && $loyaltyCard) {
                 $loyaltyCard->stamps_count = 0; // Reset to 0 stamps after using discount
                 $loyaltyCard->save();
-                
+
                 \Log::info('Loyalty stamps reset after discount', [
                     'user_id' => $user->id,
                     'new_stamps_count' => 0,
@@ -607,7 +607,7 @@ class CheckoutController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return redirect()->back()->with('error', 'An error occurred while processing your order. Please try again.');
         }
     }
@@ -631,10 +631,10 @@ class CheckoutController extends Controller
             if (empty($deliveryTime)) {
                 $deliveryTime = '09:00 AM';
             }
-            
+
             // Get selected item IDs for cart clearing later
             $selectedItemIds = $request->input('selected_items', []);
-            
+
             // Create a temporary order for payment processing
             $order = new Order([
                 'user_id' => $user->id,
@@ -659,7 +659,7 @@ class CheckoutController extends Controller
             if ($loyaltyDiscount > 0 && $loyaltyCard) {
                 $loyaltyCard->stamps_count = 0; // Reset to 0 stamps after using discount
                 $loyaltyCard->save();
-                
+
                 \Log::info('Loyalty stamps reset after discount (payment flow)', [
                     'user_id' => $user->id,
                     'new_stamps_count' => 0,
@@ -672,7 +672,7 @@ class CheckoutController extends Controller
             }
             // Get checkout data from session for additional recipient information
             $checkoutData = session('checkout_data', []);
-            
+
             $delivery = new \App\Models\Delivery([
                 'order_id' => $order->id,
                 'delivery_date' => $deliveryDate,
@@ -687,10 +687,10 @@ class CheckoutController extends Controller
                 'recipient_relationship' => $checkoutData['recipient_relationship'] ?? '',
             ]);
             $delivery->save();
-            
+
             // DON'T clear cart yet - wait for successful payment
             // Cart will be cleared in payment callback when payment is confirmed
-            
+
             // PayMongo integration via Checkout Sessions (shows E-Wallet page first)
             if (in_array($paymentMethod, ['gcash', 'paymaya', 'gotyme', 'rcbc_debit_card', 'rcbc_credit_card', 'seabank_debit_card', 'seabank_credit_card', 'bpi_debit_card', 'bpi_credit_card', 'bdo_debit_card', 'bdo_credit_card', 'metrobank_debit_card', 'metrobank_credit_card', 'security_bank_debit_card', 'security_bank_credit_card', 'other_debit_card', 'other_credit_card'])) {
                 \Log::info('Creating PayMongo Checkout Session', ['payment_method' => $paymentMethod, 'amount' => $totalPrice]);
@@ -755,29 +755,18 @@ class CheckoutController extends Controller
             // Create notification for admin
             $adminUsers = \App\Models\User::where('role', 'admin')->get();
             foreach ($adminUsers as $admin) {
-                $admin->notifications()->create([
-                    'id' => \Illuminate\Support\Str::uuid(),
-                    'type' => 'App\Notifications\NewOrderNotification',
-                    'data' => json_encode([
-                        'message' => 'New order #' . $order->id . ' has been placed by ' . $order->user->name,
-                        'order_id' => $order->id,
-                        'user_id' => $order->user_id,
-                        'total_price' => $order->total_price,
-                    ]),
-                ]);
+                $admin->notify(new \App\Notifications\NewOrderNotification($order));
             }
-            
+
+            // Create notification for clerk
+            $clerkUsers = \App\Models\User::where('role', 'clerk')->get();
+            foreach ($clerkUsers as $clerk) {
+                $clerk->notify(new \App\Notifications\NewOrderNotification($order));
+            }
+
             // Create notification for customer
-            $order->user->notifications()->create([
-                'id' => \Illuminate\Support\Str::uuid(),
-                'type' => 'App\Notifications\OrderPlacedNotification',
-                'data' => json_encode([
-                    'message' => 'Your order #' . $order->id . ' has been placed successfully!',
-                    'order_id' => $order->id,
-                    'total_price' => $order->total_price,
-                ]),
-            ]);
-            
+            $order->user->notify(new \App\Notifications\OrderPlacedNotification($order));
+
             \Log::info('Notifications created successfully');
         } catch (\Exception $e) {
             \Log::error('Error creating notifications', ['error' => $e->getMessage()]);

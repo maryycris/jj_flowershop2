@@ -40,11 +40,14 @@ class ReportController extends Controller
 
     public function sales()
     {
-        // Show all orders regardless of status for comprehensive reporting
+        // Show all orders with priority to completed orders for sales reporting
         $sales = Order::with('user', 'products')
             ->orderByDesc('created_at')
             ->get()
             ->map(function($order) {
+                // Use order_status if available, fallback to status
+                $currentStatus = $order->order_status ?? $order->status;
+                
                 return (object) [
                     'date' => $order->created_at->format('m/d/Y'),
                     'order_number' => str_pad($order->id, 5, '0', STR_PAD_LEFT),
@@ -52,7 +55,9 @@ class ReportController extends Controller
                     // Ensure qty always numeric
                     'qty' => $order->products->sum(function($p) { return $p->pivot->quantity ?? 0; }),
                     'total' => $order->total_price ?? 0,
-                    'status' => $order->status,
+                    'status' => $currentStatus,
+                    'is_completed' => in_array($currentStatus, ['completed', 'delivered']),
+                    'completed_at' => $order->completed_at ? \Carbon\Carbon::parse($order->completed_at)->format('m/d/Y H:i') : null,
                 ];
             });
         return view('admin.reports.sales', compact('sales'));

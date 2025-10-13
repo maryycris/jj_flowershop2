@@ -21,6 +21,12 @@ class Delivery extends Model
         'delivery_message',
         'recipient_relationship',
         'status',
+        'proof_of_delivery_image',
+        'proof_of_delivery_taken_at',
+    ];
+
+    protected $casts = [
+        'proof_of_delivery_taken_at' => 'datetime',
     ];
 
     /**

@@ -38,16 +38,22 @@
                                 <i class="fas fa-info-circle me-3 text-primary"></i>
                                 <div>
                                     <small class="text-muted d-block">Order Status</small>
-                            @if($order->status === 'pending')
-                                        <span class="badge bg-warning px-3 py-2">Pending Approval</span>
-                            @else
-                                <span class="badge bg-{{ 
-                                    $order->status === 'approved' ? 'info' : 
-                                    ($order->status === 'processing' ? 'primary' : 
-                                    ($order->status === 'completed' ? 'success' : 
-                                    ($order->status === 'cancelled' ? 'danger' : 'secondary'))) 
-                                        }} px-3 py-2">{{ ucfirst($order->status) }}</span>
-                                    @endif
+                                    @php
+                                        $currentStatus = $order->order_status ?? $order->status;
+                                        $statusDisplay = \App\Services\OrderStatusService::getCustomerDisplayStatus($currentStatus);
+                                        $statusColor = match($currentStatus) {
+                                            'pending' => 'warning',
+                                            'approved' => 'info', 
+                                            'assigned' => 'primary',
+                                            'on_delivery' => 'primary',
+                                            'completed' => 'success',
+                                            'delivered' => 'success',
+                                            'cancelled' => 'danger',
+                                            'returned' => 'danger',
+                                            default => 'secondary'
+                                        };
+                                    @endphp
+                                    <span class="badge bg-{{ $statusColor }} px-3 py-2">{{ $statusDisplay }}</span>
                                 </div>
                             </div>
                         </div>
@@ -223,6 +229,38 @@
                                         </div>
                                     </div>
                                 @endif
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- Proof of Delivery -->
+                    @if($order->delivery && $order->delivery->proof_of_delivery_image)
+                        <div class="mb-4">
+                            <h5 class="mb-3" style="color: #2c3e50; font-weight: 600;">
+                                <i class="fas fa-camera me-2 text-success"></i>Proof of Delivery
+                            </h5>
+                            <div class="p-3" style="background: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <p class="mb-2 text-success">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            <strong>Delivery Confirmed!</strong>
+                                        </p>
+                                        <p class="mb-1 text-muted small">
+                                            <i class="fas fa-clock me-1"></i>
+                                            Delivered on: {{ $order->delivery->proof_of_delivery_taken_at ? \Carbon\Carbon::parse($order->delivery->proof_of_delivery_taken_at)->format('M d, Y g:i A') : 'N/A' }}
+                                        </p>
+                                        <p class="mb-0 text-muted small">
+                                            <i class="fas fa-user me-1"></i>
+                                            Confirmed by: {{ $order->delivery->driver->name ?? 'Delivery Driver' }}
+                                        </p>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#proofOfDeliveryModal">
+                                            <i class="fas fa-eye me-1"></i>View Photo
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     @endif
@@ -442,4 +480,46 @@
         scrollbar-color: #8ACB88 #f1f1f1;
     }
 </style>
+
+<!-- Proof of Delivery Modal -->
+@if($order->delivery && $order->delivery->proof_of_delivery_image)
+<div class="modal fade" id="proofOfDeliveryModal" tabindex="-1" aria-labelledby="proofOfDeliveryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="proofOfDeliveryModalLabel">
+                    <i class="fas fa-camera me-2"></i>Proof of Delivery
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <img src="{{ asset('storage/' . $order->delivery->proof_of_delivery_image) }}" 
+                         alt="Proof of Delivery" 
+                         class="img-fluid rounded shadow" 
+                         style="max-height: 500px; border: 2px solid #dee2e6;">
+                </div>
+                <div class="row text-start">
+                    <div class="col-md-6">
+                        <p><strong>Order #:</strong> {{ $order->id }}</p>
+                        <p><strong>Delivered on:</strong> {{ $order->delivery->proof_of_delivery_taken_at ? $order->delivery->proof_of_delivery_taken_at->format('M d, Y g:i A') : 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Confirmed by:</strong> {{ $order->delivery->driver->name ?? 'Delivery Driver' }}</p>
+                        <p><strong>Delivery Address:</strong> {{ $order->delivery->delivery_address ?? 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="{{ asset('storage/' . $order->delivery->proof_of_delivery_image) }}" 
+                   target="_blank" 
+                   class="btn btn-primary">
+                    <i class="fas fa-download me-1"></i>Download Photo
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 @endpush

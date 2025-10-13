@@ -145,7 +145,17 @@ class DeliveryController extends Controller
 
         $order = $delivery->order;
         $order->status = 'completed';
+        $order->order_status = 'completed'; // Update both status fields
+        $order->completed_at = now();
         $order->save();
+
+        // Trigger sales report update
+        try {
+            $orderStatusService = new \App\Services\OrderStatusService();
+            $orderStatusService->updateSalesReport($order);
+        } catch (\Exception $e) {
+            \Log::error("Sales report update failed for delivery {$deliveryId}: " . $e->getMessage());
+        }
 
         return redirect()->route('deliveries.index')->with('success', 'Order marked as completed!');
     }

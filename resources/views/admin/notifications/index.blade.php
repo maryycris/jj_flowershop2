@@ -22,22 +22,35 @@
                 <div class="list-group list-group-flush">
                 @forelse($notifications as $notification)
                 @php
-                    $type = $notification->data['type'] ?? '';
-                    $productId = $notification->data['product_id'] ?? null;
-                    $targetUrl = null;
-                    if (\Illuminate\Support\Str::startsWith($type, 'product_')) {
-                        $targetUrl = route('admin.products.index', ['highlight' => 'pending', 'product_id' => $productId]);
-                    }
+                    $data = $notification->data;
+                    $isClickable = !empty($data['action_url']);
+                    $icon = $data['icon'] ?? 'fas fa-bell';
+                    $color = $data['color'] ?? 'primary';
+                    $title = $data['title'] ?? ucfirst($data['type'] ?? 'Notification');
+                    $message = $data['message'] ?? 'No message';
+                    $targetUrl = $data['action_url'] ?? 'javascript:void(0)';
                 @endphp
-                <a href="{{ $targetUrl ?? 'javascript:void(0)' }}" class="list-group-item d-flex justify-content-between align-items-start text-decoration-none {{ $notification->read() ? 'bg-light text-muted' : '' }}">
+                <a href="{{ $targetUrl }}" class="list-group-item d-flex justify-content-between align-items-start text-decoration-none {{ $notification->read() ? 'bg-light text-muted' : '' }}" 
+                   @if($isClickable) onclick="handleAdminNotificationClick({{ $notification->id }})" @endif>
                     <div class="ms-2 me-auto">
-                        <div class="fw-bold">{{ ucfirst($type ?: 'N/A') }}</div>
-                        <span class="text-reset">{{ $notification->data['message'] ?? 'N/A' }}</span>
-                        <div class="text-muted small">Date: {{ $notification->created_at->format('Y-m-d') }}</div>
+                        <div class="d-flex align-items-center mb-1">
+                            <i class="{{ $icon }} text-{{ $color }} me-2"></i>
+                            <div class="fw-bold">{{ $title }}</div>
+                        </div>
+                        <span class="text-reset">{{ $message }}</span>
+                        <div class="text-muted small">Date: {{ $notification->created_at->format('Y-m-d H:i') }}</div>
                     </div>
-                    <div class="form-check align-self-center">
-                        <input class="form-check-input mark-as-read-checkbox" type="checkbox" data-notification-id="{{ $notification->id }}" {{ $notification->read() ? 'checked disabled' : '' }}>
-                        <label class="form-check-label" for="notificationCheck{{ $notification->id }}"></label>
+                    <div class="d-flex align-items-center">
+                        @if(!$notification->read())
+                            <div class="badge bg-{{ $color }} rounded-pill me-2">New</div>
+                        @endif
+                        @if($isClickable)
+                            <i class="fas fa-external-link-alt text-muted me-2"></i>
+                        @endif
+                        <div class="form-check">
+                            <input class="form-check-input mark-as-read-checkbox" type="checkbox" data-notification-id="{{ $notification->id }}" {{ $notification->read() ? 'checked disabled' : '' }}>
+                            <label class="form-check-label" for="notificationCheck{{ $notification->id }}"></label>
+                        </div>
                     </div>
                 </a>
                 @empty
@@ -93,6 +106,37 @@
             });
         });
     });
+
+    // Handle clickable notification clicks for admin
+    function handleAdminNotificationClick(notificationId) {
+        // Mark notification as read
+        fetch(`/admin/notifications/${notificationId}/mark-as-read`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update the notification UI
+                const notificationItem = document.querySelector(`[onclick*="${notificationId}"]`);
+                if (notificationItem) {
+                    notificationItem.classList.add('bg-light', 'text-muted');
+                    const checkbox = notificationItem.querySelector('.mark-as-read-checkbox');
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        checkbox.disabled = true;
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error marking notification as read:', error);
+        });
+    }
 </script>
 @endpush
 

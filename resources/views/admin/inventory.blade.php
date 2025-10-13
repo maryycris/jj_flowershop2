@@ -224,7 +224,7 @@
         @foreach(['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Greenery', 'Floral Supplies', 'Packaging Materials', 'Wrappers', 'Ribbon', 'Other Offers'] as $category)
             <div class="tab-pane fade @if($loop->first) show active @endif" id="{{ Str::slug($category) }}" role="tabpanel">
             <div class="table-responsive inventory-scroll">
-                    <table class="table table-bordered table-striped align-middle">
+                    <table class="table table-bordered align-middle">
                         <thead>
                     <tr>
                                 <th>Product Code</th>
@@ -387,12 +387,41 @@
     transition: background-color 0.3s ease;
 }
 
+.product-row-edited td {
+    background-color: rgba(135, 206, 235, 0.5) !important; /* Blue background for all cells */
+    border-color: #87CEEB !important;
+}
+
 .product-row-deleted {
     background-color: rgba(255, 99, 99, 0.5) !important; /* 50% transparent red */
     transition: background-color 0.3s ease;
 }
+
+.product-row-deleted td {
+    background-color: rgba(255, 99, 99, 0.5) !important; /* Red background for all cells */
+    border-color: #FF6363 !important;
+}
 </style>
 <style>
+/* Override Bootstrap table-striped styling */
+.table tbody tr:nth-of-type(odd) {
+    background-color: transparent !important;
+}
+
+.table tbody tr:nth-of-type(even) {
+    background-color: transparent !important;
+}
+
+/* Ensure full row background coverage */
+.table tbody tr {
+    background-color: transparent !important;
+}
+
+.table tbody tr td {
+    background-color: transparent !important;
+    border-color: #dee2e6 !important;
+}
+
 .inventory-scroll { max-height: 60vh; overflow-y: scroll; overflow-x: auto; scrollbar-color: #7bb47b #f1f1f1; scrollbar-width: thin; }
 .inventory-scroll table { margin-bottom: 0; }
 .inventory-scroll table thead th { position: sticky; top: 0; background: #e6f4ea; color: #1e874b; z-index: 2; }

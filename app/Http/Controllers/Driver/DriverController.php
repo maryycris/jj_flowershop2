@@ -215,28 +215,70 @@ class DriverController extends Controller
 
     public function completeOrder(Request $request, $orderId)
     {
+        \Log::info('Complete order request received', [
+            'order_id' => $orderId,
+            'driver_id' => Auth::id(),
+            'has_file' => $request->hasFile('proof_of_delivery'),
+            'file_size' => $request->hasFile('proof_of_delivery') ? $request->file('proof_of_delivery')->getSize() : 0
+        ]);
+
         $order = \App\Models\Order::findOrFail($orderId);
         
         // Ensure the order is assigned to the authenticated driver
         if ($order->assigned_driver_id !== Auth::id()) {
+            \Log::warning('Unauthorized access attempt', ['order_id' => $orderId, 'driver_id' => Auth::id()]);
             return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
         }
 
         // Ensure the order is in 'on_delivery' status
         if ($order->order_status !== 'on_delivery') {
+            \Log::warning('Order not in delivery status', ['order_id' => $orderId, 'status' => $order->order_status]);
             return response()->json(['success' => false, 'message' => 'Order is not in delivery status'], 400);
         }
 
+        // Validate proof of delivery image
         try {
+            $request->validate([
+                'proof_of_delivery' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation failed', ['errors' => $e->errors()]);
+            return response()->json(['success' => false, 'message' => 'Validation failed: ' . implode(', ', $e->errors()['proof_of_delivery'])], 422);
+        }
+
+        try {
+            // Handle proof of delivery image upload
+            if ($request->hasFile('proof_of_delivery')) {
+                $file = $request->file('proof_of_delivery');
+                $filename = 'proof_delivery_' . $orderId . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('proof_of_delivery', $filename, 'public');
+                
+                \Log::info('File uploaded successfully', ['path' => $path]);
+                
+                // Update delivery record with proof of delivery
+                if ($order->delivery) {
+                    $order->delivery->update([
+                        'proof_of_delivery_image' => $path,
+                        'proof_of_delivery_taken_at' => now(),
+                    ]);
+                    \Log::info('Delivery record updated with proof');
+                } else {
+                    \Log::warning('No delivery record found for order', ['order_id' => $orderId]);
+                }
+            }
+
             // Use OrderStatusService to complete the order
             $orderStatusService = new \App\Services\OrderStatusService();
             
             if ($orderStatusService->completeOrder($order, Auth::id())) {
-                return response()->json(['success' => true, 'message' => 'Order completed successfully']);
+                \Log::info('Order completed successfully', ['order_id' => $orderId]);
+                return response()->json(['success' => true, 'message' => 'Order completed successfully with proof of delivery']);
             } else {
+                \Log::error('Failed to complete order via OrderStatusService', ['order_id' => $orderId]);
                 return response()->json(['success' => false, 'message' => 'Failed to complete order'], 500);
             }
         } catch (\Exception $e) {
+            \Log::error('Exception in completeOrder', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['success' => false, 'message' => 'Error completing order: ' . $e->getMessage()], 500);
         }
     }

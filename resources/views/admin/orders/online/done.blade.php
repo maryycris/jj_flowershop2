@@ -1,6 +1,6 @@
 @extends('layouts.admin_app')
 
-@section('content')
+@section('admin_content')
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-lg-10">
@@ -9,7 +9,7 @@
                 <i class="fas fa-check-circle me-3"></i>
                 <div>
                     <h5 class="mb-1">Order Validated Successfully!</h5>
-                    <p class="mb-0">Order #{{ $order->id }} has been validated and invoice generated. Please assign a driver for delivery.</p>
+                    <p class="mb-0">Order #{{ $order->id }} has been validated, invoice generated, and driver assigned for delivery.</p>
                 </div>
             </div>
 
@@ -25,8 +25,8 @@
                     <div class="row">
                         <div class="col-md-6">
                             <h6>Invoice Details</h6>
-                            <p><strong>Invoice Number:</strong> INV-{{ str_pad($order->id, 6, '0', STR_PAD_LEFT) }}</p>
-                            <p><strong>Generated Date:</strong> {{ now()->format('M d, Y') }}</p>
+                            <p><strong>Invoice Number:</strong> {{ $invoiceData['invoice_number'] ?? 'INV-' . str_pad($order->id, 6, '0', STR_PAD_LEFT) }}</p>
+                            <p><strong>Generated Date:</strong> {{ $invoiceData['generated_date'] ?? now()->format('M d, Y') }}</p>
                             <p><strong>Status:</strong> 
                                 <span class="badge bg-{{ $order->invoice_status === 'paid' ? 'success' : 'warning' }}">
                                     {{ ucfirst($order->invoice_status) }}
@@ -141,7 +141,7 @@
 
             <!-- Action Buttons -->
             <div class="d-flex justify-content-between">
-                <a href="{{ route('admin.orders.index', ['type' => 'online']) }}" class="btn btn-outline-secondary">
+                <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-2"></i>Back to Orders
                 </a>
                 <div>
@@ -156,7 +156,6 @@
         </div>
     </div>
 </div>
-
 <!-- Assign Driver Modal -->
 <div class="modal fade" id="assignDriverModal" tabindex="-1" aria-labelledby="assignDriverModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -188,6 +187,12 @@
                                 </option>
                             @endforeach
                         </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="delivery_date" class="form-label">Delivery Date</label>
+                        <input type="date" id="delivery_date" name="delivery_date" class="form-control" 
+                               value="{{ now()->addDay()->format('Y-m-d') }}" required>
                     </div>
                     
                     <!-- Driver Information Display -->

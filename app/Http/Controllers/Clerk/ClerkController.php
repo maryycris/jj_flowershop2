@@ -464,6 +464,21 @@ class ClerkController extends Controller
                 if (isset($stagedEdits[$productId])) {
                     $changes = $stagedEdits[$productId];
                     
+                    // Get current product data for logging
+                    $product = \App\Models\Product::find($productId);
+                    $oldValues = $product ? [
+                        'name' => $product->name,
+                        'category' => $product->category,
+                        'price' => $product->price,
+                        'cost_price' => $product->cost_price,
+                        'reorder_min' => $product->reorder_min,
+                        'reorder_max' => $product->reorder_max,
+                        'stock' => $product->stock,
+                        'qty_consumed' => $product->qty_consumed,
+                        'qty_damaged' => $product->qty_damaged,
+                        'qty_sold' => $product->qty_sold
+                    ] : [];
+                    
                     PendingInventoryChange::create([
                         'product_id' => $productId,
                         'action' => 'edit',
@@ -471,12 +486,40 @@ class ClerkController extends Controller
                         'submitted_by' => $submittedBy,
                         'status' => 'pending'
                     ]);
+                    
+                    // Create inventory log
+                    \App\Models\InventoryLog::create([
+                        'product_id' => $productId,
+                        'user_id' => $submittedBy,
+                        'action' => 'edit',
+                        'old_values' => $oldValues,
+                        'new_values' => $changes,
+                        'description' => "Product edited by " . auth()->user()->name,
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent()
+                    ]);
+                    
                     $changesCount++;
                 }
             }
 
             // Process deleted products
             foreach ($deletedProducts as $productId) {
+                // Get current product data for logging
+                $product = \App\Models\Product::find($productId);
+                $oldValues = $product ? [
+                    'name' => $product->name,
+                    'category' => $product->category,
+                    'price' => $product->price,
+                    'cost_price' => $product->cost_price,
+                    'reorder_min' => $product->reorder_min,
+                    'reorder_max' => $product->reorder_max,
+                    'stock' => $product->stock,
+                    'qty_consumed' => $product->qty_consumed,
+                    'qty_damaged' => $product->qty_damaged,
+                    'qty_sold' => $product->qty_sold
+                ] : [];
+                
                 PendingInventoryChange::create([
                     'product_id' => $productId,
                     'action' => 'delete',
@@ -484,7 +527,28 @@ class ClerkController extends Controller
                     'submitted_by' => $submittedBy,
                     'status' => 'pending'
                 ]);
+                
+                // Create inventory log
+                \App\Models\InventoryLog::create([
+                    'product_id' => $productId,
+                    'user_id' => $submittedBy,
+                    'action' => 'delete',
+                    'old_values' => $oldValues,
+                    'new_values' => null,
+                    'description' => "Product marked for deletion by " . auth()->user()->name,
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent()
+                ]);
+                
                 $changesCount++;
+            }
+
+            // Create notification for admin if there are changes
+            if ($changesCount > 0) {
+                $admin = \App\Models\User::where('role', 'admin')->first();
+                if ($admin) {
+                    $admin->notify(new \App\Notifications\InventoryChangeNotification($changesCount, auth()->user()->name));
+                }
             }
 
             return response()->json([

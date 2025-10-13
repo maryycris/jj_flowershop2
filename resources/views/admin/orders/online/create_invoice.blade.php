@@ -1,16 +1,15 @@
 @extends('layouts.admin_app')
 
-@section('content')
+@section('admin_content')
 <div class="container-fluid" style="background:#f4faf4;">
     <div class="row justify-content-center">
         <div class="col-12 col-xl-10">
             <div class="card shadow-sm" style="border:0;">
                 <div class="card-body p-0" style="background:#fff;">
                     <div class="p-3 d-flex align-items-center gap-3" style="border-bottom:1px solid #e6f0e6;">
-                        <a href="{{ route('admin.orders.index', ['type' => 'online']) }}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center" title="Back" aria-label="Back" style="width:34px;height:34px;padding:0;">
+                        <a href="{{ route('admin.orders.index') }}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center" title="Back" aria-label="Back" style="width:34px;height:34px;padding:0;">
                             <i class="bi bi-arrow-left"></i>
                         </a>
-                        <span class="badge bg-warning text-dark">Pending</span>
                         <div class="ms-2 small text-muted">Order Number</div>
                         <div class="fw-semibold">00{{ $order->id }}</div>
                         <div class="ms-auto d-flex align-items-center gap-3">
@@ -20,7 +19,7 @@
                                 <span class="badge bg-primary">1</span>
                             </div>
                             <button class="btn btn-success">Sales Order</button>
-                            <a href="{{ route('admin.orders.online.validate', $order->id) }}" class="btn btn-sm btn-success">Send Invoice</a>
+                            <a href="{{ route('admin.orders.online.validate', $order->id) }}" class="btn btn-sm btn-success">Validate Order</a>
                             <button class="btn btn-sm btn-outline-secondary">Cancel</button>
                         </div>
                     </div>
@@ -77,7 +76,49 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="text-end mt-2 fw-semibold">Total: ₱{{ number_format($order->total_price, 2) }}</div>
+                            
+                            <!-- Order Summary with Shipping Fee Breakdown -->
+                            <div class="mt-3 p-3" style="background:#f8f9fa;border:1px solid #d9ecd9;border-top:0;">
+                                @php
+                                    $subtotal = $order->products->sum(function($product) {
+                                        return $product->pivot->quantity * $product->price;
+                                    });
+                                    $shippingFee = $order->delivery->shipping_fee ?? 0;
+                                    
+                                    // If shipping_fee is 0 or null, calculate it from the difference between total_price and subtotal
+                                    if ($shippingFee == 0 && $order->total_price > $subtotal) {
+                                        $shippingFee = $order->total_price - $subtotal;
+                                    }
+                                    
+                                    $total = $subtotal + $shippingFee;
+                                @endphp
+                                
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Subtotal:</strong>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        <strong>₱{{ number_format($subtotal, 2) }}</strong>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Shipping Fee:</strong>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        <strong>₱{{ number_format($shippingFee, 2) }}</strong>
+                                    </div>
+                                </div>
+                                <hr class="my-2">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <h5 class="mb-0">Total:</h5>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        <h5 class="mb-0">₱{{ number_format($total, 2) }}</h5>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -86,4 +127,3 @@
     </div>
 </div>
 @endsection
-

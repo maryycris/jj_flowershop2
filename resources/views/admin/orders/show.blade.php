@@ -32,6 +32,14 @@
                             @endif
                         </p>
                     @endif
+                    @if($order->delivery && $order->delivery->proof_of_delivery_image)
+                        <p><strong>Proof of Delivery:</strong> 
+                            <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#proofOfDeliveryModal">
+                                <i class="fas fa-camera me-1"></i>View Photo
+                            </button>
+                            <br><small class="text-muted">Delivered on: {{ $order->delivery->proof_of_delivery_taken_at ? \Carbon\Carbon::parse($order->delivery->proof_of_delivery_taken_at)->format('M d, Y g:i A') : 'N/A' }}</small>
+                        </p>
+                    @endif
                 </div>
             </div>
         </div>
@@ -151,4 +159,48 @@
         </div>
     </div>
 </div>
+
+<!-- Proof of Delivery Modal -->
+@if($order->delivery && $order->delivery->proof_of_delivery_image)
+<div class="modal fade" id="proofOfDeliveryModal" tabindex="-1" aria-labelledby="proofOfDeliveryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="proofOfDeliveryModalLabel">
+                    <i class="fas fa-camera me-2"></i>Proof of Delivery - Order #{{ $order->id }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <img src="{{ asset('storage/' . $order->delivery->proof_of_delivery_image) }}" 
+                         alt="Proof of Delivery" 
+                         class="img-fluid rounded shadow" 
+                         style="max-height: 500px; border: 2px solid #dee2e6;">
+                </div>
+                <div class="row text-start">
+                    <div class="col-md-6">
+                        <p><strong>Order #:</strong> {{ $order->id }}</p>
+                        <p><strong>Customer:</strong> {{ $order->user->name ?? 'N/A' }}</p>
+                        <p><strong>Delivered on:</strong> {{ $order->delivery->proof_of_delivery_taken_at ? \Carbon\Carbon::parse($order->delivery->proof_of_delivery_taken_at)->format('M d, Y g:i A') : 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Confirmed by:</strong> {{ $order->delivery->driver->name ?? 'Delivery Driver' }}</p>
+                        <p><strong>Delivery Address:</strong> {{ $order->delivery->delivery_address ?? 'N/A' }}</p>
+                        <p><strong>Status:</strong> <span class="badge bg-success">Delivered</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="{{ asset('storage/' . $order->delivery->proof_of_delivery_image) }}" 
+                   target="_blank" 
+                   class="btn btn-primary">
+                    <i class="fas fa-download me-1"></i>Download Photo
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 @endsection 

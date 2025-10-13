@@ -233,6 +233,9 @@
                     <a href="{{ route('admin.notifications.index') }}" class="sidebar-link @if(request()->routeIs('admin.notifications.index')) active @endif">Notifications</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
+                    <a href="{{ route('admin.inventory-logs.index') }}" class="sidebar-link @if(request()->routeIs('admin.inventory-logs.*')) active @endif">Inventory Logs</a>
+                </li>
+                <li class="nav-item w-100 mb-1">
                     <a href="{{ route('admin.loyalty.index') }}" class="sidebar-link @if(request()->routeIs('admin.loyalty.*')) active @endif">Loyalty Cards</a>
                 </li>
             </ul>
