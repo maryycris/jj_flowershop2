@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\CatalogProduct;
+use App\Services\ProductAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -32,6 +33,14 @@ class CustomerController extends Controller
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
+        if ($request->has('min_price') && $request->min_price !== '') {
+            $query->where('price', '>=', $request->min_price);
+        }
+
+        if ($request->has('max_price') && $request->max_price !== '') {
+            $query->where('price', '<=', $request->max_price);
+        }
+
         $products = $query->latest()->get();
 
         // Get 5 latest products as promoted products (same filters)
@@ -41,10 +50,18 @@ class CustomerController extends Controller
             ->whereIn('category', $includeCategories)
             ->latest()->take(5)->get();
 
+        // Check availability for all products
+        $availabilityService = new ProductAvailabilityService();
+        $productIds = $products->pluck('id')->toArray();
+        $promotedProductIds = $promotedProducts->pluck('id')->toArray();
+        
+        $productAvailability = $availabilityService->getBulkCatalogAvailability($productIds);
+        $promotedProductAvailability = $availabilityService->getBulkCatalogAvailability($promotedProductIds);
+
         $unreadCount = Auth::check() ? Auth::user()->unreadNotifications()->count() : 0;
 
         // The original dashboard logic for orders is removed as per new UI
-        return view('customer.dashboard', compact('products', 'unreadCount', 'promotedProducts'));
+        return view('customer.dashboard', compact('products', 'unreadCount', 'promotedProducts', 'productAvailability', 'promotedProductAvailability'));
     }
 }
  

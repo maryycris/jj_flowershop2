@@ -14,8 +14,28 @@ class OrderFlowController extends Controller
     public function onlineValidate(Order $order)
     {
         $order->load('user', 'products', 'delivery');
+        
+        // Get inventory movement for this order
+        $inventoryService = new \App\Services\InventoryManagementService();
+        $inventoryMovement = $inventoryService->getOrderMovement($order);
+        
+        // If no movement exists yet, get preview number
+        if (!$inventoryMovement) {
+            $previewMovementNumber = $inventoryService->getPreviewMovementNumber();
+            $inventoryMovement = (object)['movement_number' => $previewMovementNumber];
+        }
+        
+        // Get product composition breakdown for each product in the order
+        $compositionService = new \App\Services\ProductCompositionService();
+        $productCompositions = [];
+        
+        foreach ($order->products as $product) {
+            $quantity = $product->pivot->quantity;
+            $productCompositions[$product->id] = $compositionService->getProductCompositionBreakdown($product->id, $quantity);
+        }
+        
         $view = auth()->user()->role === 'admin' ? 'admin.orders.online.validate' : 'clerk.orders.online.validate';
-        return view($view, compact('order'));
+        return view($view, compact('order', 'inventoryMovement', 'productCompositions'));
     }
 
     public function onlineInvoice(Order $order)
@@ -59,8 +79,18 @@ class OrderFlowController extends Controller
         // Get invoice data for display
         $invoice = $order->invoice;
         
+        // Get inventory movement for this order
+        $inventoryService = new \App\Services\InventoryManagementService();
+        $inventoryMovement = $inventoryService->getOrderMovement($order);
+        
+        // If no movement exists yet, get preview number
+        if (!$inventoryMovement) {
+            $previewMovementNumber = $inventoryService->getPreviewMovementNumber();
+            $inventoryMovement = (object)['movement_number' => $previewMovementNumber];
+        }
+        
         $view = auth()->user()->role === 'admin' ? 'admin.orders.online.done' : 'clerk.orders.online.done';
-        return view($view, compact('order', 'invoice'));
+        return view($view, compact('order', 'invoice', 'inventoryMovement'));
     }
 
     // Walk-in Orders Flow
@@ -72,15 +102,26 @@ class OrderFlowController extends Controller
     public function walkinQuotation(Order $order)
     {
         $order->load('user', 'products', 'delivery');
+        
+        // Get inventory movement for this order
+        $inventoryService = new \App\Services\InventoryManagementService();
+        $inventoryMovement = $inventoryService->getOrderMovement($order);
+        
+        // If no movement exists yet, get preview number
+        if (!$inventoryMovement) {
+            $previewMovementNumber = $inventoryService->getPreviewMovementNumber();
+            $inventoryMovement = (object)['movement_number' => $previewMovementNumber];
+        }
+        
         $view = auth()->user()->role === 'admin' ? 'admin.orders.walkin.quotation' : 'clerk.orders.walkin.quotation';
-        return view($view, compact('order'));
+        return view($view, compact('order', 'inventoryMovement'));
     }
 
     public function walkinCreateInvoice(Order $order)
     {
-        $order->load('user', 'products', 'delivery');
-        $view = auth()->user()->role === 'admin' ? 'admin.orders.walkin.create_invoice' : 'clerk.orders.walkin.create_invoice';
-        return view($view, compact('order'));
+        // Skip invoice page and go directly to validate
+        $route = auth()->user()->role === 'admin' ? 'admin.orders.walkin.validate' : 'clerk.orders.walkin.validate';
+        return redirect()->route($route, $order);
     }
 
     public function walkinInvoice(Order $order)
@@ -93,8 +134,28 @@ class OrderFlowController extends Controller
     public function walkinValidate(Order $order)
     {
         $order->load('user', 'products', 'delivery');
+        
+        // Get inventory movement for this order
+        $inventoryService = new \App\Services\InventoryManagementService();
+        $inventoryMovement = $inventoryService->getOrderMovement($order);
+        
+        // If no movement exists yet, get preview number
+        if (!$inventoryMovement) {
+            $previewMovementNumber = $inventoryService->getPreviewMovementNumber();
+            $inventoryMovement = (object)['movement_number' => $previewMovementNumber];
+        }
+        
+        // Get product composition breakdown for each product in the order
+        $compositionService = new \App\Services\ProductCompositionService();
+        $productCompositions = [];
+        
+        foreach ($order->products as $product) {
+            $quantity = $product->pivot->quantity;
+            $productCompositions[$product->id] = $compositionService->getProductCompositionBreakdown($product->id, $quantity);
+        }
+        
         $view = auth()->user()->role === 'admin' ? 'admin.orders.walkin.validate' : 'clerk.orders.walkin.validate';
-        return view($view, compact('order'));
+        return view($view, compact('order', 'inventoryMovement', 'productCompositions'));
     }
 
     public function walkinValidateConfirmation(Order $order)
@@ -136,13 +197,24 @@ class OrderFlowController extends Controller
     public function walkinDone(Order $order)
     {
         $order->load('user', 'products', 'delivery');
+        
+        // Get inventory movement for this order
+        $inventoryService = new \App\Services\InventoryManagementService();
+        $inventoryMovement = $inventoryService->getOrderMovement($order);
+        
+        // If no movement exists yet, get preview number
+        if (!$inventoryMovement) {
+            $previewMovementNumber = $inventoryService->getPreviewMovementNumber();
+            $inventoryMovement = (object)['movement_number' => $previewMovementNumber];
+        }
+        
         $view = auth()->user()->role === 'admin' ? 'admin.orders.walkin.done' : 'clerk.orders.walkin.done';
-        return view($view, compact('order'));
+        return view($view, compact('order', 'inventoryMovement'));
     }
 
     public function createWalkinOrder()
     {
-        // Get products for the form
+        // Get products for the form from Inventory products
         $products = \App\Models\Product::where('status', true)->get();
         
         // Determine view based on URL or user role
@@ -153,6 +225,23 @@ class OrderFlowController extends Controller
         }
         
         return view($view, compact('products'));
+    }
+
+    /**
+     * Delivery-only Walk-in Order screen (mirrors customer checkout layout)
+     */
+    public function createWalkinDelivery()
+    {
+        // Use Catalog Products (approved & active) for selection
+        $catalogProducts = \App\Models\CatalogProduct::where('status', true)
+            ->where('is_approved', true)
+            ->with(['compositions.componentProduct'])
+            ->orderBy('name')
+            ->get();
+        $view = str_contains(request()->url(), '/admin/')
+            ? 'admin.orders.walkin.delivery'
+            : 'clerk.orders.walkin.delivery';
+        return view($view, [ 'catalogProducts' => $catalogProducts ]);
     }
 
     public function storeWalkinOrder(Request $request)
@@ -176,7 +265,9 @@ class OrderFlowController extends Controller
         
         foreach ($request->products as $productData) {
             $product = \App\Models\Product::find($productData['product_id']);
-            $totalPrice += $product->price * $productData['quantity'];
+            if ($product) {
+                $totalPrice += (float)$product->price * (int)$productData['quantity'];
+            }
         }
         $totalPrice += $shippingFee;
 
@@ -200,7 +291,7 @@ class OrderFlowController extends Controller
         // Attach products to order
         foreach ($request->products as $productData) {
             $order->products()->attach($productData['product_id'], [
-                'quantity' => $productData['quantity']
+                'quantity' => (int)$productData['quantity']
             ]);
         }
 
@@ -222,9 +313,9 @@ class OrderFlowController extends Controller
         $refererUrl = request()->header('referer');
         
         if (str_contains($requestUrl, '/admin/') || str_contains($refererUrl, '/admin/')) {
-            $route = 'admin.orders.walkin.quotation';
+            $route = 'admin.orders.walkin.invoice';
         } else {
-            $route = 'clerk.orders.walkin.quotation';
+            $route = 'clerk.orders.walkin.invoice';
         }
         
         return redirect()->route($route, $order);

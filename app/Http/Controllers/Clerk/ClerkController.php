@@ -9,6 +9,9 @@ use App\Models\CatalogProduct;
 use App\Models\Delivery;
 use App\Models\User;
 use App\Models\PendingInventoryChange;
+use App\Models\PendingInventoryAddition;
+use App\Models\InventoryLog;
+use Illuminate\Support\Facades\Schema;
 use App\Services\OrderStatusService;
 use Illuminate\Http\Request;
 
@@ -486,9 +489,9 @@ class ClerkController extends Controller
                         'submitted_by' => $submittedBy,
                         'status' => 'pending'
                     ]);
-                    
-                    // Create inventory log
-                    \App\Models\InventoryLog::create([
+
+                    // Create inventory log for admin review
+                    $logData = [
                         'product_id' => $productId,
                         'user_id' => $submittedBy,
                         'action' => 'edit',
@@ -496,9 +499,44 @@ class ClerkController extends Controller
                         'new_values' => $changes,
                         'description' => "Product edited by " . auth()->user()->name,
                         'ip_address' => request()->ip(),
-                        'user_agent' => request()->userAgent()
-                    ]);
+                        'user_agent' => request()->userAgent(),
+                    ];
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('inventory_logs','status')) {
+                        $logData['status'] = 'pending';
+                    }
+                    InventoryLog::create($logData);
                     
+                    $changesCount++;
+                }
+            }
+
+            // Process newly added, staged products (no product_id yet)
+            $newProducts = json_decode($request->input('new_products', '[]'), true);
+            foreach ($newProducts as $newProduct) {
+                if (is_array($newProduct) && !empty($newProduct)) {
+                    // Only write to PendingInventoryAddition if the table exists
+                    if (Schema::hasTable('pending_inventory_additions')) {
+                        PendingInventoryAddition::create([
+                            'changes' => $newProduct,
+                            'submitted_by' => $submittedBy,
+                            'status' => 'pending',
+                        ]);
+                    }
+                    // Also write as pending create in logs (use product_id=0 to avoid NOT NULL issues)
+                    $logCreate = [
+                        'product_id' => null,
+                        'user_id' => $submittedBy,
+                        'action' => 'create',
+                        'old_values' => null,
+                        'new_values' => $newProduct,
+                        'description' => 'Clerk staged new product',
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent(),
+                    ];
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('inventory_logs','status')) {
+                        $logCreate['status'] = 'pending';
+                    }
+                    InventoryLog::create($logCreate);
                     $changesCount++;
                 }
             }
@@ -529,7 +567,7 @@ class ClerkController extends Controller
                 ]);
                 
                 // Create inventory log
-                \App\Models\InventoryLog::create([
+                $logDelete = [
                     'product_id' => $productId,
                     'user_id' => $submittedBy,
                     'action' => 'delete',
@@ -538,7 +576,11 @@ class ClerkController extends Controller
                     'description' => "Product marked for deletion by " . auth()->user()->name,
                     'ip_address' => request()->ip(),
                     'user_agent' => request()->userAgent()
-                ]);
+                ];
+                if (\Illuminate\Support\Facades\Schema::hasColumn('inventory_logs','status')) {
+                    $logDelete['status'] = 'pending';
+                }
+                \App\Models\InventoryLog::create($logDelete);
                 
                 $changesCount++;
             }

@@ -56,6 +56,15 @@ class OrderStatusService
                 ]);
             }
 
+            // Create inventory movements for approved order
+            try {
+                $inventoryService = new \App\Services\InventoryManagementService();
+                $inventoryService->createOrderMovement($order->fresh('products'), $approvedBy);
+            } catch (\Throwable $e) {
+                Log::error("Inventory movement creation failed for order {$order->id}: {$e->getMessage()}");
+                // Don't fail the approval if inventory tracking fails
+            }
+
             DB::commit();
             
             Log::info("Order {$order->id} approved by user {$approvedBy} with invoice status: {$invoiceStatus}");
@@ -253,8 +262,8 @@ class OrderStatusService
 
             // Trigger inventory decrease when order is completed/received
             try {
-                $inventoryService = new \App\Services\InventoryService();
-                $inventoryService->updateInventoryOnReceived($order->fresh('products'));
+                $inventoryService = new \App\Services\InventoryManagementService();
+                $inventoryService->createOrderMovement($order->fresh('products'), $completedBy);
             } catch (\Throwable $e) {
                 Log::error("Inventory update on completion failed for order {$order->id}: {$e->getMessage()}");
             }

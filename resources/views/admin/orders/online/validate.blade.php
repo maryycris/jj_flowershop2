@@ -19,7 +19,7 @@
                             $badge = $statusMap[$status] ?? $statusMap['pending'];
                         @endphp
                         <div class="ms-2 small text-muted">{{ sprintf('%05d', $order->id) }}</div>
-                        <div class="ms-2 small text-muted">OUT / 0001</div>
+                        <div class="ms-2 small text-muted">{{ $inventoryMovement ? $inventoryMovement->movement_number : 'OUT / 0001' }}</div>
                         <div class="ms-auto d-flex align-items-center gap-2">
                             <button type="button" class="btn btn-light d-flex align-items-center" style="border:1px solid #e6e6e6;" onclick="showMoves()">
                                 <i class="bi bi-list me-1"></i>
@@ -43,7 +43,7 @@
                     <div class="px-3 pt-3 pb-4">
                         <div class="row g-0">
                             <div class="col-md-6">
-                                <div class="p-3 fw-semibold">INVENTORY / OUT / 0001</div>
+                                <div class="p-3 fw-semibold">INVENTORY / {{ $inventoryMovement ? $inventoryMovement->movement_number : 'OUT / 0001' }}</div>
                             </div>
                             <div class="col-md-6">
                                 <div class="p-3 fw-semibold">Delivery Address</div>
@@ -79,8 +79,31 @@
                                             @php
                                                 $demand = (int) ($product->pivot->quantity ?? 0);
                                                 $stockAvailable = (int) ($product->stock ?? 0);
-                                                $quantityToProvide = max(0, min($demand, $stockAvailable));
-                                                $isInsufficientStock = $stockAvailable < $demand;
+                                                
+                                                // Check if we can fulfill based on composition analysis
+                                                $canFulfillFromComposition = false;
+                                                $compositionMessage = '';
+                                                
+                                                if (isset($productCompositions[$product->id]) && $productCompositions[$product->id]) {
+                                                    $composition = $productCompositions[$product->id];
+                                                    $canFulfillFromComposition = $composition['can_fulfill'];
+                                                    $compositionMessage = $canFulfillFromComposition ? 
+                                                        'Can be made from materials' : 
+                                                        'Insufficient materials';
+                                                }
+                                                
+                                                // Use composition analysis if available, otherwise fall back to stock
+                                                if (isset($productCompositions[$product->id]) && $productCompositions[$product->id]) {
+                                                    $quantityToProvide = $canFulfillFromComposition ? $demand : 0;
+                                                    $isInsufficientStock = !$canFulfillFromComposition;
+                                                    $stockMessage = $compositionMessage;
+                                                } else {
+                                                    $quantityToProvide = max(0, min($demand, $stockAvailable));
+                                                    $isInsufficientStock = $stockAvailable < $demand;
+                                                    $stockMessage = $isInsufficientStock ? 
+                                                        "(Insufficient stock: {$stockAvailable} available)" : 
+                                                        "({$stockAvailable} available)";
+                                                }
                                             @endphp
                                             <tr class="{{ $isInsufficientStock ? 'table-warning' : '' }}">
                                                 <td>{{ $product->name }}</td>
@@ -89,7 +112,9 @@
                                                     <span class="{{ $isInsufficientStock ? 'text-warning' : '' }}">
                                                         {{ $quantityToProvide }}
                                                         @if($isInsufficientStock)
-                                                            <small class="text-muted">(Insufficient stock: {{ $stockAvailable }} available)</small>
+                                                            <small class="text-muted">({{ $stockMessage }})</small>
+                                                        @else
+                                                            <small class="text-success">({{ $stockMessage }})</small>
                                                         @endif
                                                     </span>
                                                 </td>
@@ -99,6 +124,94 @@
                                 </table>
                             </div>
                         </div>
+
+                        <!-- Product Composition Breakdown -->
+                        @if(isset($productCompositions) && !empty($productCompositions))
+                            <div class="mt-4">
+                                <div class="px-3 py-2 fw-semibold" style="display:inline-block;background:#f8f9fa;border:1px solid #dee2e6;border-bottom:0;border-top-left-radius:4px;border-top-right-radius:4px;">Product Composition Breakdown</div>
+                                <div class="table-responsive" style="border:1px solid #dee2e6;">
+                                    @foreach($order->products as $product)
+                                        @if(isset($productCompositions[$product->id]) && $productCompositions[$product->id])
+                                            @php
+                                                $composition = $productCompositions[$product->id];
+                                                $quantity = $product->pivot->quantity;
+                                            @endphp
+                                            <div class="p-3 border-bottom">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <h6 class="mb-0">{{ $product->name }} (Qty: {{ $quantity }})</h6>
+                                                    <span class="badge bg-{{ $composition['can_fulfill'] ? 'success' : 'danger' }}">
+                                                        {{ $composition['can_fulfill'] ? 'Can Fulfill' : 'Cannot Fulfill' }}
+                                                    </span>
+                                                </div>
+                                                
+                                                @if($composition['total_components'] > 0)
+                                                    <div class="row">
+                                                        <div class="col-md-12">
+                                                            <div class="table-responsive">
+                                                                <table class="table table-sm mb-0">
+                                                                    <thead class="table-light">
+                                                                        <tr>
+                                                                            <th>Material</th>
+                                                                            <th>Required</th>
+                                                                            <th>Available</th>
+                                                                            <th>Status</th>
+                                                                            <th>Shortage</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        @foreach($composition['components'] as $component)
+                                                                            <tr class="{{ $component['sufficient'] ? '' : 'table-warning' }}">
+                                                                                <td>
+                                                                                    <strong>{{ $component['composition']->component_name }}</strong>
+                                                                                    @if($component['component'])
+                                                                                        <br><small class="text-muted">ID: {{ $component['component']->id }}</small>
+                                                                                    @endif
+                                                                                </td>
+                                                                                <td>
+                                                                                    {{ $component['required_quantity'] }} {{ $component['composition']->unit }}
+                                                                                    <br><small class="text-muted">{{ $component['composition']->quantity }} per unit</small>
+                                                                                </td>
+                                                                                <td>
+                                                                                    {{ $component['available_stock'] }} {{ $component['composition']->unit }}
+                                                                                </td>
+                                                                                <td>
+                                                                                    <span class="badge bg-{{ $component['status_class'] }}">
+                                                                                        {{ $component['status'] }}
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td>
+                                                                                    @if($component['shortage'] > 0)
+                                                                                        <span class="text-danger">
+                                                                                            {{ $component['shortage'] }} {{ $component['composition']->unit }} short
+                                                                                        </span>
+                                                                                    @else
+                                                                                        <span class="text-success">✓</span>
+                                                                                    @endif
+                                                                                </td>
+                                                                            </tr>
+                                                                        @endforeach
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="mt-2">
+                                                        <small class="text-muted">
+                                                            Summary: {{ $composition['sufficient_components'] }}/{{ $composition['total_components'] }} materials sufficient
+                                                        </small>
+                                                    </div>
+                                                @else
+                                                    <div class="text-muted">
+                                                        <i class="fas fa-info-circle"></i> No composition data available for this product.
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>

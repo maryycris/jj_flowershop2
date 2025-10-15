@@ -88,108 +88,116 @@
         #clerkProfileDropdown::after {
             display: none !important;
         }
-        /* Clerk Sidebar Link Styles */
-        .clerk-sidebar-link {
+        /* --- Updated Sidebar Styles --- */
+        .sidebar-container {
+            min-width: 240px;
+            max-width: 260px;
+            background: #f8f9f4;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-profile {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .sidebar-profile-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar-profile-icon img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .sidebar-profile-icon i {
+            font-size: 3.5rem;
+            color: #888;
+        }
+        .sidebar-profile-label {
+            font-size: 1.1rem;
             color: #222;
             font-weight: 500;
-            font-size: 1.08rem;
+            margin: 0;
+        }
+        .sidebar-link {
+            display: block;
+            text-align: left;
+            color: #222;
             text-decoration: none;
-            transition: color 0.18s;
-            border-radius: 6px;
-            padding: 8px 12px;
+            padding: 12px 0 12px 32px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-radius: 0;
+            margin-bottom: 0;
             position: relative;
         }
-        .clerk-sidebar-link.active {
+        .sidebar-link.active {
             color: #4CAF50;
             font-weight: 600;
             border-left: 4px solid transparent;
             background: none;
         }
-        .clerk-sidebar-link:hover {
+        .sidebar-link:hover {
             color: #4CAF50;
             background: #F0F8F0;
         }
-        .clerk-sidebar-link.active::after {
+        .sidebar-link.active::after {
             content: '';
             display: block;
-            width: 110px;
+            width: 150px;
             height: 2.5px;
             background: #4CAF50;
             position: absolute;
-            left: 7px;
-            bottom: 6px;
+            bottom: 0;
+            left: 32px;
             border-radius: 2px;
         }
-        .clerk-sidebar-link:not(.active)::after {
+        .sidebar-link:not(.active)::after {
             display: none;
+        }
+        .sidebar-container .nav-item {
+            width: 100%;
+        }
+        /* Remove default list styles */
+        .sidebar-container ul.nav {
+            list-style: none;
+        }
+        /* Responsive: sidebar stays fixed width */
+        @media (max-width: 900px) {
+            .sidebar-container { min-width: 180px; max-width: 200px; }
+            .sidebar-link { font-size: 1rem; padding-left: 18px; }
+        }
+        /* Remove Bootstrap's default .active background */
+        .sidebar-link.active, .sidebar-link:active {
+            background: none !important;
         }
         .clerk-navbar-spacer { height: 28px; width: 100%; }
         
-        /* Clerk Sidebar Container */
-        .clerk-sidebar-container {
-            background: #F6FBF4;
-            min-width: 220px;
-            max-width: 260px;
-            height: calc(100vh - 108px);
-            position: fixed;
-            top: 108px;
-            left: 0;
-            z-index: 999;
-            padding: 20px 0;
-            overflow-y: auto;
+        
+        
+        #wrapper {
+            min-height: calc(100vh - 56px);
+            display: flex;
         }
         
-        .clerk-sidebar-profile {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 0 20px;
-        }
-        
-        .clerk-sidebar-profile-icon {
-            width: 60px;
-            height: 60px;
-            margin: 0 auto 10px;
-            border-radius: 50%;
-            overflow: hidden;
-            border: 3px solid #4CAF50;
-        }
-        
-        .clerk-sidebar-profile-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .clerk-sidebar-profile-icon i {
-            font-size: 3rem;
-            color: #888;
-        }
-        
-        .clerk-sidebar-profile-label {
-            font-size: 1rem;
-            color: #222;
-            font-weight: 500;
-        }
-        
-        .clerk-sidebar-nav {
-            padding: 0 15px;
-        }
-        
-        .clerk-sidebar-nav .nav-item {
-            margin-bottom: 5px;
-        }
-        
-        .clerk-main-content {
-            margin-left: 260px;
+        #page-content-wrapper {
             padding: 20px 4vw;
+            background: #f8f9fa;
+            min-height: calc(100vh - 56px);
         }
         
         @media (max-width: 768px) {
-            .clerk-sidebar-container {
+            .sidebar-container {
                 display: none;
             }
-            .clerk-main-content {
-                margin-left: 0;
+            #page-content-wrapper {
+                padding: 20px 2vw;
             }
         }
     </style>
@@ -235,7 +243,7 @@
                     <i class="bi bi-brush"></i>
                     <span>Customize</span>
                 </a>
-                <a href="<?php echo e(route('clerk.inventory.index')); ?>" class="clerk-navbar-link <?php if(request()->routeIs('clerk.inventory.*')): ?> active <?php endif; ?>">
+                <a href="<?php echo e(route('clerk.clerk.inventory.index')); ?>" class="clerk-navbar-link <?php if(request()->routeIs('clerk.clerk.inventory.*')): ?> active <?php endif; ?>">
                     <i class="bi bi-box"></i>
                     <span>Inventory</span>
                 </a>
@@ -254,51 +262,49 @@
             </div>
         </nav>
         
-        <?php if(!(request()->routeIs('clerk.product_catalog.*') || request()->routeIs('clerk.customize.*') || request()->routeIs('clerk.orders.*') || request()->routeIs('clerk.invoices.*') || request()->routeIs('clerk.inventory.*'))): ?>
-        <!-- Clerk Sidebar -->
-        <div class="clerk-sidebar-container">
-            <div class="clerk-sidebar-profile">
-                <div class="clerk-sidebar-profile-icon">
-                    <?php if(auth()->user()->profile_picture): ?>
-                        <img src="<?php echo e(asset('storage/' . auth()->user()->profile_picture)); ?>" alt="Profile Picture">
-                    <?php else: ?>
-                        <i class="bi bi-person-circle"></i>
-                    <?php endif; ?>
+        <?php if(!(request()->routeIs('clerk.product_catalog.*') || request()->routeIs('clerk.customize.*') || request()->routeIs('clerk.orders.*') || request()->routeIs('clerk.clerk.inventory.*') || request()->routeIs('clerk.inventory.*'))): ?>
+        <div class="d-flex" id="wrapper">
+            <!-- Clerk Sidebar -->
+            <div class="sidebar-container sidebar-clean d-flex flex-column align-items-center" style="background: #F6FBF4; min-width: 220px; max-width: 260px; height: 100vh; padding-top: 48px;">
+                <div class="sidebar-profile text-center mb-4">
+                    <div class="sidebar-profile-icon mx-auto mb-2">
+                        <?php if(auth()->user()->profile_picture): ?>
+                            <img src="<?php echo e(asset('storage/' . auth()->user()->profile_picture)); ?>" alt="Profile Picture" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #4CAF50;">
+                        <?php else: ?>
+                            <i class="bi bi-person-circle" style="font-size: 3.5rem; color: #888;"></i>
+                        <?php endif; ?>
+                    </div>
+                    <div class="sidebar-profile-label" style="font-size: 1.1rem; color: #222; font-weight: 500;"><?php echo e(auth()->user()->name ?? 'Clerk'); ?></div>
                 </div>
-                <div class="clerk-sidebar-profile-label"><?php echo e(auth()->user()->name ?? 'Clerk'); ?></div>
+                <nav class="w-100">
+                    <ul class="nav flex-column align-items-center align-items-md-start w-100">
+                        <li class="nav-item w-100 mb-1">
+                            <a href="<?php echo e(route('clerk.dashboard')); ?>" class="sidebar-link <?php if(request()->routeIs('clerk.dashboard')): ?> active <?php endif; ?>">Dashboard</a>
+                        </li>
+                        <li class="nav-item w-100 mb-1">
+                            <a href="<?php echo e(route('clerk.invoices.index')); ?>" class="sidebar-link <?php if(request()->routeIs('clerk.invoices.*')): ?> active <?php endif; ?>">Invoices</a>
+                        </li>
+                        <li class="nav-item w-100 mb-1">
+                            <a href="<?php echo e(route('clerk.profile.edit')); ?>" class="sidebar-link <?php if(request()->routeIs('clerk.profile.*')): ?> active <?php endif; ?>">Edit Profile</a>
+                        </li>
+                        <li class="nav-item w-100 mb-1">
+                            <a href="<?php echo e(route('clerk.notifications.index')); ?>" class="sidebar-link <?php if(request()->routeIs('clerk.notifications.*')): ?> active <?php endif; ?>">Notifications</a>
+                        </li>
+                    </ul>
+                </nav>
             </div>
             
-            <nav class="clerk-sidebar-nav">
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a href="<?php echo e(route('clerk.dashboard')); ?>" class="clerk-sidebar-link <?php if(request()->routeIs('clerk.dashboard')): ?> active <?php endif; ?>">
-                            <i class="bi bi-house me-2"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?php echo e(route('clerk.invoices.index')); ?>" class="clerk-sidebar-link <?php if(request()->routeIs('clerk.invoices.*')): ?> active <?php endif; ?>">
-                            <i class="bi bi-file-earmark-text me-2"></i>Invoices
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?php echo e(route('clerk.profile.edit')); ?>" class="clerk-sidebar-link <?php if(request()->routeIs('clerk.profile.*')): ?> active <?php endif; ?>">
-                            <i class="bi bi-person me-2"></i>Edit Profile
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?php echo e(route('clerk.notifications.index')); ?>" class="clerk-sidebar-link <?php if(request()->routeIs('clerk.notifications.*')): ?> active <?php endif; ?>">
-                            <i class="bi bi-bell me-2"></i>Notifications
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+            <!-- Main Content -->
+            <div id="page-content-wrapper" class="flex-grow-1">
+                <?php echo $__env->yieldContent('content'); ?>
+            </div>
         </div>
-        <?php endif; ?>
-        
+        <?php else: ?>
         <!-- Main Content -->
-        <div class="<?php if(!(request()->routeIs('clerk.product_catalog.*') || request()->routeIs('clerk.customize.*') || request()->routeIs('clerk.orders.*') || request()->routeIs('clerk.invoices.*') || request()->routeIs('clerk.inventory.*'))): ?>clerk-main-content <?php else: ?> container-fluid py-4 <?php endif; ?>" style="<?php if(!(request()->routeIs('clerk.product_catalog.*') || request()->routeIs('clerk.customize.*') || request()->routeIs('clerk.orders.*') || request()->routeIs('clerk.invoices.*') || request()->routeIs('clerk.inventory.*'))): ?><?php else: ?> padding-left: 4.0vw; padding-right: 4.0vw; <?php endif; ?>">
+        <div class="container-fluid py-4" style="padding-left: 4.0vw; padding-right: 4.0vw;">
             <?php echo $__env->yieldContent('content'); ?>
         </div>
+        <?php endif; ?>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- SweetAlert2 CDN -->

@@ -66,25 +66,7 @@
     }
 </style>
 
-<div class="clerk-dashboard-wrapper d-flex" style="background:#f4faf4;min-height:100vh;">
-    <div class="clerk-sidebar p-4 d-flex flex-column align-items-center" style="min-width:220px;max-width:250px;background:#f8f9f4;height:100vh;">
-        <div class="mb-4 text-center">
-            @if($user->profile_picture)
-                <img src="{{ asset('storage/' . $user->profile_picture) }}" alt="Profile Picture" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #4CAF50;">
-            @else
-                <i class="bi bi-person-circle" style="font-size:3.5rem;color:#888;"></i>
-            @endif
-            <div class="fw-semibold mt-2 mb-1">{{ $user->name ?? 'Clerk name' }}</div>
-        </div>
-        <div class="w-100">
-            <a href="{{ route('clerk.dashboard') }}" class="clerk-sidebar-link d-flex align-items-center mb-3 @if(request()->routeIs('clerk.dashboard')) active @endif">Dashboard</a>
-            <a href="{{ route('clerk.profile.edit') }}" class="clerk-sidebar-link d-flex align-items-center mb-3 @if(request()->routeIs('clerk.profile.edit')) active @endif">Edit profile</a>
-            <a href="{{ route('clerk.notifications.index') }}" class="clerk-sidebar-link d-flex align-items-center mb-3 @if(request()->routeIs('clerk.notifications.index')) active @endif">Notification</a>
-        </div>
-    </div>
-    
-    <div class="flex-grow-1 d-flex justify-content-center align-items-start" style="min-height:100vh; padding: 40px;">
-        <div class="container" style="max-width: 800px;">
+<div class="container" style="max-width: 800px;">
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     {{ session('success') }}
@@ -153,8 +135,6 @@
                     <button type="submit" class="btn btn-warning">Change Password</button>
                 </form>
             </div>
-        </div>
-    </div>
 </div>
 
 <!-- Edit Details Modal -->

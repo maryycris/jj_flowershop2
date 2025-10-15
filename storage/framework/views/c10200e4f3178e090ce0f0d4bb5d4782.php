@@ -47,85 +47,6 @@
     color: #666;
 }
 
-/* Inventory Update Request Styling */
-.update-request-section {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    margin-top: 20px;
-}
-
-.request-header {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 6px;
-    margin-bottom: 20px;
-}
-
-.request-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-bottom: 20px;
-}
-
-.btn-accept {
-    background: #28a745;
-    border: none;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-weight: 500;
-}
-
-.btn-accept:hover {
-    background: #218838;
-    color: white;
-}
-
-.btn-decline {
-    background: transparent;
-    border: 2px solid #dc3545;
-    color: #dc3545;
-    padding: 8px 18px;
-    border-radius: 6px;
-    font-weight: 500;
-}
-
-.btn-decline:hover {
-    background: #dc3545;
-    color: white;
-}
-
-/* Table styling for update request */
-.update-request-table {
-    margin-top: 20px;
-}
-
-.update-request-table .table {
-    margin-bottom: 0;
-}
-
-.update-request-table .table th {
-    background: #e6f4ea;
-    border-bottom: 2px solid #28a745;
-    font-weight: 600;
-    color: #2d5a2d;
-}
-
-/* Row border colors */
-.row-added {
-    border: 2px solid #28a745 !important;
-}
-
-.row-edited {
-    border: 2px solid #007bff !important;
-}
-
-.row-deleted {
-    border: 2px solid #dc3545 !important;
-}
 
 /* Modal styling */
 .history-modal .modal-dialog {
@@ -222,133 +143,6 @@
         </div>
     </div>
 
-    <!-- Inventory Update Request Section -->
-    <div class="update-request-section">
-        <h4>Inventory Update Request</h4>
-        
-        <div class="request-header">
-            <div class="row">
-                <div class="col-md-6">
-                    <strong>Clerk's name:</strong> <span id="clerkName">John Doe</span>
-                </div>
-                <div class="col-md-6">
-                    <strong>Date:</strong> <span id="requestDate">2025-10-10</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="request-actions">
-            <button class="btn btn-accept" id="acceptChangesBtn">
-                <i class="bi bi-check-circle me-1"></i> Accept Changes
-            </button>
-            <button class="btn btn-decline" id="declineChangesBtn">
-                <i class="bi bi-x-circle me-1"></i> Decline
-            </button>
-        </div>
-        
-        <!-- Category Tabs -->
-        <ul class="nav nav-tabs" id="updateRequestTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="fresh-flowers-tab" data-bs-toggle="tab" data-bs-target="#fresh-flowers" type="button" role="tab">Fresh Flowers</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="dried-flowers-tab" data-bs-toggle="tab" data-bs-target="#dried-flowers" type="button" role="tab">Dried Flowers</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="artificial-flowers-tab" data-bs-toggle="tab" data-bs-target="#artificial-flowers" type="button" role="tab">Artificial Flowers</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="greenery-tab" data-bs-toggle="tab" data-bs-target="#greenery" type="button" role="tab">Greenery</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="floral-supplies-tab" data-bs-toggle="tab" data-bs-target="#floral-supplies" type="button" role="tab">Floral Supplies</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="packaging-materials-tab" data-bs-toggle="tab" data-bs-target="#packaging-materials" type="button" role="tab">Packaging Materials</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="wrappers-tab" data-bs-toggle="tab" data-bs-target="#wrappers" type="button" role="tab">Wrappers</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="ribbon-tab" data-bs-toggle="tab" data-bs-target="#ribbon" type="button" role="tab">Ribbon</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="other-offers-tab" data-bs-toggle="tab" data-bs-target="#other-offers" type="button" role="tab">Other Offers</button>
-            </li>
-        </ul>
-        
-        <!-- Tab Content -->
-        <div class="tab-content" id="updateRequestTabContent">
-            <div class="tab-pane fade show active" id="fresh-flowers" role="tabpanel">
-                <div class="update-request-table">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Product Code</th>
-                                <th>Name</th>
-                                <th>Category</th>
-                                <th>Selling Price</th>
-                                <th>Acquisition Cost</th>
-                                <th>Reordering Rules (Min / Max)</th>
-                                <th>Qty On Hand</th>
-                                <th>Qty Consumed</th>
-                                <th>Qty Damaged</th>
-                                <th>Qty Sold</th>
-                                <th>Qty to Purchase (Max - On Hand)</th>
-                                <th>Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Sample data with different row borders -->
-                            <tr class="row-added">
-                                <td>06001</td>
-                                <td>Rose</td>
-                                <td>Fresh Flower</td>
-                                <td>120</td>
-                                <td>02/23/2025</td>
-                                <td>10 / 60</td>
-                                <td>1</td>
-                                <td>30</td>
-                                <td>15</td>
-                                <td>15</td>
-                                <td>15</td>
-                                <td>02/03/2025</td>
-                            </tr>
-                            <tr class="row-edited">
-                                <td>01002</td>
-                                <td>Tulip</td>
-                                <td>Fresh Flower</td>
-                                <td>70</td>
-                                <td>N/A</td>
-                                <td>10 / 50</td>
-                                <td>0</td>
-                                <td>50</td>
-                                <td>60</td>
-                                <td>60</td>
-                                <td>60</td>
-                                <td>02/03/2025</td>
-                            </tr>
-                            <tr class="row-deleted">
-                                <td>07003</td>
-                                <td>Yellow Tulip</td>
-                                <td>Fresh Flower</td>
-                                <td>400</td>
-                                <td>06/07/2025</td>
-                                <td>10 / 50</td>
-                                <td>0</td>
-                                <td>25</td>
-                                <td>40</td>
-                                <td>60</td>
-                                <td>60</td>
-                                <td>02/03/2025</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <!-- Other tab panes would go here -->
-        </div>
-    </div>
 </div>
 
 <!-- History Report Modal -->
@@ -514,42 +308,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Handle Accept Changes button
-    document.getElementById('acceptChangesBtn').addEventListener('click', function() {
-        if (confirm('Are you sure you want to accept these inventory changes? This will update the inventory for both admin and clerk.')) {
-            // Show loading state
-            this.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Processing...';
-            this.disabled = true;
-            
-            // Simulate processing
-            setTimeout(() => {
-                alert('Inventory changes accepted successfully! Changes have been saved to inventory history.');
-                
-                // Reset button
-                this.innerHTML = '<i class="bi bi-check-circle me-1"></i> Accept Changes';
-                this.disabled = false;
-                
-                // Here you would typically:
-                // 1. Update inventory for both admin and clerk
-                // 2. Save changes to inventory history
-                // 3. Remove or mark this request as processed
-                // 4. Refresh the page or update the UI
-                
-            }, 2000);
-        }
-    });
-    
-    // Handle Decline button
-    document.getElementById('declineChangesBtn').addEventListener('click', function() {
-        if (confirm('Are you sure you want to decline these inventory changes?')) {
-            alert('Inventory changes have been declined.');
-            
-            // Here you would typically:
-            // 1. Mark the request as declined
-            // 2. Notify the clerk
-            // 3. Remove or hide this request
-        }
-    });
     
     // Handle history search
     document.getElementById('historySearch').addEventListener('input', function() {
@@ -584,6 +342,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+function submitAdminAction(e, form) {
+    e.preventDefault();
+    fetch(form.action, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') } })
+        .then(r => r.json())
+        .then(data => { alert(data.message || 'Done'); location.reload(); })
+        .catch(() => alert('Request failed'));
+    return false;
+}
+
 </script>
 <?php $__env->stopPush(); ?>
 

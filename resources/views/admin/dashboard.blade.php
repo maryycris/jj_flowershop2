@@ -96,7 +96,7 @@
             <!-- Restock Card -->
             <div class="row mt-2 align-items-stretch">
                 <div class="col-md-6 col-lg-4">
-                    <a href="{{ route('admin.inventory.index') }}" style="text-decoration: none; color: inherit;">
+                    <a href="{{ route('admin.admin.inventory.index') }}" style="text-decoration: none; color: inherit;">
                     <div class="card dashboard-card dashboard-orange text-start p-3" style="min-width:260px;">
                         <div class="card-body p-0">
                             <div class="d-flex align-items-center mb-2">

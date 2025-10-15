@@ -111,7 +111,7 @@
                             <input type="text" class="form-control d-inline-block" style="width: 250px;" placeholder="Search...">
                             <input type="date" class="form-control d-inline-block" style="width: auto;">
                         </div>
-                        <a href="{{ route('clerk.orders.create') }}" class="btn btn-success">New</a>
+                        <a href="{{ route('clerk.orders.walkin.delivery') }}" class="btn btn-success">New</a>
                     </div>
                     <!-- Table -->
                     <div class="table-responsive">

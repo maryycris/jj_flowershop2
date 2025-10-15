@@ -3,133 +3,102 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\PendingInventoryChange;
 use App\Models\Product;
+use App\Models\InventoryLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AdminInventoryController extends Controller
 {
     public function index()
     {
-        $pendingChanges = PendingInventoryChange::with(['product', 'submittedBy'])
-            ->pending()
-            ->orderBy('created_at', 'desc')
+        // Get products for the inventory tab
+        $products = Product::orderBy('created_at', 'desc')->get();
+
+        // Get pending inventory logs for the inventory logs tab
+        $pendingLogs = InventoryLog::with(['product','user'])
+            ->where('status', 'pending')
+            ->orderBy('created_at','desc')
             ->get();
 
-        return view('admin.inventory.index', compact('pendingChanges'));
-    }
+        // Group pending logs by category for the UI tabs
+        $categories = [
+            'Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Greenery',
+            'Floral Supplies', 'Packaging Materials', 'Wrappers', 'Ribbon', 'Other Offers'
+        ];
 
-    public function reports()
-    {
-        // Get inventory history reports
-        // For now, return sample data - replace with actual database queries
-        $inventoryHistory = collect([
-            (object)['id' => 1, 'date' => '2025-10-10', 'user' => 'Admin', 'user_type' => 'admin'],
-            (object)['id' => 2, 'date' => '2025-10-09', 'user' => 'Clerk', 'user_type' => 'clerk'],
-            (object)['id' => 3, 'date' => '2025-10-08', 'user' => 'Admin', 'user_type' => 'admin'],
-            (object)['id' => 4, 'date' => '2025-10-07', 'user' => 'Clerk', 'user_type' => 'clerk'],
-            (object)['id' => 5, 'date' => '2025-10-06', 'user' => 'Admin', 'user_type' => 'admin'],
-            (object)['id' => 6, 'date' => '2025-10-05', 'user' => 'Clerk', 'user_type' => 'clerk'],
-            (object)['id' => 7, 'date' => '2025-10-04', 'user' => 'Admin', 'user_type' => 'admin'],
-            (object)['id' => 8, 'date' => '2025-10-03', 'user' => 'Clerk', 'user_type' => 'clerk'],
-        ]);
+        $logsByCategory = [];
+        foreach ($categories as $cat) { 
+            $logsByCategory[$cat] = collect(); 
+        }
 
-        // Get pending update requests from clerks
-        $updateRequests = collect([
-            (object)[
-                'id' => 1,
-                'clerk_name' => 'John Doe',
-                'date' => '2025-10-10',
-                'status' => 'pending',
-                'changes' => [
-                    (object)['type' => 'added', 'product_code' => '06001', 'name' => 'Rose'],
-                    (object)['type' => 'edited', 'product_code' => '01002', 'name' => 'Tulip'],
-                    (object)['type' => 'deleted', 'product_code' => '07003', 'name' => 'Yellow Tulip'],
-                ]
-            ]
-        ]);
-
-        return view('admin.inventory.reports', compact('inventoryHistory', 'updateRequests'));
-    }
-
-    public function approve(Request $request, $id)
-    {
-        try {
-            DB::beginTransaction();
-
-            $pendingChange = PendingInventoryChange::findOrFail($id);
+        foreach ($pendingLogs as $log) {
+            $cat = 'Other Offers'; // Default category
             
-            if ($pendingChange->action === 'edit') {
-                // Apply the changes to the actual product
-                $product = Product::findOrFail($pendingChange->product_id);
-                $changes = $pendingChange->changes;
-                
-                foreach ($changes as $field => $value) {
-                    if (in_array($field, ['name', 'category', 'price', 'cost_price', 'reorder_min', 'reorder_max', 'stock', 'qty_consumed', 'qty_damaged', 'qty_sold'])) {
-                        $product->$field = $value;
-                    }
-                }
-                $product->save();
-                
-            } elseif ($pendingChange->action === 'delete') {
-                // Delete the product
-                $product = Product::findOrFail($pendingChange->product_id);
-                $product->delete();
+            if ($log->action === 'create') {
+                $nv = (array)($log->new_values ?? []);
+                $cat = $nv['category'] ?? 'Other Offers';
+            } elseif ($log->product) {
+                $cat = $log->product->category ?? 'Other Offers';
             }
-
-            // Mark the pending change as approved
-            $pendingChange->update([
-                'status' => 'approved',
-                'reviewed_by' => auth()->id(),
-                'reviewed_at' => now(),
-                'admin_notes' => $request->input('admin_notes', '')
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Inventory change approved successfully.'
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Error approving change: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function reject(Request $request, $id)
-    {
-        try {
-            $pendingChange = PendingInventoryChange::findOrFail($id);
             
-            $pendingChange->update([
-                'status' => 'rejected',
-                'reviewed_by' => auth()->id(),
-                'reviewed_at' => now(),
-                'admin_notes' => $request->input('admin_notes', '')
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Inventory change rejected successfully.'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error rejecting change: ' . $e->getMessage()
-            ], 500);
+            // Ensure the category exists in our categories array
+            if (!in_array($cat, $categories)) {
+                $cat = 'Other Offers';
+            }
+            
+            $logsByCategory[$cat] = ($logsByCategory[$cat] ?? collect())->push($log);
         }
+        
+
+        return view('admin.inventory', compact('products', 'pendingLogs', 'logsByCategory', 'categories'));
     }
+
 
     public function getPendingCount()
     {
-        $count = PendingInventoryChange::pending()->count();
+        $count = InventoryLog::where('status', 'pending')->count();
         return response()->json(['count' => $count]);
+    }
+
+    /**
+     * Show inventory reports
+     */
+    public function reports(Request $request)
+    {
+        $inventoryService = new \App\Services\InventoryManagementService();
+        
+        // Get summary data
+        $summary = $inventoryService->getInventorySummary();
+        
+        // Get all products for filter
+        $products = Product::orderBy('name')->get();
+        
+        // Build movement history query
+        $movementsQuery = \App\Models\InventoryMovement::with(['product', 'user', 'order'])
+            ->orderBy('created_at', 'desc');
+        
+        // Apply filters
+        if ($request->filled('product_id')) {
+            $movementsQuery->where('product_id', $request->product_id);
+        }
+        
+        if ($request->filled('movement_type')) {
+            $movementsQuery->where('movement_type', $request->movement_type);
+        }
+        
+        if ($request->filled('date_from')) {
+            $movementsQuery->whereDate('created_at', '>=', $request->date_from);
+        }
+        
+        if ($request->filled('date_to')) {
+            $movementsQuery->whereDate('created_at', '<=', $request->date_to);
+        }
+        
+        // Paginate results
+        $movements = $movementsQuery->paginate(50);
+        
+        return view('admin.inventory.reports', compact('summary', 'products', 'movements'));
     }
 }

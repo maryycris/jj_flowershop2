@@ -411,6 +411,64 @@ class ProductController extends Controller
                 $message = !$isCurrentlyMarked ? 
                     'Product marked for deletion! Admin will review.' : 
                     'Product unmarked for deletion.';
+
+                // Also persist a pending record in inventory_logs (and pending_inventory_changes) so it appears in Admin Reports
+                try {
+                    if (!$isCurrentlyMarked) {
+                        // Marking for deletion → create pending log and pending change
+                        $oldValues = [
+                            'name' => $product->name,
+                            'category' => $product->category,
+                            'price' => $product->price,
+                            'cost_price' => $product->cost_price,
+                            'reorder_min' => $product->reorder_min,
+                            'reorder_max' => $product->reorder_max,
+                            'stock' => $product->stock,
+                            'qty_consumed' => $product->qty_consumed,
+                            'qty_damaged' => $product->qty_damaged,
+                            'qty_sold' => $product->qty_sold
+                        ];
+                        $log = \App\Models\InventoryLog::create([
+                            'product_id' => $product->id,
+                            'user_id' => auth()->id(),
+                            'action' => 'delete',
+                            'old_values' => $oldValues,
+                            'new_values' => null,
+                            'description' => 'Clerk marked product for deletion',
+                            'ip_address' => request()->ip(),
+                            'user_agent' => request()->userAgent(),
+                            'status' => \Illuminate\Support\Facades\Schema::hasColumn('inventory_logs','status') ? 'pending' : null,
+                        ]);
+                        // Create parallel pending change record if table exists
+                        if (\Illuminate\Support\Facades\Schema::hasTable('pending_inventory_changes')) {
+                            \App\Models\PendingInventoryChange::create([
+                                'product_id' => $product->id,
+                                'action' => 'delete',
+                                'changes' => null,
+                                'submitted_by' => auth()->id(),
+                                'status' => 'pending',
+                            ]);
+                        }
+                    } else {
+                        // Unmark → mark existing pending delete log as rejected (if any), and pending change too
+                        if (\Illuminate\Support\Facades\Schema::hasColumn('inventory_logs','status')) {
+                            \App\Models\InventoryLog::where('product_id', $product->id)
+                                ->where('action','delete')
+                                ->where('status','pending')
+                                ->orderByDesc('created_at')
+                                ->limit(1)
+                                ->update(['status' => 'rejected']);
+                        }
+                        if (\Illuminate\Support\Facades\Schema::hasTable('pending_inventory_changes')) {
+                            \App\Models\PendingInventoryChange::where('product_id', $product->id)
+                                ->where('action','delete')
+                                ->where('status','pending')
+                                ->update(['status' => 'rejected', 'reviewed_by' => auth()->id(), 'reviewed_at' => now(), 'admin_notes' => 'Unmarked by clerk']);
+                        }
+                    }
+                } catch (\Throwable $t) {
+                    // swallow logging issues to not block UI toggle
+                }
                 
                 return response()->json([
                     'success' => true,

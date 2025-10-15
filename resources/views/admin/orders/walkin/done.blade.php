@@ -9,7 +9,7 @@
                     <div class="p-3 d-flex align-items-center gap-3" style="border-bottom:1px solid #e6f0e6;">
                         <span class="badge bg-success">Done</span>
                         <div class="ms-2 small text-muted">{{ sprintf('%05d', $order->id) }}</div>
-                        <div class="ms-2 small text-muted">OUT / 0001</div>
+                        <div class="ms-2 small text-muted">{{ $inventoryMovement ? $inventoryMovement->movement_number : 'OUT / 0001' }}</div>
                         <div class="ms-auto d-flex align-items-center gap-2">
                             <button type="button" class="btn btn-light d-flex align-items-center" style="border:1px solid #e6e6e6;">
                                 <i class="bi bi-list me-1"></i>
@@ -30,7 +30,7 @@
                     <div class="px-3 pt-3 pb-4">
                         <div class="row g-0">
                             <div class="col-md-6">
-                                <div class="p-3 fw-semibold">INVENTORY / OUT / 0001</div>
+                                <div class="p-3 fw-semibold">INVENTORY / {{ $inventoryMovement ? $inventoryMovement->movement_number : 'OUT / 0001' }}</div>
                             </div>
                             <div class="col-md-6">
                                 <div class="p-3 fw-semibold">Delivery Address</div>

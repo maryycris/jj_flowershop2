@@ -112,6 +112,8 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     
     // Admin Walk-in Order Creation (must be before resource routes)
     Route::get('orders/create', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'createWalkinOrder'])->name('orders.create');
+    // Delivery-only walk-in order (mirrors customer checkout)
+    Route::get('orders/walkin/delivery', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'createWalkinDelivery'])->name('orders.walkin.delivery');
     Route::post('orders/store', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'storeWalkinOrder'])->name('orders.store');
     
     // Admin Online Order Flow
@@ -141,10 +143,7 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     Route::post('/notifications/{notification}/mark-as-read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
     
     // Inventory Logs
-    Route::get('/inventory-logs', [\App\Http\Controllers\Admin\InventoryLogController::class, 'index'])->name('inventory-logs.index');
-    Route::get('/inventory-logs/{inventoryLog}', [\App\Http\Controllers\Admin\InventoryLogController::class, 'show'])->name('inventory-logs.show');
-    Route::get('/inventory-logs/product/{product}', [\App\Http\Controllers\Admin\InventoryLogController::class, 'productLogs'])->name('inventory-logs.product');
-    Route::get('/inventory-logs/export/csv', [\App\Http\Controllers\Admin\InventoryLogController::class, 'export'])->name('inventory-logs.export');
+    // Inventory Logs routes removed
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::post('/reports/sales', [ReportController::class, 'generateSalesReport'])->name('reports.sales');
     Route::post('/reports/order-status', [ReportController::class, 'generateOrderStatusReport'])->name('reports.orderStatus');
@@ -154,11 +153,103 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     
     // Admin Inventory Management
     Route::get('/inventory', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'index'])->name('inventory.index');
-    Route::post('/inventory/approve/{id}', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'approve'])->name('inventory.approve');
-    Route::post('/inventory/reject/{id}', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'reject'])->name('inventory.reject');
-    
-    // Admin Inventory Reports
     Route::get('/inventory/reports', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'reports'])->name('inventory.reports');
+    Route::post('/inventory/approve/{id}', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'approve'])->name('admin.inventory.approve');
+    Route::post('/inventory/reject/{id}', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'reject'])->name('admin.inventory.reject');
+    
+    
+    // Inventory Log Management
+    Route::post('/inventory/approve-pending', function() {
+        $count = 0;
+        try {
+            $logsQuery = \App\Models\InventoryLog::with('product')->orderBy('created_at');
+            if (\Illuminate\Support\Facades\Schema::hasColumn('inventory_logs','status')) {
+                $logsQuery->where('status','pending');
+            }
+            $logs = $logsQuery->get();
+            foreach ($logs as $log) {
+                if ($log->action === 'create') {
+                    $data = (array)($log->new_values ?? []);
+                    // Sanitize numeric fields
+                    foreach (['price','cost_price','reorder_min','reorder_max','stock','qty_consumed','qty_damaged','qty_sold'] as $nf) {
+                        if (!isset($data[$nf]) || $data[$nf] === '' || !is_numeric($data[$nf])) { $data[$nf] = 0; }
+                        else { $data[$nf] = (int)$data[$nf]; }
+                    }
+                    $product = new \App\Models\Product();
+                    foreach (['name','category','price','cost_price','reorder_min','reorder_max','stock','qty_consumed','qty_damaged','qty_sold'] as $f) {
+                        if (array_key_exists($f, $data)) { $product->{$f} = $data[$f]; }
+                    }
+                    // Approve flags if columns exist
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('products','status')) { $product->status = true; }
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('products','is_approved')) { $product->is_approved = true; }
+                    $product->save();
+                } elseif ($log->action === 'edit' && $log->product) {
+                    $data = $log->new_values ?? [];
+                    foreach ($data as $k=>$v) { $log->product->{$k} = $v; }
+                    $log->product->save();
+                } elseif ($log->action === 'delete' && $log->product) {
+                    $log->product->delete();
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('inventory_logs','status')) {
+                    $log->status = 'approved';
+                }
+                $log->save();
+                $count++;
+            }
+            return response()->json(['success'=>true,'applied'=>$count,'message'=>"Applied {$count} change(s)."]);
+        } catch (\Throwable $e) {
+            return response()->json(['success'=>false,'message'=>'Error: '.$e->getMessage()], 500);
+        }
+    })->name('admin.inventory.approve-pending');
+
+    // Approve a single inventory log id (helper endpoint used by per-row approve button)
+    Route::post('/inventory/approve-log/{log}', function(\App\Models\InventoryLog $log) {
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('inventory_logs','status') && $log->status !== 'pending') {
+                return response()->json(['success'=>false,'message'=>'Already processed']);
+            }
+            if ($log->action === 'create') {
+                $data = (array)($log->new_values ?? []);
+                foreach (['price','cost_price','reorder_min','reorder_max','stock','qty_consumed','qty_damaged','qty_sold'] as $nf) {
+                    if (!isset($data[$nf]) || $data[$nf] === '' || !is_numeric($data[$nf])) { $data[$nf] = 0; }
+                    else { $data[$nf] = (int)$data[$nf]; }
+                }
+                $product = new \App\Models\Product();
+                foreach (['name','category','price','cost_price','reorder_min','reorder_max','stock','qty_consumed','qty_damaged','qty_sold'] as $f) {
+                    if (array_key_exists($f, $data)) { $product->{$f} = $data[$f]; }
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('products','is_approved')) { $product->is_approved = true; }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('products','status')) { $product->status = true; }
+                $product->save();
+            } elseif ($log->action === 'edit' && $log->product) {
+                foreach ((array)($log->new_values ?? []) as $k=>$v) { $log->product->{$k} = $v; }
+                $log->product->save();
+            } elseif ($log->action === 'delete' && $log->product) {
+                $log->product->delete();
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('inventory_logs','status')) { $log->status = 'approved'; }
+            $log->save();
+            return response()->json(['success'=>true]);
+        } catch (\Throwable $e) {
+            return response()->json(['success'=>false,'message'=>$e->getMessage()], 500);
+        }
+    })->name('admin.inventory.approve-single');
+
+    // Reject a single inventory log
+    Route::post('/inventory/reject-log/{log}', function(\App\Models\InventoryLog $log) {
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('inventory_logs','status')) {
+                $log->status = 'rejected';
+                $log->save();
+            } else {
+                // No status column; just delete the log to simulate rejection
+                $log->delete();
+            }
+            return response()->json(['success'=>true]);
+        } catch (\Throwable $e) {
+            return response()->json(['success'=>false,'message'=>$e->getMessage()], 500);
+        }
+    })->name('admin.inventory.reject-single');
     
     
     // Admin Customize (bouquet components)
@@ -168,6 +259,7 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     Route::put('/customize/{id}', [\App\Http\Controllers\Admin\CustomizeController::class, 'update'])->name('customize.update');
     Route::delete('/customize/{id}', [\App\Http\Controllers\Admin\CustomizeController::class, 'destroy'])->name('customize.destroy');
     Route::get('/inventory/pending-count', [\App\Http\Controllers\Admin\AdminInventoryController::class, 'getPendingCount'])->name('inventory.pending-count');
+    
     Route::get('/reports/sales', [ReportController::class, 'sales'])->name('reports.sales');
     Route::get('/chatbox', [AdminController::class, 'chatbox'])->name('chatbox');
     Route::post('/chatbox/send', [AdminController::class, 'sendMessage'])->name('chatbox.send');
@@ -175,10 +267,9 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     Route::post('orders/{order}/assign-delivery', [OrderController::class, 'assignDelivery'])->name('orders.assignDelivery');
     Route::post('orders/{order}/mark-ready', [OrderController::class, 'markReady'])->name('orders.mark-ready');
     Route::post('orders/{order}/mark-done', [OrderController::class, 'markDone'])->name('orders.mark-done');
-    Route::get('/inventory', [ProductController::class, 'inventory'])->name('inventory.index');
     Route::post('/inventory', [ProductController::class, 'storeInventory'])->name('inventory.store');
-    Route::put('/inventory/{product}', [ProductController::class, 'updateInventory'])->name('inventory.update');
-    Route::delete('/inventory/{product}', [ProductController::class, 'destroyInventory'])->name('inventory.destroy');
+    Route::put('/inventory/product/{product}', [ProductController::class, 'updateInventory'])->name('inventory.update');
+    Route::delete('/inventory/product/{product}', [ProductController::class, 'destroyInventory'])->name('inventory.destroy');
     Route::get('/profile', [AdminController::class, 'editProfile'])->name('profile');
     Route::post('/profile', [AdminController::class, 'updateProfile'])->name('profile.update');
     Route::post('/profile/password', [AdminController::class, 'updatePassword'])->name('profile.password');
@@ -226,12 +317,14 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\ClerkMiddleware::class])-
     Route::post('products/{product}/images/update', [ProductController::class, 'updateImages'])->name('products.updateImages');
     Route::delete('products/{product}/images/delete', [ProductController::class, 'deleteImage'])->name('products.deleteImage');
     Route::delete('products/{product}/images/delete-all', [ProductController::class, 'deleteAllImages'])->name('products.deleteAllImages');
-    Route::get('/inventory', [ClerkController::class, 'inventory'])->name('inventory.index');
+    Route::get('/inventory', [ClerkController::class, 'inventory'])->name('clerk.inventory.index');
     Route::post('/inventory', [ClerkController::class, 'storeInventory'])->name('inventory.store');
     Route::put('/inventory/{product}', [ClerkController::class, 'updateProduct'])->name('inventory.update');
     Route::delete('/inventory/{product}', [\App\Http\Controllers\ProductController::class, 'destroyInventory'])->name('inventory.destroy');
     Route::post('/inventory/submit-changes', [ClerkController::class, 'submitInventoryChanges'])->name('inventory.submit-changes');
     Route::get('/orders', [ClerkController::class, 'orders'])->name('orders.index');
+    // Clerk Walk-in Delivery page
+    Route::get('orders/walkin/delivery', [\App\Http\Controllers\Clerk\OrderFlowController::class, 'createWalkinDelivery'])->name('orders.walkin.delivery');
     Route::resource('orders', OrderController::class)->except(['index']);
     Route::post('orders/{order}/approve', [OrderController::class, 'approve'])->name('orders.approve');
     Route::post('orders/{order}/validate', [OrderController::class, 'validateOrder'])->name('orders.validate');

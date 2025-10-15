@@ -8,7 +8,7 @@
     <title>{{ config('app.name', 'JJ Flowershop') }}</title>
 
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -58,17 +58,23 @@
             margin-right: 10px;
         }
 
+        /* Brand font */
+        .brand-inclusive { font-family: 'Poppins', sans-serif; font-weight: 400; }
+
         .nav-link {
             color: rgba(255, 255, 255, 0.75) !important;
-            font-weight: 600;
+            font-weight: 400; /* non-bold */
             margin-right: 15px;
             transition: color 0.3s ease;
         }
+        .nav-link i { font-size: 1.15rem; }
 
         .nav-link:hover,
         .nav-link.active {
             color: white !important;
         }
+        .nav-link.active i { color: #fff !important; }
+        .icon-btn.active i { color: #fff !important; }
 
         .btn-primary {
             background-color: var(--primary-green);
@@ -99,6 +105,9 @@
             border-radius: 0.5rem;
             margin-top: 1rem;
         }
+
+        /* Brand sits flush; no hover */
+        .customer-brand { }
 
         /* Footer Styling */
         .footer {
@@ -196,93 +205,58 @@
         @endif
         <!-- New Top Navigation Bar for Customer (standardized for all customer pages) -->
         <nav class="customer-top-navbar" style="background: #8ACB88; color: #fff; padding: 0 6.0vw; width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw);">
-            <div class="container-fluid px-4 pt-2 pb-1">
-                <div class="d-flex align-items-center justify-content-center border-bottom pb-1" style="gap: 3rem;">
-                    <!-- Home link -->
-                    <a href="{{ route('customer.dashboard') }}" class="nav-link text-white d-flex align-items-center gap-2 @if(request()->routeIs('customer.dashboard')) active @endif" style="font-size: 0.9rem;"><i class="bi bi-house-door"></i> Home</a>
-                    
-                    <!-- Customize link -->
-                    <a href="{{ route('customer.products.bouquet-customize') }}" class="nav-link text-white d-flex align-items-center gap-2 @if(request()->routeIs('customer.products.bouquet-customize')) active @endif" style="font-size: 0.9rem;"><i class="bi bi-brush"></i> Customize</a>
-                    
-                    <!-- Notifications link -->
-                    <a href="{{ route('customer.notifications.index') }}" class="nav-link text-white d-flex align-items-center gap-2 position-relative @if(request()->routeIs('customer.notifications.index')) active @endif" style="font-size: 0.9rem;">
-                        <i class="bi bi-bell"></i> Notifications
-                        @if(isset($unreadCount) && $unreadCount > 0)
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">{{ $unreadCount }}</span>
-                        @endif
-                    </a>
-                    
-                    <!-- Customer name dropdown with profile picture -->
-                    <div class="dropdown">
-                        <button class="nav-link text-white d-flex align-items-center gap-2 btn btn-link p-0" type="button" id="customerUserDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.9rem; background: none; border: none;">
-                            @php
-                                $profileSrc = null;
-                                if (Auth::check()) {
-                                    $pp = Auth::user()->profile_picture ?? null;
-                                    if ($pp) {
-                                        $profileSrc = asset('storage/' . ltrim($pp, '/'));
-                                    }
-                                }
-                                if (!$profileSrc) {
-                                    $profileSrc = asset('images/default-avatar.png');
-                                }
-                            @endphp
-                            <img src="{{ $profileSrc }}" alt="Profile" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.6); background:#fff;" onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.png') }}';"> {{ Auth::user()->name ?? "customer's name" }}
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end smooth-dropdown" aria-labelledby="customerUserDropdown">
-                            <li><a class="dropdown-item" href="{{ route('customer.account.index') }}"><i class="bi bi-person"></i> MY ACCOUNT</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> LOGOUT</button>
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="d-flex align-items-center justify-content-between mt-2">
-                    <div class="d-flex align-items-center">
-                        <img src="/images/logo.png" alt="JJ Flower Shop" style="height: 48px; background: transparent;" class="me-2">
-                        <div class="fw-bold" style="font-size: 1.3rem; line-height: 1;">J ' J FLOWER<br><span style="font-size: 0.9rem; font-weight: 400;">SHOP <span class="fs-6">Est. 2023</span></span></div>
-                    </div>
-                    @if(request()->routeIs('customer.dashboard') || request()->routeIs('customer.products.*'))
-                    <div class="flex-grow-1 mx-4" style="max-width: 500px; position: relative;">
-                        <div class="input-group">
-                            <input id="globalSearchInput" type="text" class="form-control" placeholder="Search products..." aria-label="Search">
-                            <button id="globalFilterBtn" class="btn btn-light" type="button" title="Filter"><i class="bi bi-funnel"></i></button>
+            <div class="container-fluid px-4" style="padding-top: 4px; padding-bottom: 6px;">
+                <div class="d-flex justify-content-between" style="align-items: flex-start;">
+                    <!-- Brand - full navbar height -->
+                    <div class="d-flex align-items-center customer-brand" style="gap: .6rem; padding-top: 1px;">
+                        <img src="/images/logo.png" alt="JJ Flower Shop" style="height: 64px; background: transparent;" class="me-1">
+                        <div class="brand-inclusive" style="font-size: 1.8rem; line-height: 1; letter-spacing: .5px;">
+                            J ' J FLOWER
+                            <br>
+                            <span style="font-size: 1.8rem; font-weight: 400;">SHOP <span class="fs-6">Est. 2023</span></span>
                         </div>
-                        <!-- Filter Panel -->
-                        <div id="globalFilterPanel" class="card p-3" style="display:none; position:absolute; top: 44px; left:0; right:0; z-index:1060; box-shadow:0 8px 20px rgba(0,0,0,.1);">
-                            <div class="row g-2 align-items-end">
-                                <div class="col-12 col-md-4">
-                                    <label class="form-label mb-1">Category</label>
-                                    <select id="globalFilterCategory" class="form-select form-select-sm">
-                                        <option value="all">All</option>
-                                        <option value="bouquets">Bouquets</option>
-                                        <option value="packages">Packages</option>
-                                        <option value="gifts">Gifts</option>
-                                    </select>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <label class="form-label mb-1">Min Price</label>
-                                    <input id="globalFilterMin" type="number" min="0" class="form-control form-control-sm" placeholder="0">
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <label class="form-label mb-1">Max Price</label>
-                                    <input id="globalFilterMax" type="number" min="0" class="form-control form-control-sm" placeholder="9999">
-                                </div>
-                                <div class="col-12 col-md-2 d-grid">
-                                    <button id="globalFilterApply" class="btn btn-success btn-sm">Apply</button>
-                                </div>
+                    </div>
+
+                    <!-- Center block: links (top) + icons (bottom) -->
+                    <div class="d-flex flex-column flex-grow-1" style="max-width: 1000px; margin: 0 20px;">
+                        <div class="d-flex align-items-center justify-content-center customer-nav-links" style="gap: 2.2rem; padding-top: 0;">
+                        <a href="{{ route('customer.dashboard') }}" class="nav-link text-white d-flex align-items-center gap-2 @if(request()->routeIs('customer.dashboard')) active @endif" style="font-size: 0.95rem;"><i class="bi @if(request()->routeIs('customer.dashboard')) bi-house-fill @else bi-house-door @endif"></i> Home</a>
+                        <a href="{{ route('customer.products.bouquet-customize') }}" class="nav-link text-white d-flex align-items-center gap-2 @if(request()->routeIs('customer.products.bouquet-customize')) active @endif" style="font-size: 0.95rem;"><i class="bi @if(request()->routeIs('customer.products.bouquet-customize')) bi-brush-fill @else bi-brush @endif"></i> Customize</a>
+                        <a href="{{ route('customer.notifications.index') }}" class="nav-link text-white d-flex align-items-center gap-2 position-relative @if(request()->routeIs('customer.notifications.index')) active @endif" style="font-size: 0.95rem;">
+                            <i class="bi @if(request()->routeIs('customer.notifications.index')) bi-bell-fill @else bi-bell @endif"></i> Notifications
+                                @if(isset($unreadCount) && $unreadCount > 0)
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">{{ $unreadCount }}</span>
+                                @endif
+                            </a>
+                            <div class="dropdown">
+                                <button class="nav-link text-white d-flex align-items-center gap-2 btn btn-link p-0" type="button" id="customerUserDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.95rem; background: none; border: none;">
+                                    @php
+                                        $profileSrc = null;
+                                        if (Auth::check()) {
+                                            $pp = Auth::user()->profile_picture ?? null;
+                                            if ($pp) { $profileSrc = asset('storage/' . ltrim($pp, '/')); }
+                                        }
+                                        if (!$profileSrc) { $profileSrc = asset('images/default-avatar.png'); }
+                                    @endphp
+                                    <img src="{{ $profileSrc }}" alt="Profile" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.6); background:#fff;" onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.png') }}';"> {{ Auth::user()->name ?? "customer's name" }}
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end smooth-dropdown" aria-labelledby="customerUserDropdown">
+                                    <li><a class="dropdown-item" href="{{ route('customer.account.index') }}"><i class="bi bi-person"></i> MY ACCOUNT</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="POST" action="{{ route('logout') }}">
+                                            @csrf
+                                            <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> LOGOUT</button>
+                                        </form>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
-                    </div>
-                    @endif
-                    <div class="d-flex align-items-center gap-4">
-                        <a href="{{ route('customer.favorites') }}" class="icon-btn text-white position-relative" title="Add to Favorites" style="font-size: 1.5rem;"><i class="bi bi-heart"></i></a>
-                        <a href="{{ route('customer.cart.index') }}" class="icon-btn text-white position-relative"><i class="bi bi-cart" style="font-size: 1.5rem;"></i></a>
-                        <button class="icon-btn text-white position-relative" id="navbarChatBtn" title="Chat Support" style="background: none; border: none; font-size: 1.5rem; padding: 0 0.5rem 0 0;"><i class="bi bi-chat-dots"></i></button>
+                        <div class="d-flex align-items-center justify-content-end gap-4 customer-right-icons">
+                            <a href="{{ route('customer.favorites') }}" class="icon-btn text-white position-relative @if(request()->routeIs('customer.favorites')) active @endif" title="Favorites" style="font-size: 1.35rem;"><i class="bi @if(request()->routeIs('customer.favorites')) bi-heart-fill @else bi-heart @endif"></i></a>
+                            <a href="{{ route('customer.cart.index') }}" class="icon-btn text-white position-relative @if(request()->routeIs('customer.cart.index')) active @endif" title="Cart"><i class="bi @if(request()->routeIs('customer.cart.index')) bi-cart-fill @else bi-cart @endif" style="font-size: 1.35rem;"></i></a>
+                            <button class="icon-btn text-white position-relative @if(request()->routeIs('customer.chat.*')) active @endif" id="navbarChatBtn" title="Chat Support" style="background: none; border: none; font-size: 1.35rem; padding: 0 .5rem 0 0;"><i class="bi bi-chat-dots"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -328,6 +302,24 @@
                         .footer-icons > a { margin-right: 15px; }
                         .footer-icons > a:last-child { margin-right: 0; }
                         </style>
+    <style>
+        /* Divider line only beneath nav links */
+        .customer-nav-links { position: relative; }
+        .customer-nav-links::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0; bottom: -6px;
+            height: 2px; border-radius: 2px;
+            background: rgba(255,255,255,0.6);
+        }
+        /* Place right icons visually below the divider line */
+        .customer-right-icons { padding-top: 8px; align-self: flex-end; }
+        .customer-right-icons a,
+        .customer-right-icons button { margin-top: 2px; }
+        @media (max-width: 992px) {
+            .customer-right-icons { padding-top: 10px; }
+        }
+    </style>
                     </div>
                 </div>
             </div>
@@ -353,63 +345,54 @@
                 });
             }, 2000);
 
-            // Simple client-side search & filter for product grids on customer pages
-            const searchInput = document.getElementById('globalSearchInput');
-            const filterBtn = document.getElementById('globalFilterBtn');
-            const filterPanel = document.getElementById('globalFilterPanel');
-            const filterApply = document.getElementById('globalFilterApply');
-            const filterCategory = document.getElementById('globalFilterCategory');
-            const filterMin = document.getElementById('globalFilterMin');
-            const filterMax = document.getElementById('globalFilterMax');
+            // Product search and filter functionality for customer dashboard
+            const searchInput = document.getElementById('productSearchInput');
+            const filterBtn = document.getElementById('productFilterBtn');
+            const filterPanel = document.getElementById('productFilterPanel');
+            const filterMin = document.getElementById('productFilterMin');
+            const filterMax = document.getElementById('productFilterMax');
+            const filterApply = document.getElementById('productFilterApply');
+            const filterClear = document.getElementById('productFilterClear');
 
-            function getProductCards() {
-                // Works on dashboard and product index grids
-                return Array.from(document.querySelectorAll('.product-grid .card'));
+            function performSearch() {
+                const searchTerm = searchInput ? searchInput.value : '';
+                // preserve current category from URL (default to 'all')
+                const currentUrl = new URL(window.location.href);
+                const category = (currentUrl.searchParams.get('category') || 'all');
+                const minPrice = filterMin && filterMin.value ? filterMin.value : '';
+                const maxPrice = filterMax && filterMax.value ? filterMax.value : '';
+
+                // Build URL with search parameters
+                const url = new URL(window.location.href);
+                url.searchParams.set('search', searchTerm);
+                url.searchParams.set('category', category);
+                if (minPrice) url.searchParams.set('min_price', minPrice);
+                if (maxPrice) url.searchParams.set('max_price', maxPrice);
+
+                // Redirect to the same page with search parameters
+                window.location.href = url.toString();
             }
 
-            function normalize(text) { return (text || '').toString().toLowerCase(); }
-
-            function getCardData(card) {
-                const titleEl = card.querySelector('.card-title, h6');
-                const priceEl = card.querySelector('.product-price, .card-text');
-                const title = titleEl ? titleEl.textContent.trim() : '';
-                // extract numeric price
-                const priceText = priceEl ? priceEl.textContent.replace(/[^0-9.]/g, '') : '';
-                const price = parseFloat(priceText || '0') || 0;
-                return { title, price };
+            function clearFilters() {
+                if (searchInput) searchInput.value = '';
+                if (filterMin) filterMin.value = '';
+                if (filterMax) filterMax.value = '';
+                
+                // Redirect to clean URL
+                const url = new URL(window.location.href);
+                url.searchParams.delete('search');
+                url.searchParams.delete('min_price');
+                url.searchParams.delete('max_price');
+                window.location.href = url.toString();
             }
 
-            function applyFilters() {
-                const q = normalize(searchInput ? searchInput.value : '');
-                const cat = filterCategory ? filterCategory.value : 'all';
-                const min = filterMin && filterMin.value ? parseFloat(filterMin.value) : null;
-                const max = filterMax && filterMax.value ? parseFloat(filterMax.value) : null;
-
-                const cards = getProductCards();
-                cards.forEach(card => {
-                    const { title, price } = getCardData(card);
-
-                    // category check based on current page URL
-                    let inCategory = true;
-                    if (cat && cat !== 'all') {
-                        const urlCat = new URL(window.location.href, window.location.origin).searchParams.get('category') || 'all';
-                        inCategory = (urlCat.toLowerCase() === cat.toLowerCase());
-                    }
-
-                    let match = true;
-                    if (q && !normalize(title).includes(q)) match = false;
-                    if (min !== null && price < min) match = false;
-                    if (max !== null && price > max) match = false;
-                    if (!inCategory) match = false;
-
-                    card.closest('.col-6, .col-md-4, .col-lg-3').style.display = match ? '' : 'none';
-                });
-            }
-
+            // Event listeners
             if (filterBtn && filterPanel) {
                 filterBtn.addEventListener('click', function() {
                     filterPanel.style.display = (filterPanel.style.display === 'none' || !filterPanel.style.display) ? 'block' : 'none';
                 });
+                
+                // Close filter panel when clicking outside
                 document.addEventListener('click', function(e){
                     if (filterPanel.style.display === 'block') {
                         const within = filterPanel.contains(e.target) || filterBtn.contains(e.target);
@@ -419,17 +402,28 @@
             }
 
             if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        performSearch();
+                    }
+                });
+                // Optional: live typing debounce search
+                clearTimeout(searchInput.__t);
                 searchInput.addEventListener('input', function(){
-                    // small debounce
                     clearTimeout(searchInput.__t);
-                    searchInput.__t = setTimeout(applyFilters, 180);
+                    searchInput.__t = setTimeout(performSearch, 400);
                 });
             }
+
             if (filterApply) {
                 filterApply.addEventListener('click', function(){
-                    applyFilters();
+                    performSearch();
                     if (filterPanel) filterPanel.style.display = 'none';
                 });
+            }
+
+            if (filterClear) {
+                filterClear.addEventListener('click', clearFilters);
             }
         });
     </script>

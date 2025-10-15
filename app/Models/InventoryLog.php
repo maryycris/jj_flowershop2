@@ -13,6 +13,7 @@ class InventoryLog extends Model
         'product_id',
         'user_id',
         'action',
+        'status',
         'old_values',
         'new_values',
         'description',

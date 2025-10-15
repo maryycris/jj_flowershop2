@@ -203,7 +203,7 @@
         <a href="{{ route('admin.chatbox') }}" class="nav-link @if(request()->routeIs('admin.chatbox')) active @endif"><i class="bi bi-chat"></i> Chat</a>
     </div>
 </div>
-@if(!(request()->routeIs('admin.orders.*') || request()->routeIs('admin.walkInOrders.*') || request()->routeIs('admin.products.*') || request()->routeIs('admin.inventory.*') || request()->routeIs('admin.chatbox') || request()->routeIs('admin.customize.*')))
+@if(!(request()->routeIs('admin.orders.*') || request()->routeIs('admin.walkInOrders.*') || request()->routeIs('admin.products.*') || request()->routeIs('admin.admin.inventory.*') || request()->routeIs('admin.chatbox') || request()->routeIs('admin.customize.*')))
 <div class="d-flex" id="wrapper">
     <!-- Sidebar -->
     <div class="sidebar-container sidebar-clean d-flex flex-column align-items-center" style="background: #F6FBF4; min-width: 220px; max-width: 260px; height: 100vh; padding-top: 48px; ">
@@ -233,7 +233,7 @@
                     <a href="{{ route('admin.notifications.index') }}" class="sidebar-link @if(request()->routeIs('admin.notifications.index')) active @endif">Notifications</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
-                    <a href="{{ route('admin.inventory-logs.index') }}" class="sidebar-link @if(request()->routeIs('admin.inventory-logs.*')) active @endif">Inventory Logs</a>
+                    <!-- Inventory Logs temporarily hidden -->
                 </li>
                 <li class="nav-item w-100 mb-1">
                     <a href="{{ route('admin.loyalty.index') }}" class="sidebar-link @if(request()->routeIs('admin.loyalty.*')) active @endif">Loyalty Cards</a>

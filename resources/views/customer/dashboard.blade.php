@@ -23,13 +23,55 @@
                         @endforeach
                     @else
                         @foreach($promotedProducts as $i => $product)
-                        <div class="carousel-item @if($i === 0) active @endif text-center">
-                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;">
+                        @php
+                            $isPromotedOutOfStock = isset($promotedProductAvailability[$product->id]) && !$promotedProductAvailability[$product->id]['can_fulfill'];
+                        @endphp
+                        <div class="carousel-item @if($i === 0) active @endif text-center" style="position: relative;">
+                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%; @if($isPromotedOutOfStock) filter: grayscale(50%); @endif">
+                            @if($isPromotedOutOfStock)
+                                <div class="position-absolute" style="top: 10px; right: 10px; z-index: 10;">
+                                    <span class="badge bg-danger" style="font-size: 0.6rem;">OUT OF STOCK</span>
+                                </div>
+                            @endif
                             <div class="mt-1 fw-bold" style="font-size: 1rem;">{{ $product->name }}</div>
                             <div class="text-success" style="font-size: 0.95rem;">₱{{ number_format($product->price, 2) }}</div>
+                            @if($isPromotedOutOfStock)
+                                <small class="text-muted" style="font-size: 0.7rem;">Insufficient materials</small>
+                            @endif
                         </div>
                         @endforeach
                     @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="mx-auto mb-3" style="max-width: 1000px;">
+        <div class="p-0">
+            <div class="row g-2 align-items-end">
+                <div class="col-12">
+                    <div class="input-group">
+                        <input id="productSearchInput" type="text" class="form-control" placeholder="Search products..." aria-label="Search" value="{{ request('search', '') }}">
+                        <button id="productFilterBtn" class="btn btn-outline-success" type="button" title="Filter"><i class="bi bi-funnel"></i></button>
+                    </div>
+                </div>
+            </div>
+            <!-- Advanced Filter Panel -->
+            <div id="productFilterPanel" class="card p-3 mt-2" style="display:none;">
+                <div class="row g-2 align-items-end">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label mb-1">Min Price</label>
+                        <input id="productFilterMin" type="number" min="0" class="form-control form-control-sm" placeholder="0" value="{{ request('min_price', '') }}">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label mb-1">Max Price</label>
+                        <input id="productFilterMax" type="number" min="0" class="form-control form-control-sm" placeholder="9999" value="{{ request('max_price', '') }}">
+                    </div>
+                    <div class="col-12 col-md-6 d-flex gap-2">
+                        <button id="productFilterApply" class="btn btn-success btn-sm">Apply Filters</button>
+                        <button id="productFilterClear" class="btn btn-outline-secondary btn-sm">Clear</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -56,22 +98,42 @@
         <hr class="my-2" style="border: 2px solid #1f3b2a; border-radius: 1px; margin-left: 15px; margin-right: 15px;">
         <div class="row g-2 product-grid" style="padding-left: 15px; padding-right: 15px;">
                 @forelse($products as $product)
+                @php
+                    $isOutOfStock = isset($productAvailability[$product->id]) && !$productAvailability[$product->id]['can_fulfill'];
+                @endphp
                 <div class="col-6 col-md-4 col-lg-3">
-                    <a href="#" class="text-decoration-none text-dark" onclick='console.log("Clicking product:", {{ $product->id }}); openProductModal({
-                        id: {{ $product->id }},
-                        name: {!! json_encode($product->name) !!},
-                        price: "{{ $product->price }}",
-                        image: "{{ asset('storage/' . $product->image) }}",
-                        description: {!! json_encode($product->description ?? '') !!}
-                    }); return false;'>
-                        <div class="card product-card h-100" style="border: none; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; background: transparent;">
-                            <img src="{{ asset('storage/' . $product->image) }}" class="card-img-top product-image" alt="{{ $product->name }}" style="height: 240px; object-fit: cover; border-radius: 8px 8px 0 0;">
-                            <div class="card-body text-center" style="background: transparent; padding: 20px 15px 15px 15px;">
-                                <h6 class="card-title mb-2" style="font-size: 0.8rem; font-weight: 600; color: #2c3e50; line-height: 1.2;">{{ $product->name }}</h6>
-                                <p class="card-text product-price mb-0" style="color: #27ae60; font-weight: 700; font-size: 0.85rem;">₱{{ number_format($product->price, 2) }}</p>
+                    @if($isOutOfStock)
+                        <div class="text-decoration-none text-dark" style="opacity: 0.6;">
+                            <div class="card product-card h-100" style="border: none; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: transparent; position: relative;">
+                                <img src="{{ asset('storage/' . $product->image) }}" class="card-img-top product-image" alt="{{ $product->name }}" style="height: 240px; object-fit: cover; border-radius: 8px 8px 0 0; filter: grayscale(50%);">
+                                <!-- OUT OF STOCK Overlay -->
+                                <div class="position-absolute" style="top: 10px; right: 10px; z-index: 10;">
+                                    <span class="badge bg-danger" style="font-size: 0.7rem;">OUT OF STOCK</span>
+                                </div>
+                                <div class="card-body text-center" style="background: transparent; padding: 20px 15px 15px 15px;">
+                                    <h6 class="card-title mb-2" style="font-size: 0.8rem; font-weight: 600; color: #2c3e50; line-height: 1.2;">{{ $product->name }}</h6>
+                                    <p class="card-text product-price mb-0" style="color: #27ae60; font-weight: 700; font-size: 0.85rem;">₱{{ number_format($product->price, 2) }}</p>
+                                    <small class="text-muted" style="font-size: 0.7rem;">Insufficient materials</small>
+                                </div>
                             </div>
                         </div>
-                    </a>
+                    @else
+                        <a href="#" class="text-decoration-none text-dark" onclick='console.log("Clicking product:", {{ $product->id }}); openProductModal({
+                            id: {{ $product->id }},
+                            name: {!! json_encode($product->name) !!},
+                            price: "{{ $product->price }}",
+                            image: "{{ asset('storage/' . $product->image) }}",
+                            description: {!! json_encode($product->description ?? '') !!}
+                        }); return false;'>
+                            <div class="card product-card h-100" style="border: none; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; background: transparent;">
+                                <img src="{{ asset('storage/' . $product->image) }}" class="card-img-top product-image" alt="{{ $product->name }}" style="height: 240px; object-fit: cover; border-radius: 8px 8px 0 0;">
+                                <div class="card-body text-center" style="background: transparent; padding: 20px 15px 15px 15px;">
+                                    <h6 class="card-title mb-2" style="font-size: 0.8rem; font-weight: 600; color: #2c3e50; line-height: 1.2;">{{ $product->name }}</h6>
+                                    <p class="card-text product-price mb-0" style="color: #27ae60; font-weight: 700; font-size: 0.85rem;">₱{{ number_format($product->price, 2) }}</p>
+                                </div>
+                            </div>
+                        </a>
+                    @endif
                 </div>
                 @empty
                 <div class="col-12">
@@ -171,6 +233,48 @@
         padding: 0;
         box-shadow: none;
         min-height: 300px;
+    }
+    
+    /* Search bar styling (no white container) */
+    #productSearchInput {
+        border: 2px solid #e9ecef;
+        border-radius: 8px 0 0 8px;
+        transition: border-color 0.3s ease;
+        background: #fff;
+    }
+    
+    #productSearchInput:focus {
+        border-color: #27ae60;
+        box-shadow: 0 0 0 0.2rem rgba(39, 174, 96, 0.25);
+    }
+    
+    #productFilterBtn {
+        border: 2px solid #27ae60;
+        border-left: none;
+        border-radius: 0 8px 8px 0;
+        transition: all 0.3s ease;
+    }
+    
+    #productFilterBtn:hover {
+        background-color: #27ae60;
+        color: white;
+    }
+    
+    #productFilterPanel {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        background: #f8f9fa;
+    }
+    
+    #productFilterMin, #productFilterMax {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        transition: border-color 0.3s ease;
+    }
+    
+    #productFilterMin:focus, #productFilterMax:focus {
+        border-color: #27ae60;
+        box-shadow: 0 0 0 0.2rem rgba(39, 174, 96, 0.25);
     }
 </style>
 

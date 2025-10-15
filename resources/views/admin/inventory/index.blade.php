@@ -22,14 +22,18 @@
                             <small class="text-muted">{{ $change->created_at->diffForHumans() }}</small>
                         </div>
                         <div class="card-body">
-                            <h6 class="card-title">{{ $change->product->name }}</h6>
+                            <h6 class="card-title">{{ $change->product->name ?? 'Product Deleted' }}</h6>
                             <p class="card-text">
-                                <strong>Product Code:</strong> {{ $change->product->code ?? $change->product->id }}<br>
-                                <strong>Category:</strong> {{ $change->product->category }}<br>
-                                <strong>Submitted by:</strong> {{ $change->submittedBy->name }}
+                                <strong>Product Code:</strong> {{ $change->product->code ?? $change->product->id ?? 'N/A' }}<br>
+                                <strong>Category:</strong> {{ $change->product->category ?? 'N/A' }}<br>
+                                <strong>Submitted by:</strong> {{ $change->submittedBy->name ?? 'Unknown' }}
                             </p>
                             
-                            @if($change->action === 'edit' && $change->changes)
+                            @if(!$change->product)
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> This product has been deleted and cannot be processed.
+                                </div>
+                            @elseif($change->action === 'edit' && $change->changes)
                                 <div class="mt-3">
                                     <h6>Changes:</h6>
                                     <div class="table-responsive">
@@ -71,18 +75,28 @@
                             @endif
                         </div>
                         <div class="card-footer">
-                            <div class="row">
-                                <div class="col-6">
-                                    <button class="btn btn-success btn-sm w-100" onclick="approveChange({{ $change->id }})">
-                                        <i class="fas fa-check"></i> Approve
-                                    </button>
+                            @if($change->product)
+                                <div class="row">
+                                    <div class="col-6">
+                                        <button class="btn btn-success btn-sm w-100" onclick="approveChange({{ $change->id }})">
+                                            <i class="fas fa-check"></i> Approve
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-danger btn-sm w-100" onclick="rejectChange({{ $change->id }})">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="col-6">
-                                    <button class="btn btn-danger btn-sm w-100" onclick="rejectChange({{ $change->id }})">
-                                        <i class="fas fa-times"></i> Reject
-                                    </button>
+                            @else
+                                <div class="row">
+                                    <div class="col-12">
+                                        <button class="btn btn-secondary btn-sm w-100" disabled>
+                                            <i class="fas fa-ban"></i> Cannot Process - Product Deleted
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
+                            @endif
                         </div>
                     </div>
                 </div>

@@ -203,7 +203,7 @@
         <a href="<?php echo e(route('admin.chatbox')); ?>" class="nav-link <?php if(request()->routeIs('admin.chatbox')): ?> active <?php endif; ?>"><i class="bi bi-chat"></i> Chat</a>
     </div>
 </div>
-<?php if(!(request()->routeIs('admin.orders.*') || request()->routeIs('admin.walkInOrders.*') || request()->routeIs('admin.products.*') || request()->routeIs('admin.inventory.*') || request()->routeIs('admin.chatbox') || request()->routeIs('admin.customize.*'))): ?>
+<?php if(!(request()->routeIs('admin.orders.*') || request()->routeIs('admin.walkInOrders.*') || request()->routeIs('admin.products.*') || request()->routeIs('admin.admin.inventory.*') || request()->routeIs('admin.chatbox') || request()->routeIs('admin.customize.*'))): ?>
 <div class="d-flex" id="wrapper">
     <!-- Sidebar -->
     <div class="sidebar-container sidebar-clean d-flex flex-column align-items-center" style="background: #F6FBF4; min-width: 220px; max-width: 260px; height: 100vh; padding-top: 48px; ">
@@ -233,7 +233,7 @@
                     <a href="<?php echo e(route('admin.notifications.index')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.notifications.index')): ?> active <?php endif; ?>">Notifications</a>
                 </li>
                 <li class="nav-item w-100 mb-1">
-                    <a href="<?php echo e(route('admin.inventory-logs.index')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.inventory-logs.*')): ?> active <?php endif; ?>">Inventory Logs</a>
+                    <!-- Inventory Logs temporarily hidden -->
                 </li>
                 <li class="nav-item w-100 mb-1">
                     <a href="<?php echo e(route('admin.loyalty.index')); ?>" class="sidebar-link <?php if(request()->routeIs('admin.loyalty.*')): ?> active <?php endif; ?>">Loyalty Cards</a>

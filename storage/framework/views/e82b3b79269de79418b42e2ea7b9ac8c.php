@@ -89,15 +89,10 @@
     background: #45a049;
 }
 
-/* Marked for deletion styling */
-.marked-for-deletion {
-    border: 2px solid #dc3545 !important;
-    background-color: transparent !important;
-}
-
-.marked-for-deletion td {
-    border-color: #dc3545 !important;
-    background-color: transparent !important;
+/* Marked for deletion (use row background, not borders) */
+table.table tr.product-row-deleted,
+table.table tr.product-row-deleted td {
+    background-color: rgba(255, 99, 99, 0.5) !important; /* soft red */
 }
 
 
@@ -221,8 +216,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     if (data.success) {
                         if (isMarked) {
-                            // Unmark the row - remove red border
-                            productRow.classList.remove('marked-for-deletion');
+                            // Unmark the row - remove red background class
+                            productRow.classList.remove('product-row-deleted');
                             productRow.style.border = '';
                             
                             // Update button
@@ -230,9 +225,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             this.setAttribute('title', 'Mark for deletion');
                             this.setAttribute('data-is-marked', 'false');
                         } else {
-                            // Mark the row with red border
-                            productRow.classList.add('marked-for-deletion');
-                            productRow.style.border = '2px solid #dc3545';
+                            // Mark the row with soft red background
+                            productRow.classList.add('product-row-deleted');
+                            productRow.style.border = '';
                             
                             // Update button
                             icon.className = 'bi bi-arrow-counterclockwise';
@@ -274,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <h5 class="modal-title" id="addProductModalLabel">Add New Product</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form action="<?php echo e(route('clerk.inventory.store')); ?>" method="POST">
+      <form id="addProductForm" action="<?php echo e(route('clerk.inventory.store')); ?>" method="POST">
         <?php echo csrf_field(); ?>
         <div class="modal-body">
           <div class="mb-3">
@@ -347,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <input type="text" class="form-control" id="inventorySearch" placeholder="Search code, name, or category..." autocomplete="off">
         <button class="btn btn-outline-secondary" type="button" id="clearInventorySearch">Clear</button>
     </div>
-    <button class="btn btn-success" id="submitInventoryBtn">Update</button>
+    <button class="btn btn-success" id="submitInventoryBtn">Save changes</button>
 </div>
 
 <!-- Inventory Submitted Modal -->
@@ -380,11 +375,11 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="text-center mb-3">
           <i class="fas fa-edit fa-3x text-warning mb-3"></i>
           <h6 class="text-dark">You have unsaved changes!</h6>
-          <p class="text-muted">Don't forget to click the <strong>"Update"</strong> button to save your changes and notify the admin.</p>
+          <p class="text-muted">Don't forget to click the <strong>"Save changes"</strong> button to save your changes and notify the admin.</p>
         </div>
         <div class="alert alert-info">
           <i class="fas fa-info-circle me-2"></i>
-          <strong>Reminder:</strong> Your changes are currently staged and will be lost if you navigate away without clicking "Update".
+          <strong>Reminder:</strong> Your changes are currently staged and will be lost if you navigate away without clicking "Save changes".
         </div>
       </div>
       <div class="modal-footer">
@@ -442,8 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 ?>
                                     <tr id="product-row-<?php echo e($product->id); ?>" data-product-id="<?php echo e($product->id); ?>" 
                                         <?php if($product->is_marked_for_deletion): ?> 
-                                            class="marked-for-deletion" 
-                                            style="border: 2px solid #dc3545 !important;"
+                                            class="product-row-deleted" 
                                         <?php endif; ?>>
                                     <td><?php echo e($product->code ?? $product->id); ?></td>
                                     <td><?php echo e($product->name); ?></td>
@@ -577,27 +571,25 @@ document.addEventListener('DOMContentLoaded', function() {
     border-color: #dee2e6 !important;
 }
 
-.product-row-edited {
-    background-color: rgba(135, 206, 235, 0.7) !important; /* 70% transparent sky-blue - more visible */
-    transition: background-color 0.3s ease;
-    border: 2px solid #87CEEB !important; /* Add border to make it more visible */
+table.table tr.product-row-edited,
+table.table tr.product-row-edited td {
+    background-color: rgba(135, 206, 235, 0.5) !important; /* edited: blue */
 }
 
-.product-row-edited td {
-    background-color: rgba(135, 206, 235, 0.7) !important; /* Blue background for all cells */
-    border-color: #87CEEB !important;
-}
-
-.product-row-deleted {
-    background-color: rgba(255, 99, 99, 0.7) !important; /* 70% transparent red - more visible */
-    transition: background-color 0.3s ease;
-    border: 2px solid #FF6363 !important; /* Add border to make it more visible */
-}
-
+.product-row-deleted,
 .product-row-deleted td {
-    background-color: rgba(255, 99, 99, 0.7) !important; /* Red background for all cells */
-    border-color: #FF6363 !important;
+    background-color: rgba(255, 99, 99, 0.5) !important; /* deleted: red */
 }
+
+/* Newly added (staged) rows should be green */
+table.table tr.product-row-added,
+table.table tr.product-row-added td {
+    background-color: rgba(46, 204, 113, 0.35) !important; /* soft green */
+}
+
+/* Discard button for pending new rows */
+.discard-new-btn { padding: 2px 8px; font-size: 0.8rem; }
+.discard-new-btn[disabled] { opacity: .6; pointer-events: none; }
 </style>
 <style>
 .inventory-scroll {
@@ -637,11 +629,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let editedProducts = new Set();
     let deletedProducts = new Set();
     let stagedEdits = {};
+    let newProducts = []; // staged new products (no IDs yet)
     
     // Load highlighted products from session storage
     const savedEdited = sessionStorage.getItem('editedProducts');
     const savedDeleted = sessionStorage.getItem('deletedProducts');
     const savedStagedEdits = sessionStorage.getItem('stagedEdits');
+    const savedNewProducts = sessionStorage.getItem('newProducts');
     
     if (savedEdited) {
         editedProducts = new Set(JSON.parse(savedEdited));
@@ -662,14 +656,19 @@ document.addEventListener('DOMContentLoaded', function() {
             stagedEdits = {};
         }
     }
+    if (savedNewProducts) {
+        try {
+            newProducts = JSON.parse(savedNewProducts) || [];
+        } catch(e) { newProducts = []; }
+    }
     
     // Apply highlighting to loaded products
     editedProducts.forEach(productId => {
         const row = document.getElementById('product-row-' + productId);
         if (row) {
             row.classList.add('product-row-edited');
-            row.style.backgroundColor = 'rgba(135, 206, 235, 0.7)';
-            row.style.border = '2px solid #87CEEB';
+            row.style.backgroundColor = '';
+            row.style.border = '';
             console.log('Applied blue highlight to product:', productId);
         }
     });
@@ -678,8 +677,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = document.getElementById('product-row-' + productId);
         if (row) {
             row.classList.add('product-row-deleted');
-            row.style.backgroundColor = 'rgba(255, 99, 99, 0.7)';
-            row.style.border = '2px solid #FF6363';
+            row.style.backgroundColor = '';
+            row.style.border = '';
             console.log('Applied red highlight to product:', productId);
         }
     });
@@ -688,6 +687,7 @@ document.addEventListener('DOMContentLoaded', function() {
     sessionStorage.removeItem('stagedEdits');
     sessionStorage.removeItem('editedProducts');
     sessionStorage.removeItem('deletedProducts');
+    // keep newProducts in session until submitted
     
     // Function to hide pending icon (for future admin approval)
     window.hidePendingIcon = function() {
@@ -718,14 +718,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 const qtyToPurchase = (parseInt(v.reorder_max || 0) - parseInt(v.stock || 0));
                 if (row.cells[11]) row.cells[11].textContent = Math.max(0, qtyToPurchase);
                 row.classList.add('product-row-edited');
-                row.style.backgroundColor = 'rgba(135, 206, 235, 0.7)';
-                row.style.border = '2px solid #87CEEB';
+                row.style.backgroundColor = '';
+                row.style.border = '';
                 console.log('Applied staged values for product:', pid);
             }
         });
     } catch (e) {
         console.warn('Failed to apply staged edits from session', e);
     }
+
+    // Render any staged new products into the active tab
+    function renderNewProductRow(prod) {
+        const pane = document.querySelector('#inventoryTabsContent .tab-pane.show.active');
+        if (!pane) return;
+        const tbody = pane.querySelector('tbody');
+        if (!tbody) return;
+        const tr = document.createElement('tr');
+        tr.classList.add('product-row-added');
+        tr.innerHTML = `
+            <td>NEW</td>
+            <td>${prod.name || '-'}</td>
+            <td>${prod.category || '-'}</td>
+            <td>${Number(prod.price||0).toFixed(2)}</td>
+            <td>${Number(prod.cost_price||0).toFixed(2)}</td>
+            <td>${prod.reorder_min||0}</td>
+            <td>${prod.reorder_max||0}</td>
+            <td>${prod.stock||0}</td>
+            <td>${prod.qty_consumed||0}</td>
+            <td>${prod.qty_damaged||0}</td>
+            <td>${prod.qty_sold||0}</td>
+            <td>${Math.max(0, (parseInt(prod.reorder_max||0) - parseInt(prod.stock||0)))}</td>
+            <td>-</td>
+            <td class="text-center">(pending) <button type="button" class="btn btn-outline-danger btn-sm discard-new-btn">Discard</button></td>
+        `;
+        tbody.prepend(tr);
+    }
+
+    newProducts.forEach(renderNewProductRow);
     
     // Function to handle Edit button clicks (table row Edit button)
     function handleEditClick(event) {
@@ -758,7 +787,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Remove from edited list if it was there
             editedProducts.delete(productId);
             row.classList.remove('product-row-edited');
-            
+
             // Add to deleted list and highlight
             deletedProducts.add(productId);
             row.classList.add('product-row-deleted');
@@ -889,9 +918,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     console.log('Row highlighted for edit:', productId);
                     
-                    // Force a visual update
-                    row.style.backgroundColor = 'rgba(135, 206, 235, 0.7)';
-                    row.style.border = '2px solid #87CEEB';
+                    // let CSS handle the visuals
+                    row.style.backgroundColor = '';
+                    row.style.border = '';
                     
                     // Build staged values from form and update UI only (no backend save yet)
                     const formData = new FormData(form);
@@ -947,6 +976,40 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Intercept Add New Product submit to stage visually and save for approval
+    const addForm = document.getElementById('addProductForm');
+    if (addForm) {
+        addForm.addEventListener('submit', function(e){
+            e.preventDefault();
+            const fd = new FormData(addForm);
+            const prod = Object.fromEntries(fd.entries());
+            newProducts.push(prod);
+            sessionStorage.setItem('newProducts', JSON.stringify(newProducts));
+            // render with green background
+            renderNewProductRow(prod);
+            // close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addProductModal'));
+            if (modal) modal.hide();
+            showChangesReminder();
+        });
+    }
+
+    // Discard a staged new product (by row)
+    document.addEventListener('click', function(e){
+        if (e.target && e.target.classList.contains('discard-new-btn')) {
+            const row = e.target.closest('tr');
+            if (row) {
+                // Remove from session list by matching name+category+price (best-effort)
+                const cells = row.querySelectorAll('td');
+                const name = cells[1]?.textContent?.trim();
+                const category = cells[2]?.textContent?.trim();
+                newProducts = newProducts.filter(p => !(p.name===name && p.category===category));
+                sessionStorage.setItem('newProducts', JSON.stringify(newProducts));
+                row.remove();
+            }
+        }
+    });
+
     // Handle Update button click
     const updateBtn = document.getElementById('submitInventoryBtn');
     if (updateBtn) {
@@ -971,6 +1034,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 edited_products: JSON.stringify(Array.from(editedProducts)),
                 deleted_products: JSON.stringify(Array.from(deletedProducts)),
                 staged_edits: JSON.stringify(stagedEdits),
+                new_products: JSON.stringify(newProducts),
                 _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             };
 
@@ -994,13 +1058,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     editedProducts.clear();
                     deletedProducts.clear();
                     stagedEdits = {};
+                    newProducts = [];
+                    sessionStorage.removeItem('newProducts');
                     
-                    // Remove all highlighting
-                    document.querySelectorAll('.product-row-edited, .product-row-deleted').forEach(row => {
-                        row.classList.remove('product-row-edited', 'product-row-deleted');
-                        row.style.backgroundColor = '';
-                        row.style.border = '';
+                    // Keep row highlights and disable actions while pending approval
+                    document.querySelectorAll('.discard-new-btn').forEach(btn => { btn.disabled = true; });
+                    document.querySelectorAll('.edit-product-btn, .delete-btn, #addProductForm button[type="submit"], [data-bs-target="#addProductModal"]').forEach(el => {
+                        if (el) { el.setAttribute('disabled','true'); el.classList.add('disabled'); }
                     });
+                    const saveBtn = document.getElementById('submitInventoryBtn');
+                    if (saveBtn) saveBtn.setAttribute('disabled','true');
                     
                     // Hide pending icon
                     const pendingIcon = document.getElementById('pendingIcon');

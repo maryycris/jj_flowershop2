@@ -32,7 +32,7 @@
         </div>
         <div class="row mt-2">
             <div class="col-md-6 col-lg-4">
-                <a href="{{ route('clerk.inventory.index') }}" style="text-decoration: none; color: inherit;">
+                <a href="{{ route('clerk.clerk.inventory.index') }}" style="text-decoration: none; color: inherit;">
                 <div class="card dashboard-card dashboard-orange text-start p-3" style="min-width:260px;">
                     <div class="card-body p-0">
                         <div class="d-flex align-items-center mb-2">

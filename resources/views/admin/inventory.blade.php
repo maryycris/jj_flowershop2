@@ -102,15 +102,33 @@
 
 @section('admin_content')
 <div class="mx-auto" style="max-width: 1100px; padding-top: 24px;">
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Inventory (Admin)</h2>
-    <div class="d-flex gap-2">
-        <button class="btn btn-primary" id="saveChangesBtn" title="Save inventory changes and create history record">
-            <i class="bi bi-save me-1"></i> Save Changes
+<!-- Main Tab Navigation -->
+<ul class="nav nav-tabs mb-4" id="mainInventoryTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory" type="button" role="tab" aria-controls="inventory" aria-selected="true">
+            <i class="bi bi-box-seam me-2"></i>Inventory
         </button>
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProductModal">+ Add New Product</button>
-    </div>
-                        </div>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="inventory-logs-tab" data-bs-toggle="tab" data-bs-target="#inventory-logs" type="button" role="tab" aria-controls="inventory-logs" aria-selected="false">
+            <i class="bi bi-clock-history me-2"></i>Inventory Logs
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content" id="mainInventoryTabsContent">
+    <!-- Inventory Tab -->
+    <div class="tab-pane fade show active" id="inventory" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>Inventory Management</h4>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" id="saveChangesBtn" title="Save inventory changes and create history record">
+                    <i class="bi bi-save me-1"></i> Save Changes
+                </button>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProductModal">+ Add New Product</button>
+            </div>
+        </div>
 
 <!-- Add Product Modal -->
 <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
@@ -360,6 +378,155 @@
 @else
     <p>No products found.</p>
 @endif
+    </div> <!-- End Inventory Tab -->
+    
+    <!-- Inventory Logs Tab -->
+    <div class="tab-pane fade" id="inventory-logs" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>Inventory Update Requests</h4>
+            <small class="text-muted">Pending Logs: {{ $pendingLogs->count() }}</small>
+        </div>
+        
+        
+        
+        
+
+        <!-- Inventory Update Request Section (dynamic) -->
+        <div class="update-request-section">
+            <h4>Inventory Update Request</h4>
+            
+            @if($pendingLogs->count() > 0)
+                <div class="request-header">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Clerk's name:</strong> <span id="clerkName">{{ $pendingLogs->first()->user->name ?? 'Unknown' }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Date:</strong> <span id="requestDate">{{ $pendingLogs->first()->created_at->format('Y-m-d') }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="request-actions">
+                    <button class="btn btn-accept" id="acceptChangesBtn">
+                        <i class="bi bi-check-circle me-1"></i> Accept Changes
+                    </button>
+                    <button class="btn btn-decline" id="declineChangesBtn">
+                        <i class="bi bi-x-circle me-1"></i> Decline
+                    </button>
+                </div>
+            @endif
+            
+            <!-- Category Tabs (always show) -->
+            <ul class="nav nav-tabs" id="updateRequestTabs" role="tablist">
+                @php
+                    $firstTabWithLogs = null;
+                    foreach($categories as $cat) {
+                        if(isset($logsByCategory[$cat]) && $logsByCategory[$cat]->count() > 0) {
+                            $firstTabWithLogs = $cat;
+                            break;
+                        }
+                    }
+                @endphp
+                @foreach(($categories ?? []) as $index => $cat)
+                    @php $tabId = Str::slug($cat); @endphp
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {{ ($firstTabWithLogs && $cat === $firstTabWithLogs) ? 'active' : ($index === 0 && !$firstTabWithLogs ? 'active' : '') }}" 
+                                id="{{ $tabId }}-tab" 
+                                data-bs-target="#{{ $tabId }}" 
+                                type="button" 
+                                role="tab" 
+                                aria-controls="{{ $tabId }}">
+                            {{ $cat }} 
+                            @if(isset($logsByCategory[$cat]) && $logsByCategory[$cat]->count() > 0)
+                                <span class="badge bg-primary ms-1">{{ $logsByCategory[$cat]->count() }}</span>
+                            @endif
+                        </button>
+                    </li>
+                @endforeach
+            </ul>
+            
+            <div class="tab-content" id="updateRequestTabContent">
+                @foreach(($categories ?? []) as $index => $cat)
+                    @php $tabId = Str::slug($cat); @endphp
+                    <div class="category-tab-content {{ ($firstTabWithLogs && $cat === $firstTabWithLogs) ? 'active' : ($index === 0 && !$firstTabWithLogs ? 'active' : '') }}" 
+                         id="{{ $tabId }}" 
+                         data-category="{{ $cat }}">
+                        <div class="update-request-table">
+                            @php $catLogs = ($logsByCategory[$cat] ?? collect()); @endphp
+                            <div class="alert alert-info mb-3">
+                                <strong>{{ $cat }}:</strong> {{ $catLogs->count() }} pending logs
+                            </div>
+                            @if($catLogs->count() > 0)
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Product Code</th>
+                                            <th>Name</th>
+                                            <th>Category</th>
+                                            <th>Selling Price</th>
+                                            <th>Acquisition Cost</th>
+                                            <th>Reordering Rules (Min / Max)</th>
+                                            <th>Qty On Hand</th>
+                                            <th>Qty Consumed</th>
+                                            <th>Qty Damaged</th>
+                                            <th>Qty Sold</th>
+                                            <th>Qty to Purchase (Max - On Hand)</th>
+                                            <th>Date</th>
+                                            <th style="width: 120px;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($catLogs as $log)
+                                            @php
+                                                $p = $log->product; 
+                                                $nv = (array)($log->new_values ?? []);
+                                                $rowClass = $log->action === 'create' ? 'row-added' : ($log->action === 'edit' ? 'row-edited' : 'row-deleted');
+                                            @endphp
+                                            <tr class="{{ $rowClass }}">
+                                                <td>{{ $log->action === 'create' ? 'NEW' : ($p->code ?? $p->id ?? 'N/A') }}</td>
+                                                <td>{{ $nv['name'] ?? ($p->name ?? 'Product Deleted') }}</td>
+                                                <td>{{ $nv['category'] ?? ($p->category ?? 'N/A') }}</td>
+                                                <td>{{ $nv['price'] ?? ($p->price ?? '0') }}</td>
+                                                <td>{{ $nv['cost_price'] ?? ($p->cost_price ?? 'N/A') }}</td>
+                                                <td>{{ ($nv['reorder_min'] ?? ($p->reorder_min ?? 0)) . ' / ' . ($nv['reorder_max'] ?? ($p->reorder_max ?? 0)) }}</td>
+                                                <td>{{ $nv['stock'] ?? ($p->stock ?? 0) }}</td>
+                                                <td>{{ $nv['qty_consumed'] ?? ($p->qty_consumed ?? 0) }}</td>
+                                                <td>{{ $nv['qty_damaged'] ?? ($p->qty_damaged ?? 0) }}</td>
+                                                <td>{{ $nv['qty_sold'] ?? ($p->qty_sold ?? 0) }}</td>
+                                                <td>{{ max(0, (int)($nv['reorder_max'] ?? ($p->reorder_max ?? 0)) - (int)($nv['stock'] ?? ($p->stock ?? 0))) }}</td>
+                                                <td>{{ optional(optional($log)->created_at)->format('Y-m-d') }}</td>
+                                                <td>
+                                                    @if(($log->status ?? 'pending') === 'pending')
+                                                        <form method="post" action="{{ route('admin.admin.inventory.approve-pending') }}" onsubmit="return approveSingle(event, {{ $log->id }});" class="d-inline">
+                                                            @csrf
+                                                            <button class="btn btn-success btn-sm">Approve</button>
+                                                        </form>
+                                                        <form method="post" action="{{ route('admin.admin.inventory.reject-single', $log->id) }}" onsubmit="return rejectSingle(event, {{ $log->id }});" class="d-inline ms-1">
+                                                            @csrf
+                                                            <button class="btn btn-outline-danger btn-sm">Decline</button>
+                                                        </form>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            @else
+                                <div class="text-center py-5">
+                                    <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                                    <h4 class="mt-3">No Pending Changes</h4>
+                                    <p class="text-muted">All inventory changes have been reviewed.</p>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div> <!-- End Inventory Logs Tab -->
+</div> <!-- End Tab Content -->
+
 
 <style>
 /* Inventory Add and Edit Modal scrollbar styling */
@@ -436,6 +603,102 @@
 /* Make category tab names green */
 #inventoryTabs .nav-link { color: #27ae60 !important; }
 #inventoryTabs .nav-link.active { color: #1e874b !important; border-color: transparent !important; }
+
+
+/* Inventory Update Request Styling */
+.update-request-section {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.request-header {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+.request-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+}
+
+.btn-accept {
+    background: #28a745;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-accept:hover {
+    background: #218838;
+    color: white;
+}
+
+.btn-decline {
+    background: transparent;
+    border: 2px solid #dc3545;
+    color: #dc3545;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-decline:hover {
+    background: #dc3545;
+    color: white;
+}
+
+/* Table styling for update request */
+.update-request-table {
+    margin-top: 20px;
+}
+
+.update-request-table .table {
+    margin-bottom: 0;
+}
+
+.update-request-table .table th {
+    background: #e6f4ea;
+    border-bottom: 2px solid #28a745;
+    font-weight: 600;
+    color: #2d5a2d;
+}
+
+/* Row border colors */
+.row-added {
+    border: 2px solid #28a745 !important;
+}
+
+.row-edited {
+    border: 2px solid #007bff !important;
+}
+
+.row-deleted {
+    border: 2px solid #dc3545 !important;
+}
+
+/* Soft background colors similar to clerk side */
+.row-added td { background-color: #e8fbe8 !important; }
+.row-edited td { background-color: #e8f0ff !important; }
+.row-deleted td { background-color: #fdeaea !important; }
+
+/* Custom tab content visibility */
+.category-tab-content {
+    display: none !important;
+}
+
+.category-tab-content.active {
+    display: block !important;
+}
+
 </style>
 
 <script>
@@ -651,7 +914,99 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 1500); // Simulate 1.5 second save process
         }
     });
+
+    // Inventory Logs Tab Functionality
+    // Remove old bulk-accept button wiring if element not present
+    const bulkAccept = document.getElementById('acceptChangesBtn');
+    if (bulkAccept) {
+        bulkAccept.addEventListener('click', function() {
+            if (!confirm('Accept and apply all pending inventory changes?')) return;
+            const btn = this;
+            btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Processing...';
+            fetch('{{ route('admin.admin.inventory.approve-pending') }}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') } })
+                .then(r => r.json())
+                .then(data => { alert(data.message || 'Inventory changes accepted.'); location.reload(); })
+                .catch(() => { alert('Failed to apply changes.'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Accept Changes'; });
+        });
+    }
+    
+    // Handle Decline button
+    const declineBtn = document.getElementById('declineChangesBtn');
+    if (declineBtn) {
+        declineBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to decline these inventory changes?')) {
+                alert('Inventory changes have been declined.');
+                
+                // Here you would typically:
+                // 1. Mark the request as declined
+                // 2. Notify the clerk
+                // 3. Remove or hide this request
+            }
+        });
+    }
+    
+    // Simple tab switching for Inventory Logs category tabs
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('#updateRequestTabs button[data-bs-target]')) {
+            e.preventDefault();
+            
+            const targetId = e.target.getAttribute('data-bs-target').substring(1);
+            console.log('Tab clicked:', e.target.textContent.trim(), 'Target ID:', targetId);
+            
+            // Hide all tab content
+            document.querySelectorAll('.category-tab-content').forEach(pane => {
+                pane.classList.remove('active');
+            });
+            
+            // Remove active from all tabs
+            document.querySelectorAll('#updateRequestTabs .nav-link').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show target content
+            const targetPane = document.getElementById(targetId);
+            if (targetPane) {
+                targetPane.classList.add('active');
+                console.log('Showing content for:', targetId);
+            } else {
+                console.error('Target content not found:', targetId);
+            }
+            
+            // Add active to clicked tab
+            e.target.classList.add('active');
+        }
+    });
+    
 });
+
+function submitAdminAction(e, form) {
+    e.preventDefault();
+    fetch(form.action, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') } })
+        .then(r => r.json())
+        .then(data => { alert(data.message || 'Done'); location.reload(); })
+        .catch(() => alert('Request failed'));
+    return false;
+}
+
+function approveSingle(e, logId) {
+    e.preventDefault();
+    fetch(`/admin/inventory/approve-log/${logId}`, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') } })
+        .then(r => r.json())
+        .then(data => { if (data.success) { location.reload(); } else { alert(data.message || 'Failed'); } })
+        .catch(() => alert('Request failed'));
+    return false;
+}
+
+function rejectSingle(e, logId) {
+    e.preventDefault();
+    if (!confirm('Decline this change?')) return false;
+    fetch(`/admin/inventory/reject-log/${logId}`, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') } })
+        .then(r => r.json())
+        .then(data => { if (data.success) { location.reload(); } else { alert(data.message || 'Failed'); } })
+        .catch(() => alert('Request failed'));
+    return false;
+}
+
 </script>
 </div>
 @endsection

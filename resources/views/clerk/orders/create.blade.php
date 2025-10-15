@@ -2,7 +2,16 @@
 
 @section('content')
 <div class="container-fluid">
-    <h1 class="h3 mb-4 text-gray-800">New Walk-in Order</h1>
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <h1 class="h3 text-gray-800 mb-0">New Walk-in Order</h1>
+        <div class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0">Order Method</label>
+            <select class="form-select" id="order_method_top" style="width: 160px;" onchange="if(this.value==='delivery'){window.location='{{ route('clerk.orders.walkin.delivery') }}';}">
+                <option value="picked_up" selected>Pick-up</option>
+                <option value="delivery">Delivery</option>
+            </select>
+        </div>
+    </div>
 
     <div class="card shadow mb-4">
         <div class="card-body">
@@ -24,19 +33,7 @@
                 </div>
 
                 <!-- Order Method -->
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="order_method" class="form-label">Order Method</label>
-                        <select class="form-select" id="order_method" name="order_method" required>
-                            <option value="delivery">Delivery</option>
-                            <option value="picked_up">Picked-Up</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6" id="shipping_fee_group">
-                        <label for="shipping_fee" class="form-label">Shipping Fee</label>
-                        <input type="number" class="form-control" id="shipping_fee" name="shipping_fee" min="0" value="0" required readonly>
-                    </div>
-                </div>
+                <!-- Shipping fee hidden for Pick-up orders -->
                 <div class="mb-3">
                     <label for="payment_method" class="form-label">Mode of Payment</label>
                     <select class="form-select" id="payment_method" name="payment_method" required>

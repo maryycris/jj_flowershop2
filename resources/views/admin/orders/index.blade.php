@@ -8,7 +8,7 @@
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <h2 class="mb-0">{{ $type == 'online' ? 'Online Orders' : 'Walk-in Orders' }}</h2>
                 @if($type == 'walkin')
-                    <a href="{{ route('admin.orders.create') }}" class="btn btn-success">Add New</a>
+                    <a href="{{ route('admin.orders.walkin.delivery') }}" class="btn btn-success">Add New</a>
                 @endif
             </div>
             <div class="row mb-3">
