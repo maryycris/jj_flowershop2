@@ -36,24 +36,42 @@ class AuthController extends Controller
         }
 
         try {
+            \Log::info('Login attempt', ['login_field' => $loginField, 'has_email' => filter_var($loginField, FILTER_VALIDATE_EMAIL), 'has_phone' => preg_match('/^09\d{9}$/', $loginField)]);
+            
             if (Auth::attempt($credentials)) {
                 $user = Auth::user();
+                \Log::info('Auth attempt successful', ['user_id' => $user ? $user->id : null]);
+                
                 if (!$user) {
+                    \Log::warning('Auth attempt returned true but no user found');
                     return back()->withErrors(['login_field' => 'Authentication failed. Please try again.']);
                 }
+                
                 // Check if is_verified column exists before accessing it
                 if (isset($user->is_verified) && !$user->is_verified) {
+                    \Log::info('User not verified', ['user_id' => $user->id]);
                     Auth::logout();
                     return back()->withErrors(['login_field' => 'Please verify your email first.']);
                 }
+                
                 $role = $user->role;
                 if (!$role) {
+                    \Log::error('User has no role', ['user_id' => $user->id]);
                     return back()->withErrors(['login_field' => 'User role not found.']);
                 }
+                
+                \Log::info('Login successful, redirecting', ['user_id' => $user->id, 'role' => $role, 'route' => "$role.dashboard"]);
                 return redirect()->route("$role.dashboard");
+            } else {
+                \Log::info('Auth attempt failed', ['login_field' => $loginField]);
             }
         } catch (\Exception $e) {
-            \Log::error('Login error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            \Log::error('Login error', [
+                'error' => $e->getMessage(), 
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->withErrors(['login_field' => 'An error occurred during login. Please try again.']);
         }
         
@@ -709,22 +727,40 @@ class AuthController extends Controller
         $credentials = ['username' => $loginField, 'password' => $password];
 
         try {
+            \Log::info('Staff login attempt', ['login_field' => $loginField]);
+            
             if (Auth::attempt($credentials)) {
                 $user = Auth::user();
+                \Log::info('Staff auth attempt successful', ['user_id' => $user ? $user->id : null]);
+                
                 if (!$user) {
+                    \Log::warning('Staff auth attempt returned true but no user found');
                     return back()->withErrors(['login_field' => 'Authentication failed. Please try again.']);
                 }
+                
                 if (!in_array($user->role, ['admin', 'clerk', 'driver'])) {
+                    \Log::info('User role not allowed for staff login', ['user_id' => $user->id, 'role' => $user->role]);
                     Auth::logout();
                     return back()->withErrors(['login_field' => 'Only staff (admin, clerk, driver) can log in here.']);
                 }
+                
                 if (!$user->role) {
+                    \Log::error('Staff user has no role', ['user_id' => $user->id]);
                     return back()->withErrors(['login_field' => 'User role not found.']);
                 }
+                
+                \Log::info('Staff login successful, redirecting', ['user_id' => $user->id, 'role' => $user->role]);
                 return redirect()->route($user->role . '.dashboard');
+            } else {
+                \Log::info('Staff auth attempt failed', ['login_field' => $loginField]);
             }
         } catch (\Exception $e) {
-            \Log::error('Staff login error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            \Log::error('Staff login error', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->withErrors(['login_field' => 'An error occurred during login. Please try again.']);
         }
         return back()->withErrors(['login_field' => 'Invalid credentials']);
