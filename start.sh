@@ -23,8 +23,13 @@ fi
 
 # Ensure storage directories exist and are writable
 echo "Checking storage directories..." >&2
-mkdir -p storage/framework/{sessions,views,cache,testing} storage/logs bootstrap/cache 2>&1
+mkdir -p storage/framework/{sessions,views,cache,testing} storage/logs bootstrap/cache storage/app/public/catalog_products 2>&1
 chmod -R 775 storage bootstrap/cache 2>&1 || echo "Warning: chmod failed (may not be critical)" >&2
+
+# Ensure catalog_products directory exists and is writable
+echo "Ensuring catalog_products directory exists..." >&2
+mkdir -p storage/app/public/catalog_products 2>&1
+chmod -R 775 storage/app/public/catalog_products 2>&1 || echo "Warning: chmod catalog_products failed (may not be critical)" >&2
 
 # Clear config cache first (this doesn't require database)
 echo "Clearing config cache..." >&2
@@ -47,9 +52,31 @@ if [ "$APP_ENV" = "production" ]; then
 fi
 
 # Create storage symlink if it doesn't exist
+echo "Checking storage symlink..." >&2
 if [ ! -L "../public/storage" ]; then
     echo "Creating storage symlink..." >&2
-    php artisan storage:link 2>&1 || echo "Storage link failed (non-critical)" >&2
+    # Remove existing symlink if it's broken
+    rm -f ../public/storage 2>&1 || true
+    php artisan storage:link 2>&1 || {
+        echo "Storage link failed, trying manual symlink..." >&2
+        # Manual symlink as fallback
+        ln -sfn ../backend/storage/app/public ../public/storage 2>&1 || echo "Manual symlink also failed" >&2
+    }
+    # Verify symlink was created
+    if [ -L "../public/storage" ]; then
+        echo "Storage symlink created successfully" >&2
+        ls -la ../public/storage >&2 || echo "Warning: Could not list symlink" >&2
+    else
+        echo "WARNING: Storage symlink was not created!" >&2
+    fi
+else
+    echo "Storage symlink already exists" >&2
+    # Verify it's not broken
+    if [ ! -e "../public/storage" ]; then
+        echo "WARNING: Storage symlink exists but is broken, recreating..." >&2
+        rm -f ../public/storage 2>&1 || true
+        php artisan storage:link 2>&1 || echo "Storage link recreation failed" >&2
+    fi
 fi
 
 # Run migrations if database is configured
