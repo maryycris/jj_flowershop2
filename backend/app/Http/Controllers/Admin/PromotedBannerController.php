@@ -28,7 +28,19 @@ class PromotedBannerController extends Controller
         foreach ($request->file('images', []) as $img) {
             if ($index >= 3) { break; }
             try {
+                // Check what driver is being used
+                $driver = config('filesystems.disks.public.driver');
+                \Log::info('Attempting banner upload', [
+                    'driver' => $driver,
+                    'file_size' => $img->getSize(),
+                    'file_name' => $img->getClientOriginalName()
+                ]);
+                
                 $path = $img->store('promoted_banners', 'public');
+                
+                // Check if path is a Cloudinary URL (starts with http)
+                $isCloudinary = filter_var($path, FILTER_VALIDATE_URL) !== false;
+                
                 PromotedBanner::create([
                     'image' => $path,
                     'title' => null,
@@ -37,7 +49,12 @@ class PromotedBannerController extends Controller
                     'sort_order' => $sortBase + $index,
                 ]);
                 $index++;
-                \Log::info('Banner uploaded successfully', ['path' => $path]);
+                \Log::info('Banner uploaded successfully', [
+                    'path' => $path,
+                    'driver' => $driver,
+                    'is_cloudinary' => $isCloudinary,
+                    'note' => $isCloudinary ? 'PERMANENT - Stored in Cloudinary' : 'TEMPORARY - Stored locally (will be lost on deployment)'
+                ]);
             } catch (\Exception $e) {
                 \Log::error('Failed to upload banner image', [
                     'error' => $e->getMessage(),
@@ -98,8 +115,19 @@ class PromotedBannerController extends Controller
                         \Log::warning('Failed to delete old banner image (non-critical)', ['error' => $e->getMessage()]);
                     }
                 }
+                
+                $driver = config('filesystems.disks.public.driver');
+                \Log::info('Attempting banner update upload', ['driver' => $driver]);
+                
                 $data['image'] = $request->file('image')->store('promoted_banners','public');
-                \Log::info('Banner image updated successfully', ['path' => $data['image']]);
+                
+                $isCloudinary = filter_var($data['image'], FILTER_VALIDATE_URL) !== false;
+                \Log::info('Banner image updated successfully', [
+                    'path' => $data['image'],
+                    'driver' => $driver,
+                    'is_cloudinary' => $isCloudinary,
+                    'note' => $isCloudinary ? 'PERMANENT - Stored in Cloudinary' : 'TEMPORARY - Stored locally'
+                ]);
             } catch (\Exception $e) {
                 \Log::error('Failed to upload banner image during update', [
                     'error' => $e->getMessage(),
