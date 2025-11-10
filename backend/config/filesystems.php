@@ -66,10 +66,11 @@ return [
 
         'cloudinary' => [
             'driver' => 'cloudinary',
-            'api_key' => env('CLOUDINARY_API_KEY'),
-            'api_secret' => env('CLOUDINARY_API_SECRET'),
-            'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+            'cloud' => env('CLOUDINARY_CLOUD_NAME'), // Cloudinary expects 'cloud', not 'cloud_name'
+            'key' => env('CLOUDINARY_API_KEY'), // Cloudinary expects 'key', not 'api_key'
+            'secret' => env('CLOUDINARY_API_SECRET'), // Cloudinary expects 'secret', not 'api_secret'
             'url' => env('CLOUDINARY_URL'), // Optional: full Cloudinary URL
+            'secure' => true, // Use HTTPS
         ],
 
     ],
