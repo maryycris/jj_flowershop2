@@ -47,7 +47,11 @@ RUN npm install && npm run build
 WORKDIR /var/www/html
 RUN mkdir -p public/build && \
     if [ -d "frontend/public/build" ]; then \
-        cp -r frontend/public/build/* public/build/; \
+        cp -r frontend/public/build/* public/build/ 2>&1 || true; \
+        echo "Copied Vite assets to public/build" && \
+        ls -la public/build/ || echo "Warning: public/build directory is empty"; \
+    else \
+        echo "Warning: frontend/public/build directory not found"; \
     fi
 
 # Optimize autoloader

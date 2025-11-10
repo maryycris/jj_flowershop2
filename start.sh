@@ -51,7 +51,7 @@ if [ -n "$DB_CONNECTION" ] && [ "$DB_CONNECTION" != "sqlite" ]; then
     echo "Running database migrations..." >&2
     
     # Try to check migration status (this will fail if database is empty or connection fails)
-    MIGRATION_STATUS=$(php artisan migrate:status --force 2>&1)
+    MIGRATION_STATUS=$(php artisan migrate:status 2>&1)
     MIGRATION_EXIT_CODE=$?
     
     # Check if error is due to missing migrations table (database is empty)
