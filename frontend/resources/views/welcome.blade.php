@@ -364,9 +364,10 @@
             box-sizing: border-box;
         }
         .content-box {
-            background: rgba(115, 174, 113, 0.85);
-            color: #fff;
-            border-radius: 1px;
+            background: rgba(255, 255, 255, 0.95) !important;
+            background-image: none !important;
+            color: #222 !important;
+            border-radius: 12px;
             padding: 48px 38px 38px 38px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.10);
             position: relative;
@@ -392,7 +393,7 @@
             font-style: italic;
             font-size: 1.18rem;
             margin-bottom: 1.2rem;
-            color: #f8fff5;
+            color: #333 !important;
         }
         .content-box hr {
             border-top: 1px solid #e0e0e0;
@@ -401,7 +402,7 @@
         .content-box p {
             font-size: 1.01rem;
             margin-bottom: 1.5rem;
-            color: #f8fff5;
+            color: #333 !important;
         }
         .btn-shop {
             background: #f3f3f3;
