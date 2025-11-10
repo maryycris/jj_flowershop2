@@ -173,9 +173,18 @@
             align-items: flex-start;
             justify-content: flex-start;
             padding: 0;
+            background: none !important;
+            background-image: none !important;
         }
         /* Hero with carousel background */
-        .hero-row { position: relative; min-height: 580px; height: 80vh; overflow: hidden; }
+        .hero-row { 
+            position: relative; 
+            min-height: 580px; 
+            height: 80vh; 
+            overflow: hidden;
+            background: none !important;
+            background-image: none !important;
+        }
         .flower-img {
             max-width: 2000px;
             width: 100%;
@@ -191,8 +200,23 @@
         .image-resize { height: 580px; width: 1300px; }
         .hero-equal { height: 580px; }
         .content-stretch { height: 100%; display: flex; }
-        .hero-carousel { position: absolute; inset: 0; z-index: 0; }
-        .hero-carousel .carousel-item img { width: 100%; height: 100%; object-fit: cover; }
+        .hero-carousel { 
+            position: absolute; 
+            inset: 0; 
+            z-index: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .hero-carousel .carousel-item { 
+            width: 100%; 
+            height: 100%; 
+        }
+        .hero-carousel .carousel-item img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover;
+            display: block;
+        }
         .hero-content { position: relative; z-index: 1; }
         /* Hero Responsive */
         @media (max-width: 991px) {
