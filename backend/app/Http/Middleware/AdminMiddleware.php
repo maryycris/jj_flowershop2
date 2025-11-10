@@ -18,14 +18,31 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check()) {
-            return redirect()->route('login');
-        }
+        try {
+            if (!Auth::check()) {
+                \Log::warning('AdminMiddleware: User not authenticated', ['url' => $request->url()]);
+                return redirect('/staff/login')->with('error', 'Please log in to access this page.');
+            }
 
-        if (Auth::user()->role !== 'admin') {
-            abort(403, 'Unauthorized action.');
-        }
+            $user = Auth::user();
+            if (!$user) {
+                \Log::error('AdminMiddleware: Auth::check() returned true but no user found');
+                return redirect('/staff/login')->with('error', 'Session expired. Please log in again.');
+            }
 
-        return $next($request);
+            if ($user->role !== 'admin') {
+                \Log::warning('AdminMiddleware: User role mismatch', ['user_id' => $user->id, 'role' => $user->role, 'expected' => 'admin']);
+                abort(403, 'Unauthorized action.');
+            }
+
+            return $next($request);
+        } catch (\Exception $e) {
+            \Log::error('AdminMiddleware error', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return redirect('/staff/login')->with('error', 'An error occurred. Please try again.');
+        }
     }
 }
