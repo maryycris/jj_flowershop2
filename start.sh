@@ -57,6 +57,13 @@ echo "Checking storage symlink..." >&2
 ROOT_PUBLIC="../public"
 ROOT_STORAGE="../backend/storage/app/public"
 
+# Ensure storage directories exist and are writable
+echo "Ensuring storage directories exist..." >&2
+mkdir -p storage/app/public/catalog_products 2>&1 || true
+mkdir -p storage/app/public/promoted_banners 2>&1 || true
+chmod -R 775 storage/app/public 2>&1 || true
+chown -R www-data:www-data storage/app/public 2>&1 || true
+
 if [ ! -L "$ROOT_PUBLIC/storage" ]; then
     echo "Creating storage symlink at root public directory..." >&2
     # Remove existing symlink if it's broken
@@ -79,7 +86,14 @@ if [ ! -L "$ROOT_PUBLIC/storage" ]; then
         # Test if symlink works
         if [ -e "$ROOT_PUBLIC/storage" ]; then
             echo "Storage symlink is working" >&2
-            ls -la "$ROOT_PUBLIC/storage/catalog_products" 2>&1 | head -5 >&2 || echo "catalog_products directory not found in symlink" >&2
+            echo "Checking catalog_products directory..." >&2
+            if [ -d "$ROOT_PUBLIC/storage/catalog_products" ]; then
+                echo "catalog_products directory found" >&2
+                FILE_COUNT=$(find "$ROOT_PUBLIC/storage/catalog_products" -type f 2>/dev/null | wc -l)
+                echo "Found $FILE_COUNT image file(s) in catalog_products" >&2
+            else
+                echo "WARNING: catalog_products directory not found in symlink" >&2
+            fi
         else
             echo "WARNING: Storage symlink exists but is broken!" >&2
         fi
@@ -95,6 +109,13 @@ else
         ln -sfn "$ROOT_STORAGE" "$ROOT_PUBLIC/storage" 2>&1 || echo "Storage link recreation failed" >&2
     else
         echo "Storage symlink is working correctly" >&2
+        # Check if catalog_products directory exists and has files
+        if [ -d "$ROOT_PUBLIC/storage/catalog_products" ]; then
+            FILE_COUNT=$(find "$ROOT_PUBLIC/storage/catalog_products" -type f 2>/dev/null | wc -l)
+            echo "Found $FILE_COUNT image file(s) in catalog_products" >&2
+        else
+            echo "WARNING: catalog_products directory not found - images may need to be re-uploaded" >&2
+        fi
     fi
 fi
 
