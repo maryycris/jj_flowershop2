@@ -50,6 +50,10 @@ fi
 if [ -n "$DB_CONNECTION" ] && [ "$DB_CONNECTION" != "sqlite" ]; then
     echo "Running database migrations..." >&2
     
+    # Ensure sessions table exists (required for database session driver)
+    echo "Checking sessions table..." >&2
+    php artisan migrate --path=database/migrations/2024_06_14_000000_create_sessions_table.php --force 2>&1 || echo "Sessions table migration skipped (may already exist)" >&2
+    
     # Try to check migration status (this will fail if database is empty or connection fails)
     MIGRATION_STATUS=$(php artisan migrate:status 2>&1)
     MIGRATION_EXIT_CODE=$?

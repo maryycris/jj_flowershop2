@@ -35,14 +35,26 @@ class AuthController extends Controller
             return back()->withErrors(['login_field' => 'Please enter a valid email address or phone number.']);
         }
 
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
-            if (!$user->is_verified) {
-                Auth::logout();
-                return back()->withErrors(['login_field' => 'Please verify your email first.']);
+        try {
+            if (Auth::attempt($credentials)) {
+                $user = Auth::user();
+                if (!$user) {
+                    return back()->withErrors(['login_field' => 'Authentication failed. Please try again.']);
+                }
+                // Check if is_verified column exists before accessing it
+                if (isset($user->is_verified) && !$user->is_verified) {
+                    Auth::logout();
+                    return back()->withErrors(['login_field' => 'Please verify your email first.']);
+                }
+                $role = $user->role;
+                if (!$role) {
+                    return back()->withErrors(['login_field' => 'User role not found.']);
+                }
+                return redirect()->route("$role.dashboard");
             }
-            $role = $user->role;
-            return redirect()->route("$role.dashboard");
+        } catch (\Exception $e) {
+            \Log::error('Login error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return back()->withErrors(['login_field' => 'An error occurred during login. Please try again.']);
         }
         
         // Check if user exists but wrong password
