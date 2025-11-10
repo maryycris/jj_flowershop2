@@ -28,18 +28,12 @@ trait CustomizeFilterTrait
             ->orderBy('name')
             ->get();
 
-        // Filter out items that are in inventory:
-        // 1. Items with inventory_item_id (linked to Product)
-        // 2. Items whose name matches a Product name
-        $customizeItems = $customizeItems->filter(function($ci) use ($inventoryProductNames) {
-            // Exclude if linked to inventory item
+        // Filter out items that are linked to inventory (via inventory_item_id)
+        // Only exclude items that are explicitly linked to inventory products
+        // Items with matching names but no link are still allowed
+        $customizeItems = $customizeItems->filter(function($ci) {
+            // Only exclude if explicitly linked to inventory item
             if ($ci->inventoryItem) {
-                return false;
-            }
-            
-            // Exclude if name matches any inventory product name
-            $itemName = mb_strtolower(trim($ci->name));
-            if (in_array($itemName, $inventoryProductNames)) {
                 return false;
             }
             

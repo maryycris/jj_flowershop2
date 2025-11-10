@@ -42,8 +42,6 @@ class CustomizeController extends Controller
 
     public function store(Request $request)
     {
-        \Log::info('Customize store request', $request->all());
-        
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category' => 'required|in:Fresh Flowers,Artificial Flowers,Greenery,Ribbon,Wrappers',
@@ -52,77 +50,27 @@ class CustomizeController extends Controller
             'inventory_item_id' => 'nullable|exists:products,id'
         ]);
 
-        // Check if item name already exists in inventory
-        $inventoryProduct = Product::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower(trim($validated['name']))])->first();
-        if ($inventoryProduct) {
-            \Log::warning('Item name matches inventory product', [
-                'item_name' => $validated['name'],
-                'inventory_product_id' => $inventoryProduct->id
-            ]);
-            
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This item name already exists in inventory. Customize items must have unique names that are NOT in inventory.'
-                ], 422);
-            }
-            
-            return back()->withErrors(['name' => 'This item name already exists in inventory. Customize items must have unique names.'])->withInput();
-        }
+        $path = $request->file('image')->store('customize', 'public');
 
-        // If inventory_item_id is provided, warn but don't link it (to prevent filtering)
-        if (!empty($validated['inventory_item_id'])) {
-            \Log::info('Inventory item ID provided but will not be linked', [
-                'inventory_item_id' => $validated['inventory_item_id'],
-                'item_name' => $validated['name']
+        $customizeItem = new CustomizeItem();
+        $customizeItem->name = $validated['name'];
+        $customizeItem->category = $validated['category'];
+        $customizeItem->price = $validated['price'] ?? 0;
+        $customizeItem->image = $path;
+        $customizeItem->inventory_item_id = $validated['inventory_item_id'] ?? null;
+        $customizeItem->is_approved = true; // Admin can directly approve
+        $customizeItem->status = true;
+        $customizeItem->save();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Item added successfully.',
+                'item' => $customizeItem
             ]);
         }
 
-        try {
-            $path = $request->file('image')->store('customize', 'public');
-            \Log::info('Image stored', ['path' => $path]);
-
-            $customizeItem = new CustomizeItem();
-            $customizeItem->name = $validated['name'];
-            $customizeItem->category = $validated['category'];
-            $customizeItem->price = $validated['price'] ?? 0;
-            $customizeItem->image = $path;
-            // DO NOT set inventory_item_id - customize items should be independent
-            $customizeItem->inventory_item_id = null;
-            $customizeItem->is_approved = true; // Admin can directly approve
-            $customizeItem->status = true;
-            $customizeItem->save();
-
-            \Log::info('Customize item created', [
-                'id' => $customizeItem->id,
-                'name' => $customizeItem->name,
-                'category' => $customizeItem->category
-            ]);
-
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Item added successfully.',
-                    'item' => $customizeItem
-                ]);
-            }
-
-            return back()->with('success','Item added successfully.');
-        } catch (\Exception $e) {
-            \Log::error('Error creating customize item', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'An error occurred while adding the item: ' . $e->getMessage()
-                ], 500);
-            }
-            
-            return back()->withErrors(['error' => 'An error occurred while adding the item.'])->withInput();
-        }
+        return back()->with('success','Item added successfully.');
     }
 
     public function update(Request $request, $id)
