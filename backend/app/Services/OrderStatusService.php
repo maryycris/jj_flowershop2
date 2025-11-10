@@ -476,26 +476,41 @@ class OrderStatusService
      */
     public function getOrderCounts()
     {
-        // Count pending orders, excluding walk-in orders that are still in quotation stage
-        // (walk-in orders in quotation are being created, not waiting for approval)
-        $pendingCount = Order::where('order_status', 'pending')
-            ->where(function($query) {
-                $query->where('type', '!=', 'walk-in')
-                    ->orWhere(function($q) {
-                        $q->where('type', 'walk-in')
-                          ->whereNotIn('status', ['quotation', 'draft']);
-                    });
-            })
-            ->count();
-        
-        return [
-            'pending' => $pendingCount,
-            'approved' => Order::where('order_status', 'approved')->count(),
-            'on_delivery' => Order::where('order_status', 'on_delivery')->count(),
-            'completed_today' => Order::where('order_status', 'completed')
-                ->whereDate('completed_at', now()->toDateString())
-                ->count(),
-        ];
+        try {
+            // Count pending orders, excluding walk-in orders that are still in quotation stage
+            // (walk-in orders in quotation are being created, not waiting for approval)
+            $pendingCount = Order::where('order_status', 'pending')
+                ->where(function($query) {
+                    $query->where('type', '!=', 'walkin')
+                        ->orWhere(function($q) {
+                            $q->where('type', 'walkin')
+                              ->whereNotIn('order_status', ['quotation', 'draft']);
+                        });
+                })
+                ->count();
+            
+            return [
+                'pending' => $pendingCount,
+                'approved' => Order::where('order_status', 'approved')->count(),
+                'on_delivery' => Order::where('order_status', 'on_delivery')->count(),
+                'completed_today' => Order::where('order_status', 'completed')
+                    ->whereDate('completed_at', now()->toDateString())
+                    ->count(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error in getOrderCounts', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            // Return default values if query fails
+            return [
+                'pending' => 0,
+                'approved' => 0,
+                'on_delivery' => 0,
+                'completed_today' => 0,
+            ];
+        }
     }
 
     /**
