@@ -37,6 +37,7 @@ class AuthController extends Controller
 
         try {
             \Log::info('Login attempt', ['login_field' => $loginField, 'has_email' => filter_var($loginField, FILTER_VALIDATE_EMAIL), 'has_phone' => preg_match('/^09\d{9}$/', $loginField)]);
+            error_log("LOGIN ATTEMPT: login_field=$loginField");
             
             if (Auth::attempt($credentials)) {
                 $user = Auth::user();
@@ -75,6 +76,7 @@ class AuthController extends Controller
                 return redirect($dashboardUrl);
             } else {
                 \Log::info('Auth attempt failed', ['login_field' => $loginField]);
+                error_log("AUTH ATTEMPT FAILED: login_field=$loginField");
             }
         } catch (\Exception $e) {
             \Log::error('Login error', [
@@ -740,6 +742,7 @@ class AuthController extends Controller
 
         try {
             \Log::info('Staff login attempt', ['login_field' => $loginField]);
+            error_log("STAFF LOGIN ATTEMPT: login_field=$loginField");
             
             if (Auth::attempt($credentials)) {
                 $user = Auth::user();
@@ -762,17 +765,21 @@ class AuthController extends Controller
                 }
                 
                 \Log::info('Staff login successful, redirecting', ['user_id' => $user->id, 'role' => $user->role]);
+                error_log("STAFF LOGIN SUCCESS: user_id={$user->id}, role={$user->role}");
                 
                 // Use direct URL redirect to avoid route resolution issues
                 $dashboardUrl = "/{$user->role}/dashboard";
                 \Log::info('Redirecting to dashboard', ['url' => $dashboardUrl, 'role' => $user->role]);
+                error_log("REDIRECTING TO: $dashboardUrl");
                 
                 // Ensure session is saved before redirect
                 \Session::save();
+                error_log("SESSION SAVED");
                 
                 return redirect($dashboardUrl);
             } else {
                 \Log::info('Staff auth attempt failed', ['login_field' => $loginField]);
+                error_log("STAFF AUTH ATTEMPT FAILED: login_field=$loginField");
             }
         } catch (\Exception $e) {
             \Log::error('Staff login error', [
@@ -781,6 +788,7 @@ class AuthController extends Controller
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
+            error_log("STAFF LOGIN ERROR: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
             return back()->withErrors(['login_field' => 'An error occurred during login. Please try again.']);
         }
         return back()->withErrors(['login_field' => 'Invalid credentials']);
