@@ -11,44 +11,29 @@ trait CustomizeFilterTrait
     /**
      * Get filtered customize items for admin, clerk, and customer
      * Ensures all three use exactly the same data source and filtering
-     * EXCLUDES items that exist in inventory (Product table)
+     * Shows all items from customize_items table (regardless of inventory_item_id)
      */
     public function getCustomizeItems()
     {
-        // Get all product names from inventory to exclude them
-        $inventoryProductNames = Product::pluck('name')->map(function($name) {
-            return mb_strtolower(trim($name));
-        })->toArray();
-        
         // Get customize items from the separate customize_items table
         // Eager load inventory item relationship to get latest price
         $customizeItems = CustomizeItem::where('status', true)
+            ->where('is_approved', true) // Only show approved items
             ->with('inventoryItem')
             ->orderBy('category')
             ->orderBy('name')
             ->get();
 
-        // Filter out items that are linked to inventory (via inventory_item_id)
-        // Only exclude items that are explicitly linked to inventory products
-        // Items with matching names but no link are still allowed
-        $customizeItems = $customizeItems->filter(function($ci) {
-            // Only exclude if explicitly linked to inventory item
-            if ($ci->inventoryItem) {
-                return false;
-            }
-            
-            return true;
-        });
-
-        // Compute display price: use own price (since we're excluding inventory items)
+        // Compute display price: use inventory price if linked, otherwise use own price
         foreach ($customizeItems as $ci) {
-            $price = $ci->price ?? 0;
+            // If linked to inventory, use inventory price; otherwise use own price
+            $price = $ci->inventoryItem ? $ci->inventoryItem->price : ($ci->price ?? 0);
             // Attach a non-persistent attribute for views
             $ci->computed_price = $price;
         }
             
-        // DO NOT fallback to products table - only show CustomizeItems that are NOT in inventory
-        // If customize_items table is empty or all items are filtered out, return empty collection
+        // Show all items from customize_items table
+        // Items can be linked to inventory or standalone - both are allowed
         
         return $customizeItems->groupBy('category');
     }
