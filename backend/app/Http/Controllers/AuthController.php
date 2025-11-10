@@ -179,8 +179,11 @@ class AuthController extends Controller
             abort(404);
         }
         if ($provider === 'facebook') {
-            // Use the new app ID
-            $clientId = '769015785952499';
+            // Get Facebook credentials from environment
+            $clientId = env('FACEBOOK_CLIENT_ID', '769015785952499');
+            if (empty($clientId)) {
+                return redirect('/login')->withErrors(['message' => 'Facebook login is not configured. Please contact the administrator.']);
+            }
             // For localhost, use hardcoded URL. For Railway/production, use APP_URL
             $appUrl = config('app.url');
             if (str_contains($appUrl, 'localhost') || str_contains($appUrl, '127.0.0.1')) {
@@ -453,8 +456,14 @@ class AuthController extends Controller
 
         try {
             // Exchange code for access token
-            $clientId = '769015785952499';
-            $clientSecret = 'e3751172c5bf6451c8f2ed10656abfb0';
+            $clientId = env('FACEBOOK_CLIENT_ID', '769015785952499');
+            $clientSecret = env('FACEBOOK_CLIENT_SECRET', 'e3751172c5bf6451c8f2ed10656abfb0');
+            
+            if (empty($clientId) || empty($clientSecret)) {
+                \Log::error('Facebook OAuth credentials missing');
+                return redirect('/login')->withErrors(['message' => 'Facebook login is not configured. Please contact the administrator.']);
+            }
+            
             // For localhost, use hardcoded URL. For Railway/production, use APP_URL
             $appUrl = config('app.url');
             if (str_contains($appUrl, 'localhost') || str_contains($appUrl, '127.0.0.1')) {
