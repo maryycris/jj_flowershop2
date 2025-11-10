@@ -110,6 +110,12 @@ if [ -z "$APP_URL" ] && [ -n "$RAILWAY_PUBLIC_DOMAIN" ]; then
     echo "Set APP_URL to: $APP_URL" >&2
 fi
 
+# Set session configuration for HTTPS (Railway uses HTTPS)
+if [ -z "$SESSION_SECURE_COOKIE" ]; then
+    export SESSION_SECURE_COOKIE="true"
+    echo "Set SESSION_SECURE_COOKIE to true for HTTPS" >&2
+fi
+
 # Start the server from root public directory
 echo "Starting PHP server on 0.0.0.0:$PORT..." >&2
 cd .. || exit 1
