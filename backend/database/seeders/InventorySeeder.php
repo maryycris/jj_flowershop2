@@ -4,16 +4,21 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Product;
+use Illuminate\Support\Str;
 
 class InventorySeeder extends Seeder
 {
     public function run()
     {
+        $this->command->info('Starting inventory population...');
+
         $categories = [
             'Fresh Flowers' => [
-                'Red roses', 'White roses', 'Pink roses', 'White lily', 'Sunflower', 
-                'Carnation', 'Tulips', 'Aster', 'Gypsophila', 'Eucalyptus', 'Misty', 
-                'Lemon leaf', 'Bil is', 'Orchids', 'Wander', 'Winter', 'Statice'
+                'Red roses', 'White roses', 'Pink roses', 'Yellow roses', 'Orange roses',
+                'White lily', 'Sunflower', 'Carnation', 'Tulips', 'Aster', 'Gypsophila', 
+                'Eucalyptus', 'Misty', 'Lemon leaf', 'Bil is', 'Orchids', 'Wander', 
+                'Winter', 'Statice', 'Baby breath', 'Chrysanthemum', 'Gerbera', 'Iris',
+                'Peony', 'Daisy', 'Lavender', 'Marigold', 'Snapdragon', 'Zinnia'
             ],
             'Dried Flowers' => [
                 'Fossilized Roses', 'Preserve Roses', 'Gypsophila (Dried)', 
@@ -113,6 +118,39 @@ class InventorySeeder extends Seeder
                 'Ink pad & Stamp', 'Glue', 'Receipt', 'Sticker', 'Loyalty card',
                 'Battery (AA)', 'Battery (AAA)', 'Price stamp', 'Stapler', 'Eraser', 'Sharpener'
             ],
+            'Greenery' => [
+                'Eucalyptus leaves', 'Fern leaves', 'Ivy leaves', 'Palm leaves',
+                'Monstera leaves', 'Fiddle leaf', 'Pothos leaves', 'Philodendron',
+                'Asparagus fern', 'Ruscus', 'Salal leaves', 'Leather leaf',
+                'Lemon leaf', 'Boxwood', 'Cedar', 'Pine branches'
+            ],
+            'Wrappers' => [
+                'Foggy bouquet wrapper (red)', 'Foggy bouquet wrapper (gold)', 
+                'Foggy bouquet wrapper (blue)', 'Foggy bouquet wrapper (purple)',
+                'Foggy bouquet wrapper (black)', 'Foggy bouquet wrapper (white)',
+                'Foggy bouquet wrapper (pink)', 'Two toned bouquet wrapper (red)',
+                'Two toned bouquet wrapper (yellow)', 'Two toned bouquet wrapper (green)',
+                'Two toned bouquet wrapper (blue)', 'Two toned bouquet wrapper (purple)',
+                'Two toned bouquet wrapper (pink)', 'Single tone bouquet wrapper (red)',
+                'Single tone bouquet wrapper (yellow)', 'Single tone bouquet wrapper (green)',
+                'Single tone bouquet wrapper (blue)', 'Single tone bouquet wrapper (purple)',
+                'Single tone bouquet wrapper (pink)', 'English news flower bouquet wrapper',
+                'Printed heart bouquet wrapper', 'Gradient color bouquet wrapper',
+                'Tissue wrapper', 'Tela bouquet wrapper', 'Mesh web'
+            ],
+            'Ribbon' => [
+                '2 cm satin ribbon (red)', '2 cm satin ribbon (yellow)', '2 cm satin ribbon (green)',
+                '2 cm satin ribbon (blue)', '2 cm satin ribbon (purple)', '2 cm satin ribbon (pink)',
+                '2 cm satin ribbon (black)', '2 cm satin ribbon (white)', '2.5 cm satin ribbon (red)',
+                '2.5 cm satin ribbon (yellow)', '2.5 cm satin ribbon (green)', '2.5 cm satin ribbon (blue)',
+                '2.5 cm satin ribbon (purple)', '2.5 cm satin ribbon (pink)', '2.5 cm satin ribbon (black)',
+                '4cm satin ribbon (red)', '4cm satin ribbon (yellow)', '4cm satin ribbon (green)',
+                '4cm satin ribbon (blue)', '4cm satin ribbon (purple)', '4cm satin ribbon (pink)',
+                '4cm satin ribbon (black)', 'Fancy ribbon plain', 'Fancy ribbon with gold outline',
+                'Plastic ribbon heart printed', 'Plastic ribbon I love you printed',
+                '4cm fishtail ribbon', 'Organza ribbon with gold lining', 'Glitter Ribbon (gold)',
+                'Glitter Ribbon (silver)'
+            ],
             'Other Offers' => [
                 'Glass Dome Galaxy Rose', 'Bobo Balloon', 'Foil Balloon (I Love You)',
                 'Foil Balloon (Happy Birthday)', 'Foil Balloon (Happy Anniversary)',
@@ -122,36 +160,71 @@ class InventorySeeder extends Seeder
             ]
         ];
 
+        $categoryPrefixes = [
+            'Fresh Flowers' => 'FRE',
+            'Dried Flowers' => 'DRI',
+            'Artificial Flowers' => 'ART',
+            'Floral Supplies' => 'FLO',
+            'Packaging Materials' => 'PAC',
+            'Materials, Tools, and Equipment' => 'MAT',
+            'Office Supplies' => 'OFF',
+            'Greenery' => 'GRE',
+            'Wrappers' => 'WRA',
+            'Ribbon' => 'RIB',
+            'Other Offers' => 'OTH'
+        ];
+
+        $productCount = 0;
         foreach ($categories as $category => $items) {
-            foreach ($items as $item) {
+            foreach ($items as $index => $item) {
+                // Generate product code: Category prefix + Name abbreviation + Number
+                $prefix = $categoryPrefixes[$category] ?? 'PRO';
+                $nameAbbr = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $item), 0, 5));
+                $code = $prefix . '-' . $nameAbbr . '-' . str_pad($index + 1, 3, '0', STR_PAD_LEFT);
+                
+                // Check if product with same code already exists
+                if (Product::where('code', $code)->exists()) {
+                    continue;
+                }
+
                 Product::create([
+                    'code' => $code,
                     'name' => $item,
                     'category' => $category,
                     'price' => $this->getPriceForItem($item, $category),
                     'stock' => $this->getStockForItem($item, $category),
                     'description' => 'Inventory item from ' . $category,
-                    'cost_price' => $this->getPriceForItem($item, $category) * 0.7,
-                    'reorder_min' => 10,
-                    'reorder_max' => 50,
-                    'qty_consumed' => 0,
-                    'qty_damaged' => 0,
-                    'qty_sold' => 0,
+                    'cost_price' => $this->getPriceForItem($item, $category) * 0.5,
+                    'reorder_min' => $this->getReorderMin($category),
+                    'reorder_max' => $this->getReorderMax($category),
+                    'qty_consumed' => rand(0, 10),
+                    'qty_damaged' => rand(0, 3),
+                    'qty_sold' => rand(0, 20),
+                    'status' => true,
+                    'is_approved' => true,
+                    'is_customize_item' => in_array($category, ['Fresh Flowers', 'Dried Flowers', 'Artificial Flowers', 'Greenery', 'Floral Supplies']),
                 ]);
+                $productCount++;
             }
         }
+
+        $this->command->info("Successfully created {$productCount} inventory items!");
     }
 
     private function getPriceForItem($item, $category)
     {
         $prices = [
-            'Fresh Flowers' => 25.00,
-            'Dried Flowers' => 40.00,
-            'Artificial Flowers' => 12.00,
-            'Floral Supplies' => 3.00,
-            'Packaging Materials' => 5.00,
-            'Materials, Tools, and Equipment' => 15.00,
-            'Office Supplies' => 5.00,
-            'Other Offers' => 50.00,
+            'Fresh Flowers' => rand(15, 30),
+            'Dried Flowers' => rand(35, 50),
+            'Artificial Flowers' => rand(10, 20),
+            'Floral Supplies' => rand(2, 8),
+            'Packaging Materials' => rand(3, 10),
+            'Materials, Tools, and Equipment' => rand(10, 25),
+            'Office Supplies' => rand(3, 10),
+            'Greenery' => rand(12, 25),
+            'Wrappers' => rand(4, 12),
+            'Ribbon' => rand(2, 6),
+            'Other Offers' => rand(40, 100),
         ];
         
         return $prices[$category] ?? 10.00;
@@ -160,16 +233,57 @@ class InventorySeeder extends Seeder
     private function getStockForItem($item, $category)
     {
         $stocks = [
-            'Fresh Flowers' => 80,
-            'Dried Flowers' => 30,
-            'Artificial Flowers' => 60,
-            'Floral Supplies' => 150,
-            'Packaging Materials' => 100,
-            'Materials, Tools, and Equipment' => 25,
-            'Office Supplies' => 100,
-            'Other Offers' => 20,
+            'Fresh Flowers' => rand(50, 100),
+            'Dried Flowers' => rand(20, 40),
+            'Artificial Flowers' => rand(40, 80),
+            'Floral Supplies' => rand(100, 200),
+            'Packaging Materials' => rand(80, 150),
+            'Materials, Tools, and Equipment' => rand(15, 35),
+            'Office Supplies' => rand(80, 150),
+            'Greenery' => rand(30, 70),
+            'Wrappers' => rand(60, 120),
+            'Ribbon' => rand(100, 200),
+            'Other Offers' => rand(10, 30),
         ];
         
         return $stocks[$category] ?? 50;
+    }
+
+    private function getReorderMin($category)
+    {
+        $mins = [
+            'Fresh Flowers' => 20,
+            'Dried Flowers' => 10,
+            'Artificial Flowers' => 15,
+            'Floral Supplies' => 30,
+            'Packaging Materials' => 25,
+            'Materials, Tools, and Equipment' => 5,
+            'Office Supplies' => 20,
+            'Greenery' => 15,
+            'Wrappers' => 20,
+            'Ribbon' => 30,
+            'Other Offers' => 5,
+        ];
+        
+        return $mins[$category] ?? 10;
+    }
+
+    private function getReorderMax($category)
+    {
+        $maxs = [
+            'Fresh Flowers' => 100,
+            'Dried Flowers' => 50,
+            'Artificial Flowers' => 80,
+            'Floral Supplies' => 200,
+            'Packaging Materials' => 150,
+            'Materials, Tools, and Equipment' => 50,
+            'Office Supplies' => 150,
+            'Greenery' => 80,
+            'Wrappers' => 120,
+            'Ribbon' => 200,
+            'Other Offers' => 40,
+        ];
+        
+        return $maxs[$category] ?? 50;
     }
 }
