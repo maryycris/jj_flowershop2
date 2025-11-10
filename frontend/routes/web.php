@@ -26,18 +26,53 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Serve storage files since root public/storage symlink doesn't exist
+// Serve storage files - fallback route if symlink doesn't work
 Route::get('/storage/{path}', function ($path) {
-    $filePath = base_path('../backend/storage/app/public/' . $path);
+    // Try multiple possible paths
+    $possiblePaths = [
+        // From frontend directory
+        base_path('../backend/storage/app/public/' . $path),
+        // From root directory
+        base_path('backend/storage/app/public/' . $path),
+        // Absolute path from backend
+        __DIR__ . '/../../backend/storage/app/public/' . $path,
+    ];
     
-    if (!file_exists($filePath)) {
-        abort(404);
+    $filePath = null;
+    foreach ($possiblePaths as $possiblePath) {
+        if (file_exists($possiblePath)) {
+            $filePath = $possiblePath;
+            break;
+        }
+    }
+    
+    if (!$filePath || !file_exists($filePath)) {
+        \Log::warning('Storage file not found', [
+            'requested_path' => $path,
+            'tried_paths' => $possiblePaths,
+            'current_dir' => __DIR__,
+            'base_path' => base_path(),
+        ]);
+        abort(404, "File not found: $path");
+    }
+    
+    // Security: prevent directory traversal
+    $realPath = realpath($filePath);
+    $storageRoot = realpath(base_path('../backend/storage/app/public')) ?: realpath(__DIR__ . '/../../backend/storage/app/public');
+    if (!$storageRoot || strpos($realPath, $storageRoot) !== 0) {
+        abort(403, 'Access denied');
     }
     
     $mimeType = mime_content_type($filePath);
     if (!$mimeType) {
         $mimeType = 'application/octet-stream';
     }
+    
+    \Log::info('Serving storage file', [
+        'path' => $path,
+        'file_path' => $filePath,
+        'mime_type' => $mimeType,
+    ]);
     
     return response()->file($filePath, [
         'Content-Type' => $mimeType,
