@@ -5,7 +5,7 @@
 php = "8.2"
 node = "20"
 
-# Install phase - override default to use correct directories
+# Override install phase to use correct directories
 [phases.install]
 dependsOn = ["setup"]
 cmds = [
@@ -13,14 +13,10 @@ cmds = [
     "cd frontend && npm ci || exit 1"
 ]
 
-# Build phase - override default to use correct directories
+# Use custom build script for build phase
 [phases.build]
 dependsOn = ["install"]
-cmds = [
-    "cd frontend && npm run build || exit 1",
-    "cd backend && mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache storage/framework/testing storage/logs bootstrap/cache",
-    "cd backend && chmod -R 775 storage bootstrap/cache 2>/dev/null || true"
-]
+cmds = ["bash build.sh"]
 
 # Start command
 [start]
