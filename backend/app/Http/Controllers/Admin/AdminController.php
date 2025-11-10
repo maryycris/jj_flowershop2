@@ -15,8 +15,9 @@ class AdminController extends Controller
 {
     public function dashboard()
     {
-        $orderStatusService = new OrderStatusService();
-        $orderCounts = $orderStatusService->getOrderCounts();
+        try {
+            $orderStatusService = new OrderStatusService();
+            $orderCounts = $orderStatusService->getOrderCounts();
 
         // Aggregate totals for dashboard analytics
         $totalOrders = Order::count();
@@ -97,7 +98,7 @@ class AdminController extends Controller
         $onlineOrdersCount = Order::where('type', 'online')->count();
         $walkinOrdersCount = Order::where('type', 'walkin')->count();
 
-        return view('admin.dashboard', [
+            return view('admin.dashboard', [
             'pendingOrdersCount' => $orderCounts['pending'],
             'approvedOrdersCount' => $orderCounts['approved'],
             'onDeliveryCount' => $orderCounts['on_delivery'],
@@ -119,6 +120,15 @@ class AdminController extends Controller
             'onlineOrdersCount' => $onlineOrdersCount,
             'walkinOrdersCount' => $walkinOrdersCount,
         ]);
+        } catch (\Exception $e) {
+            \Log::error('Admin dashboard error', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->route('admin.dashboard')->with('error', 'An error occurred loading the dashboard. Please try again.');
+        }
     }
 
     public function chatbox(Request $request)

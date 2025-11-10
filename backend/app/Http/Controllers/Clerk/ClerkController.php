@@ -21,8 +21,9 @@ class ClerkController extends Controller
 {
     public function dashboard()
     {
-        $orderStatusService = new OrderStatusService();
-        $orderCounts = $orderStatusService->getOrderCounts();
+        try {
+            $orderStatusService = new OrderStatusService();
+            $orderCounts = $orderStatusService->getOrderCounts();
         
         // Get low stock alerts using InventoryService
         $inventoryService = new \App\Services\InventoryService();
@@ -74,6 +75,15 @@ class ClerkController extends Controller
             'walkinOrdersCount' => $walkinOrdersCount,
             'recentMovements' => $recentMovements,
         ]);
+        } catch (\Exception $e) {
+            \Log::error('Clerk dashboard error', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->route('clerk.dashboard')->with('error', 'An error occurred loading the dashboard. Please try again.');
+        }
     }
 
     public function products(Request $request) {
