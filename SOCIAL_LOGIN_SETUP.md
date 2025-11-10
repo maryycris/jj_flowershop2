@@ -36,13 +36,37 @@ GOOGLE_REDIRECT_URI=https://jjflowershop2-production.up.railway.app/auth/google/
 
 ### 3. Google OAuth Configuration
 
+**IMPORTANTE: Kailangan mo muna gumawa ng Google OAuth credentials!**
+
+#### Step 1: Gumawa ng Google OAuth Credentials
+
 1. Pumunta sa [Google Cloud Console](https://console.cloud.google.com/)
 2. Pumunta sa **APIs & Services** > **Credentials**
-3. Piliin ang iyong OAuth 2.0 Client ID (o gumawa ng bago)
-4. Sa **Authorized redirect URIs**, i-add:
+3. Click **+ CREATE CREDENTIALS** > **OAuth client ID**
+4. Kung first time, kailangan mo muna i-configure ang **OAuth consent screen**:
+   - Pumunta sa **OAuth consent screen**
+   - Piliin ang **External** (para sa public users)
+   - I-fill up ang required fields (App name, User support email, Developer contact)
+   - I-save
+5. Bumalik sa **Credentials** > **+ CREATE CREDENTIALS** > **OAuth client ID**
+6. Piliin ang **Application type**: **Web application**
+7. I-bigay ang **Name**: "JJ Flowershop Railway"
+8. Sa **Authorized redirect URIs**, i-click **+ ADD URI** at i-add:
    - `https://jjflowershop2-production.up.railway.app/auth/google/callback`
-5. I-save ang changes
-6. I-copy ang **Client ID** at **Client Secret** at i-set bilang environment variables sa Railway
+9. I-click **CREATE**
+10. I-copy ang **Client ID** at **Client Secret** (important: i-save mo ito agad, hindi na ito ma-view ulit!)
+
+#### Step 2: I-set ang Credentials sa Railway
+
+1. Pumunta sa Railway → jj_flowershop2 → **Variables**
+2. I-add ang mga sumusunod:
+   ```
+   GOOGLE_CLIENT_ID=<paste_your_client_id_here>
+   GOOGLE_CLIENT_SECRET=<paste_your_client_secret_here>
+   GOOGLE_REDIRECT_URI=https://jjflowershop2-production.up.railway.app/auth/google/callback
+   ```
+3. I-save ang changes
+4. Mag-redeploy ang application
 
 ### 4. Important Notes
 

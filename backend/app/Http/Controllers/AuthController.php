@@ -206,7 +206,20 @@ class AuthController extends Controller
         if ($provider === 'google') {
             // Check if Google credentials are configured
             $clientId = env('GOOGLE_CLIENT_ID', config('services.google.client_id'));
-            if (empty($clientId)) {
+            $clientSecret = env('GOOGLE_CLIENT_SECRET', config('services.google.client_secret'));
+            
+            \Log::info('Google OAuth redirect attempt', [
+                'client_id_set' => !empty($clientId),
+                'client_secret_set' => !empty($clientSecret),
+                'client_id_preview' => $clientId ? substr($clientId, 0, 10) . '...' : 'NOT SET',
+                'app_url' => config('app.url')
+            ]);
+            
+            if (empty($clientId) || empty($clientSecret)) {
+                \Log::error('Google OAuth credentials missing', [
+                    'client_id_set' => !empty($clientId),
+                    'client_secret_set' => !empty($clientSecret)
+                ]);
                 return redirect('/login')->withErrors(['message' => 'Google login is not configured. Please contact the administrator.']);
             }
             
@@ -214,12 +227,14 @@ class AuthController extends Controller
             $appUrl = config('app.url');
             if (str_contains($appUrl, 'localhost') || str_contains($appUrl, '127.0.0.1')) {
                 // Localhost - use default behavior (no redirectUrl set)
+                \Log::info('Google OAuth redirect (localhost)');
                 return Socialite::driver('google')
                     ->scopes(['email', 'profile', 'https://www.googleapis.com/auth/user.phonenumbers.read'])
                     ->redirect();
             } else {
                 // Railway/Production - set redirect URL explicitly
                 $redirectUri = env('GOOGLE_REDIRECT_URI', rtrim($appUrl, '/') . '/auth/google/callback');
+                \Log::info('Google OAuth redirect (production)', ['redirect_uri' => $redirectUri]);
                 return Socialite::driver('google')
                     ->redirectUrl($redirectUri)
                     ->scopes(['email', 'profile', 'https://www.googleapis.com/auth/user.phonenumbers.read'])
