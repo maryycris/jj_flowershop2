@@ -65,18 +65,40 @@ class AuthController extends Controller
                 // Check if route exists before redirecting
                 try {
                     $routeName = "$role.dashboard";
-                    if (!\Route::has($routeName)) {
-                        \Log::error('Dashboard route not found', ['route' => $routeName, 'role' => $role]);
-                        return back()->withErrors(['login_field' => "Dashboard route not found for role: $role"]);
+                    \Log::info('Checking route', ['route' => $routeName]);
+                    
+                    // List all routes for debugging
+                    $allRoutes = \Route::getRoutes();
+                    $dashboardRoutes = [];
+                    foreach ($allRoutes as $route) {
+                        if (str_contains($route->getName() ?? '', 'dashboard')) {
+                            $dashboardRoutes[] = $route->getName();
+                        }
                     }
-                    return redirect()->route($routeName);
+                    \Log::info('Available dashboard routes', ['routes' => $dashboardRoutes]);
+                    
+                    if (!\Route::has($routeName)) {
+                        \Log::error('Dashboard route not found', ['route' => $routeName, 'role' => $role, 'available_routes' => $dashboardRoutes]);
+                        // Fallback to direct URL
+                        \Log::info('Using fallback URL redirect', ['url' => "/$role/dashboard"]);
+                        return redirect("/$role/dashboard");
+                    }
+                    
+                    \Log::info('Route found, redirecting', ['route' => $routeName]);
+                    $redirectUrl = route($routeName);
+                    \Log::info('Redirect URL generated', ['url' => $redirectUrl]);
+                    return redirect($redirectUrl);
                 } catch (\Exception $e) {
                     \Log::error('Route redirect error', [
                         'error' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
                         'route' => "$role.dashboard",
-                        'role' => $role
+                        'role' => $role,
+                        'trace' => $e->getTraceAsString()
                     ]);
                     // Fallback to role-specific URL
+                    \Log::info('Using fallback URL after exception', ['url' => "/$role/dashboard"]);
                     return redirect("/$role/dashboard");
                 }
             } else {
