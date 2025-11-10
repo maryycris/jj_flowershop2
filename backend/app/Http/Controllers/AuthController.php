@@ -708,14 +708,25 @@ class AuthController extends Controller
         // Only allow username login for staff
         $credentials = ['username' => $loginField, 'password' => $password];
 
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
-            if (!in_array($user->role, ['admin', 'clerk', 'driver'])) {
-                Auth::logout();
-                return back()->withErrors(['login_field' => 'Only staff (admin, clerk, driver) can log in here.']);
+        try {
+            if (Auth::attempt($credentials)) {
+                $user = Auth::user();
+                if (!$user) {
+                    return back()->withErrors(['login_field' => 'Authentication failed. Please try again.']);
+                }
+                if (!in_array($user->role, ['admin', 'clerk', 'driver'])) {
+                    Auth::logout();
+                    return back()->withErrors(['login_field' => 'Only staff (admin, clerk, driver) can log in here.']);
+                }
+                if (!$user->role) {
+                    return back()->withErrors(['login_field' => 'User role not found.']);
+                }
+                return redirect()->route($user->role . '.dashboard');
             }
-            return redirect()->route($user->role . '.dashboard');
+        } catch (\Exception $e) {
+            \Log::error('Staff login error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return back()->withErrors(['login_field' => 'An error occurred during login. Please try again.']);
         }
-        return back()->withErrors(['Invalid credentials']);
+        return back()->withErrors(['login_field' => 'Invalid credentials']);
     }
 } 
