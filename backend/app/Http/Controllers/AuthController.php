@@ -744,6 +744,23 @@ class AuthController extends Controller
             \Log::info('Staff login attempt', ['login_field' => $loginField]);
             error_log("STAFF LOGIN ATTEMPT: login_field=$loginField");
             
+            // Check if user exists first
+            $user = \App\Models\User::where('username', $loginField)->first();
+            if ($user) {
+                error_log("USER FOUND: user_id={$user->id}, username={$user->username}, role={$user->role}");
+                // Verify password manually
+                if (\Hash::check($password, $user->password)) {
+                    error_log("PASSWORD VERIFIED");
+                    // Manually log in the user
+                    Auth::login($user);
+                    error_log("USER LOGGED IN VIA MANUAL AUTH");
+                } else {
+                    error_log("PASSWORD MISMATCH");
+                }
+            } else {
+                error_log("USER NOT FOUND with username=$loginField");
+            }
+            
             if (Auth::attempt($credentials)) {
                 $user = Auth::user();
                 \Log::info('Staff auth attempt successful', ['user_id' => $user ? $user->id : null]);
