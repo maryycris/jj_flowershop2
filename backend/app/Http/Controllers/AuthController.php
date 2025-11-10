@@ -61,13 +61,16 @@ class AuthController extends Controller
                 }
                 
                 \Log::info('Login successful, redirecting', ['user_id' => $user->id, 'role' => $role]);
+                error_log("LOGIN SUCCESS: user_id={$user->id}, role=$role");
                 
                 // Use direct URL redirect to avoid route resolution issues
                 $dashboardUrl = "/$role/dashboard";
                 \Log::info('Redirecting to dashboard', ['url' => $dashboardUrl, 'role' => $role]);
+                error_log("REDIRECTING TO: $dashboardUrl");
                 
                 // Ensure session is saved before redirect
                 \Session::save();
+                error_log("SESSION SAVED");
                 
                 return redirect($dashboardUrl);
             } else {
@@ -80,6 +83,7 @@ class AuthController extends Controller
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
+            error_log("LOGIN ERROR: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
             return back()->withErrors(['login_field' => 'An error occurred during login. Please try again.']);
         }
         
