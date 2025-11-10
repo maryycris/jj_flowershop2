@@ -95,6 +95,19 @@ if [ -n "$DB_CONNECTION" ] && [ "$DB_CONNECTION" != "sqlite" ]; then
         fi
     fi
     echo "Migration process completed." >&2
+    
+    # Check if admin user exists, if not, run seeder
+    echo "Checking if admin user exists..." >&2
+    ADMIN_COUNT=$(php artisan tinker --execute="echo \App\Models\User::where('role', 'admin')->count();" 2>&1 | tail -1 | grep -oE '[0-9]+' || echo "0")
+    if [ "$ADMIN_COUNT" = "0" ] || [ -z "$ADMIN_COUNT" ]; then
+        echo "No admin users found. Running database seeder..." >&2
+        php artisan db:seed --class=CreateAdminUserSeeder --force 2>&1 || {
+            echo "WARNING: Seeder failed. You may need to create admin user manually." >&2
+        }
+        echo "Seeder completed." >&2
+    else
+        echo "Admin user(s) found: $ADMIN_COUNT" >&2
+    fi
 fi
 
 # If APP_KEY is not set, try to generate one (only if .env exists)
