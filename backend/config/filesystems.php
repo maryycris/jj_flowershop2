@@ -69,7 +69,8 @@ return [
             'cloud' => env('CLOUDINARY_CLOUD_NAME'), // Cloudinary expects 'cloud', not 'cloud_name'
             'key' => env('CLOUDINARY_API_KEY'), // Cloudinary expects 'key', not 'api_key'
             'secret' => env('CLOUDINARY_API_SECRET'), // Cloudinary expects 'secret', not 'api_secret'
-            'url' => env('CLOUDINARY_URL'), // Optional: full Cloudinary URL
+            // URL will be set dynamically in AppServiceProvider if valid
+            // DO NOT set 'url' here to avoid invalid URLs from environment
             'secure' => true, // Use HTTPS
         ],
 

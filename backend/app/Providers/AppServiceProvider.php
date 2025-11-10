@@ -46,23 +46,36 @@ class AppServiceProvider extends ServiceProvider
             // Update Cloudinary disk config with correct key names
             // DO NOT use CLOUDINARY_URL if it's set to the app URL (common mistake)
             $cloudinaryUrl = env('CLOUDINARY_URL');
-            if ($cloudinaryUrl && !str_starts_with($cloudinaryUrl, 'cloudinary://')) {
-                // If CLOUDINARY_URL is set but not a valid Cloudinary URL, ignore it
-                \Log::warning('CLOUDINARY_URL is set but invalid, ignoring it', [
-                    'url_preview' => substr($cloudinaryUrl, 0, 50) . '...'
-                ]);
-                $cloudinaryUrl = null;
+            $isValidUrl = false;
+            
+            if ($cloudinaryUrl) {
+                // Check if it's a valid Cloudinary URL (must start with cloudinary://)
+                if (str_starts_with($cloudinaryUrl, 'cloudinary://')) {
+                    $isValidUrl = true;
+                    \Log::info('Using CLOUDINARY_URL from environment');
+                } else {
+                    // If CLOUDINARY_URL is set but not a valid Cloudinary URL, ignore it
+                    \Log::warning('CLOUDINARY_URL is set but invalid, ignoring it', [
+                        'url_preview' => substr($cloudinaryUrl, 0, 50) . '...',
+                        'note' => 'CLOUDINARY_URL must start with cloudinary://'
+                    ]);
+                    $cloudinaryUrl = null;
+                }
             }
             
+            // Always set individual credentials (more reliable)
             config(['filesystems.disks.cloudinary.cloud' => $cloudName]);
             config(['filesystems.disks.cloudinary.key' => $apiKey]);
             config(['filesystems.disks.cloudinary.secret' => $apiSecret]);
             config(['filesystems.disks.cloudinary.secure' => true]);
+            
             // Only set URL if it's a valid Cloudinary URL
-            if ($cloudinaryUrl && str_starts_with($cloudinaryUrl, 'cloudinary://')) {
+            // If URL is invalid or not set, CloudinaryServiceProvider will use individual credentials
+            if ($isValidUrl && $cloudinaryUrl) {
                 config(['filesystems.disks.cloudinary.url' => $cloudinaryUrl]);
             } else {
-                // Remove URL config to use individual credentials
+                // Explicitly unset URL to force use of individual credentials
+                // This prevents CloudinaryServiceProvider from using an invalid URL
                 config(['filesystems.disks.cloudinary.url' => null]);
             }
             
