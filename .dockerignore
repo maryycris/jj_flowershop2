@@ -63,3 +63,6 @@ frontend/public/hot
 *.tmp
 *.temp
 
+# Railway config files (we want to use Dockerfile, not Railpack/Nixpacks)
+nixpacks.toml
+
