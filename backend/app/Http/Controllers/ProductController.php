@@ -323,6 +323,13 @@ class ProductController extends Controller
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Validation failed:', $e->errors());
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
             return redirect()->back()->withErrors($e->errors())->withInput();
         }
 
@@ -342,34 +349,50 @@ class ProductController extends Controller
             $productData['image'] = $request->file('image')->store('catalog_products', 'public');
         }
 
-        $catalogProduct = CatalogProduct::create($productData);
-        \Log::info('Catalog product created:', ['id' => $catalogProduct->id, 'name' => $catalogProduct->name]);
+        try {
+            $catalogProduct = CatalogProduct::create($productData);
+            \Log::info('Catalog product created:', ['id' => $catalogProduct->id, 'name' => $catalogProduct->name]);
 
-        // Save product compositions (materials from inventory)
-        if ($request->has('compositions') && is_array($request->compositions)) {
-            foreach ($request->compositions as $composition) {
-                if (!empty($composition['component_id']) && !empty($composition['component_name']) && !empty($composition['quantity'])) {
-                    $catalogProduct->compositions()->create([
-                        'component_id' => $composition['component_id'],
-                        'component_name' => $composition['component_name'],
-                        'quantity' => $composition['quantity'],
-                        'unit' => $composition['unit'],
-                        'description' => $composition['description'] ?? null,
-                    ]);
+            // Save product compositions (materials from inventory)
+            if ($request->has('compositions') && is_array($request->compositions)) {
+                foreach ($request->compositions as $composition) {
+                    if (!empty($composition['component_id']) && !empty($composition['component_name']) && !empty($composition['quantity'])) {
+                        $catalogProduct->compositions()->create([
+                            'component_id' => $composition['component_id'],
+                            'component_name' => $composition['component_name'],
+                            'quantity' => $composition['quantity'],
+                            'unit' => $composition['unit'],
+                            'description' => $composition['description'] ?? null,
+                        ]);
+                    }
                 }
+                \Log::info('Compositions saved for product:', ['product_id' => $catalogProduct->id, 'compositions_count' => count($request->compositions)]);
             }
-            \Log::info('Compositions saved for product:', ['product_id' => $catalogProduct->id, 'compositions_count' => count($request->compositions)]);
-        }
 
-        if ($request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Product added successfully to catalog.',
-                'product' => $catalogProduct
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Product added successfully to catalog.',
+                    'product' => $catalogProduct
+                ]);
+            }
+
+            return Redirect::route('admin.products.index')->with('success', 'Product added successfully to catalog.');
+        } catch (\Exception $e) {
+            \Log::error('Error creating product:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
+            
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An error occurred while adding the product: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->back()->withErrors(['error' => 'An error occurred while adding the product.'])->withInput();
         }
-
-        return Redirect::route('admin.products.index')->with('success', 'Product added successfully to catalog.');
     }
 
     public function edit(Product $product)
