@@ -616,51 +616,34 @@
 </nav>
 <div class="container-fluid main-section px-0">
     <?php
-        $carouselImages = [];
-        try {
-            // Use public_path() which is bound to root public directory
-            $publicPath = public_path();
-            
-            // Fallback paths if public_path() doesn't work correctly
-            if (!is_dir($publicPath)) {
-                $publicPath = base_path('../public');
-            }
-            if (!is_dir($publicPath)) {
-                $publicPath = realpath(__DIR__ . '/../../../../public');
-            }
-            if (!is_dir($publicPath)) {
-                $publicPath = base_path('../frontend/public');
-            }
-            
-            $carouselPath = $publicPath . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . 'lpcarousel';
-            if (is_dir($carouselPath)) {
-                $paths = glob($carouselPath . DIRECTORY_SEPARATOR . '*.{jpg,jpeg,png,gif,webp}', GLOB_BRACE) ?: [];
-                foreach ($paths as $p) {
-                    $rel = str_replace($publicPath, '', $p);
-                    // Normalize path separators and create URL path
-                    $rel = str_replace('\\', '/', $rel);
-                    $rel = ltrim($rel, '/');
-                    $carouselImages[] = '/' . $rel;
-                }
-            }
-        } catch (\Throwable $e) {
-            $carouselImages = [];
+        // Use the three existing background images from public/images/lpcarousel
+        $carouselImages = [
+            asset('images/lpcarousel/jjbackgrnd.jpg'),
+            asset('images/lpcarousel/bg.jpg'),
+            asset('images/lpcarousel/aflowerss.jpg')
+        ];
+        
+        // Filter out any that don't exist (fallback check)
+        $carouselImages = array_filter($carouselImages, function($img) {
+            // Remove the domain part and check if file exists
+            $path = parse_url($img, PHP_URL_PATH);
+            $publicPath = public_path($path);
+            return file_exists($publicPath);
+        });
+        
+        // If no images found, use fallback
+        if (empty($carouselImages)) {
+            $carouselImages = [asset('images/landingpagebm.png')];
         }
     ?>
     <div class="row w-100 align-items-center hero-row g-0 fade-in-section" id="home">
         <div id="lpCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4000">
             <div class="carousel-inner">
-                <?php if(count($carouselImages) === 0): ?>
-                    <div class="carousel-item active">
-                        <img src="/images/landingpagebm.png" alt="Placeholder">
+                <?php foreach($carouselImages as $idx => $img): ?>
+                    <div class="carousel-item <?= $idx === 0 ? 'active' : '' ?>">
+                        <img src="<?= $img ?>" alt="Background Slide <?= $idx+1 ?>" style="width: 100%; height: 100%; object-fit: cover;">
                     </div>
-                <?php else: ?>
-                    <?php foreach($carouselImages as $idx => $img): ?>
-                        <div class="carousel-item <?= $idx === 0 ? 'active' : '' ?>">
-                            <img src="<?= $img ?>" alt="Slide <?= $idx+1 ?>">
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                <?php endforeach; ?>
             </div>
             <?php if(count($carouselImages) > 1): ?>
                 <button class="carousel-control-prev" type="button" data-bs-target="#lpCarousel" data-bs-slide="prev">
