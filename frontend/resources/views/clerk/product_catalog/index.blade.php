@@ -114,27 +114,27 @@
 @endpush
 @section('content')
 <div class="container-fluid py-2" style="background: #f6faf6; min-height: 100vh;">
-    <!-- Promoted Products Carousel -->
+    <!-- Promoted Banner Carousel (only shows if banners are uploaded) -->
+    @php $banners = \App\Models\PromotedBanner::active()->take(5)->get(); @endphp
+    @if($banners->count() > 0)
     <div class="mx-auto mb-2" style="max-width: 1000px;">
         <div class="bg-white rounded-4 shadow-sm p-2 position-relative">
             <div id="promotedCarousel" class="carousel slide" data-bs-ride="carousel">
+                @if($banners->count() > 1)
                 <button class="btn btn-link text-success p-0 position-absolute" data-bs-target="#promotedCarousel" data-bs-slide="prev" style="left: 8px; top: 50%; transform: translateY(-50%); z-index: 10;"><i class="bi bi-chevron-left" style="font-size: 2rem;"></i></button>
                 <button class="btn btn-link text-success p-0 position-absolute" data-bs-target="#promotedCarousel" data-bs-slide="next" style="right: 8px; top: 50%; transform: translateY(-50%); z-index: 10;"><i class="bi bi-chevron-right" style="font-size: 2rem;"></i></button>
+                @endif
                 <div class="carousel-inner">
-                    @php $banners = \App\Models\PromotedBanner::active()->take(5)->get(); @endphp
-                    @forelse($banners as $i => $b)
+                    @foreach($banners as $i => $b)
                     <div class="carousel-item @if($i === 0) active @endif text-center">
-                        <img src="/storage/{{ $b->image }}" alt="Banner" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;">
+                        <img src="{{ asset('storage/' . $b->image) }}" alt="{{ $b->title ?? 'Banner' }}" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;">
                     </div>
-                    @empty
-                    <div class="carousel-item active text-center">
-                        <div style="height: 180px;"></div>
-                    </div>
-                    @endforelse
+                    @endforeach
                 </div>
             </div>
         </div>
     </div>
+    @endif
 
     <!-- Search Bar -->
     <div class="mx-auto mb-3" style="max-width: 1000px;">

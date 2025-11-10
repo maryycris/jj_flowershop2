@@ -210,7 +210,7 @@
                 <button class="btn btn-link text-success p-0 position-absolute" data-bs-target="#promotedCarousel" data-bs-slide="next" style="right: 8px; top: 50%; transform: translateY(-50%); z-index: 10;"><i class="bi bi-chevron-right" style="font-size: 2rem;"></i></button>
                 <div class="carousel-inner">
                     @php
-                        $banners = \App\Models\PromotedBanner::orderBy('sort_order')->get();
+                        $banners = \App\Models\PromotedBanner::active()->orderBy('sort_order')->get();
                     @endphp
                     @forelse($banners as $i => $b)
                     <div class="carousel-item @if($i === 0) active @endif text-center">
@@ -218,7 +218,12 @@
                     </div>
                     @empty
                     <div class="carousel-item active text-center">
-                        <div style="height: 180px;"></div>
+                        <div style="height: 180px; display: flex; align-items: center; justify-content: center; color: #6c757d;">
+                            <div class="text-center">
+                                <i class="bi bi-image" style="font-size: 2rem; opacity: 0.5;"></i>
+                                <p class="mt-2 mb-0" style="font-size: 0.9rem;">No active banners. Click to add banners.</p>
+                            </div>
+                        </div>
                     </div>
                     @endforelse
                 </div>

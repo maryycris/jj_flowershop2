@@ -3,48 +3,31 @@
 @section('content')
 <div class="container-fluid py-1" style="background: #f4faf4; min-height: 100vh;">
 
-    <!-- Promoted Products Carousel -->
+    <!-- Promoted Banner Carousel (only shows if banners are uploaded) -->
+    @php
+        $banners = \App\Models\PromotedBanner::active()->take(5)->get();
+    @endphp
+    @if($banners->count() > 0)
     <div class="mx-auto mb-2" style="max-width: 1000px;">
         <div class="bg-white rounded-3 p-2 position-relative shadow-sm">
             <div id="promotedCarousel" class="carousel slide" data-bs-ride="carousel">
+                @if($banners->count() > 1)
                 <button class="btn btn-link text-success p-0 position-absolute" data-bs-target="#promotedCarousel" data-bs-slide="prev" style="left: 8px; top: 50%; transform: translateY(-50%); z-index: 10;"><i class="bi bi-chevron-left" style="font-size: 1.5rem;"></i></button>
                 <button class="btn btn-link text-success p-0 position-absolute" data-bs-target="#promotedCarousel" data-bs-slide="next" style="right: 8px; top: 50%; transform: translateY(-50%); z-index: 10;"><i class="bi bi-chevron-right" style="font-size: 1.5rem;"></i></button>
+                @endif
                 <div class="carousel-inner">
-                    @php
-                        $banners = \App\Models\PromotedBanner::active()->take(5)->get();
-                    @endphp
-                    @if($banners->count())
-                        @foreach($banners as $i => $b)
-                        <div class="carousel-item @if($i === 0) active @endif text-center">
-                            <a href="{{ $b->link_url ?? '#' }}" @if($b->link_url) target="_self" @endif>
-                                <img src="{{ asset('storage/' . $b->image) }}" alt="{{ $b->title ?? 'Banner' }}" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;">
-                            </a>
-                        </div>
-                        @endforeach
-                    @else
-                        @foreach($promotedProducts as $i => $product)
-                        @php
-                            $isPromotedOutOfStock = isset($promotedProductAvailability[$product->id]) && !$promotedProductAvailability[$product->id]['can_fulfill'];
-                        @endphp
-                        <div class="carousel-item @if($i === 0) active @endif text-center" style="position: relative;">
-                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%; @if($isPromotedOutOfStock) filter: grayscale(50%); @endif">
-                            @if($isPromotedOutOfStock)
-                                <div class="position-absolute" style="top: 10px; right: 10px; z-index: 10;">
-                                    <span class="badge bg-danger" style="font-size: 0.6rem;">OUT OF STOCK</span>
-                                </div>
-                            @endif
-                            <div class="mt-1 fw-bold" style="font-size: 1rem;">{{ $product->name }}</div>
-                            <div class="text-success" style="font-size: 0.95rem;">₱{{ number_format($product->price, 2) }}</div>
-                            @if($isPromotedOutOfStock)
-                                <small class="text-muted" style="font-size: 0.7rem;">Insufficient materials</small>
-                            @endif
-                        </div>
-                        @endforeach
-                    @endif
+                    @foreach($banners as $i => $b)
+                    <div class="carousel-item @if($i === 0) active @endif text-center">
+                        <a href="{{ $b->link_url ?? '#' }}" @if($b->link_url) target="_self" @endif>
+                            <img src="{{ asset('storage/' . $b->image) }}" alt="{{ $b->title ?? 'Banner' }}" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;">
+                        </a>
+                    </div>
+                    @endforeach
                 </div>
             </div>
         </div>
     </div>
+    @endif
 
 
     <!-- Search Bar -->
