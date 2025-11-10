@@ -13,7 +13,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            background: #f6fbf2;
+            background: #fff !important;
+            background-image: none !important;
             font-family: 'Montserrat', Arial, sans-serif;
             margin: 0;
             padding: 0;
@@ -185,20 +186,10 @@
             background: none !important;
             background-image: none !important;
         }
-        .flower-img {
-            max-width: 2000px;
-            width: 100%;
-            height: auto;
-            border-radius: 0;
-            margin-left: -118px;
-            margin-top: -5px;
-            margin-bottom: 30px;
-            box-shadow: none;
-            filter: drop-shadow(0 16px 48px rgba(37, 37, 37, 0.18));
-            transform: scaleX(-1);
-        }
-        .image-resize { height: 580px; width: 1300px; }
-        .hero-equal { height: 580px; }
+        /* Removed flower-img and related classes - using carousel instead */
+        .flower-img { display: none !important; }
+        .image-resize { display: none !important; }
+        .hero-equal { display: none !important; }
         .content-stretch { height: 100%; display: flex; }
         .hero-carousel { 
             position: absolute; 
@@ -680,7 +671,7 @@
                 </button>
             <?php endif; ?>
         </div>
-        <div class="col-lg-6"></div>
+        <!-- Empty column removed - carousel covers full width -->
         <div class="col-lg-6 d-flex justify-content-center hero-content">
             <div class="content-box" style="min-width: 370px; max-width: 470px; margin-left: 0; margin-top: 0;">
                 <div class="d-flex flex-column justify-content-center w-100">
