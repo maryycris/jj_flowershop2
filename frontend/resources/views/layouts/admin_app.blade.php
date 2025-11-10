@@ -157,6 +157,164 @@
             .sidebar-container { min-width: 180px; max-width: 200px; }
             .sidebar-link { font-size: 1rem; padding-left: 18px; }
         }
+        
+        /* Mobile View (410x740 and similar) - Optimize for small screens */
+        @media (max-width: 450px) {
+            /* Reduce navbar height and padding */
+            .navbar-admin { height: 45px; }
+            .navbar-admin-content { 
+                padding: 0 10px; 
+                height: 45px;
+                padding-top: 3px;
+            }
+            .navbar-admin-logo { 
+                height: 35px; 
+                width: 35px; 
+            }
+            .shop-title { 
+                font-size: 0.85rem !important; 
+            }
+            .shop-title span { 
+                font-size: 0.65rem !important; 
+            }
+            
+            /* Smaller icons in navbar */
+            .navbar-admin .bi { 
+                font-size: 1rem !important; 
+            }
+            .admin-user i { 
+                font-size: 1.2rem !important; 
+            }
+            .admin-user span { 
+                font-size: 0.75rem !important; 
+                display: none; /* Hide name on very small screens */
+            }
+            .admin-user img { 
+                width: 24px !important; 
+                height: 24px !important; 
+            }
+            
+            /* Reduce navbar links row */
+            .navbar-admin-links-row { 
+                top: 45px; 
+            }
+            .navbar-admin-links { 
+                gap: 0.8rem !important; 
+                padding: 0.25rem 0 0.4rem 0;
+                padding-top: 8px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .navbar-admin-links .nav-link { 
+                font-size: 0.7rem !important; 
+                gap: 0.3rem !important;
+            }
+            .navbar-admin-links .bi { 
+                font-size: 0.9rem !important; 
+            }
+            
+            /* Reduce container padding */
+            .container-fluid { 
+                padding-left: 10px !important; 
+                padding-right: 10px !important; 
+                padding-top: 1rem !important;
+                padding-bottom: 1rem !important;
+            }
+            
+            /* Smaller cards and text */
+            .card { 
+                margin-bottom: 0.75rem; 
+            }
+            .card-body { 
+                padding: 0.75rem !important; 
+            }
+            .card-title { 
+                font-size: 0.9rem !important; 
+            }
+            .card-text, p { 
+                font-size: 0.8rem !important; 
+            }
+            h1, .h1 { 
+                font-size: 1.5rem !important; 
+            }
+            h2, .h2 { 
+                font-size: 1.3rem !important; 
+            }
+            h3, .h3 { 
+                font-size: 1.1rem !important; 
+            }
+            h4, .h4 { 
+                font-size: 1rem !important; 
+            }
+            h5, .h5 { 
+                font-size: 0.9rem !important; 
+            }
+            h6, .h6 { 
+                font-size: 0.85rem !important; 
+            }
+            
+            /* Smaller buttons */
+            .btn { 
+                font-size: 0.8rem !important; 
+                padding: 0.4rem 0.8rem !important; 
+            }
+            .btn-sm { 
+                font-size: 0.75rem !important; 
+                padding: 0.3rem 0.6rem !important; 
+            }
+            
+            /* Smaller form elements */
+            .form-control, .form-select { 
+                font-size: 0.85rem !important; 
+                padding: 0.4rem 0.6rem !important; 
+            }
+            .form-label { 
+                font-size: 0.85rem !important; 
+                margin-bottom: 0.3rem !important; 
+            }
+            
+            /* Smaller tables */
+            .table { 
+                font-size: 0.75rem !important; 
+            }
+            .table th, .table td { 
+                padding: 0.4rem 0.3rem !important; 
+            }
+            
+            /* Smaller badges */
+            .badge { 
+                font-size: 0.7rem !important; 
+                padding: 0.25rem 0.5rem !important; 
+            }
+            
+            /* Smaller icons throughout */
+            .bi, i { 
+                font-size: 0.9rem !important; 
+            }
+            .fs-1 { font-size: 1.5rem !important; }
+            .fs-2 { font-size: 1.3rem !important; }
+            .fs-3 { font-size: 1.1rem !important; }
+            .fs-4 { font-size: 1rem !important; }
+            .fs-5 { font-size: 0.9rem !important; }
+            .fs-6 { font-size: 0.8rem !important; }
+            
+            /* Reduce spacing */
+            .mb-3 { margin-bottom: 0.75rem !important; }
+            .mb-4 { margin-bottom: 1rem !important; }
+            .mt-3 { margin-top: 0.75rem !important; }
+            .mt-4 { margin-top: 1rem !important; }
+            .py-3 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+            .py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+            
+            /* Smaller alerts */
+            .alert { 
+                font-size: 0.8rem !important; 
+                padding: 0.6rem 0.8rem !important; 
+            }
+            .alert-heading { 
+                font-size: 0.9rem !important; 
+            }
+        }
         /* Remove Bootstrap's default .active background */
         .sidebar-link.active, .sidebar-link:active {
             background: none !important;

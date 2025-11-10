@@ -620,6 +620,136 @@
             }
         }
         
+        /* Mobile View (410x740 and similar) - Optimize for small screens */
+        @media (max-width: 450px) {
+            /* Reduce navbar height */
+            .navbar { 
+                padding: 0.4rem 0 !important; 
+                min-height: 60px;
+            }
+            .navbar-brand { 
+                font-size: 0.9rem !important; 
+            }
+            .navbar-brand .logo { 
+                width: 35px !important; 
+                height: 35px !important; 
+            }
+            
+            /* Smaller icons in navbar */
+            .navbar .bi, .navbar i { 
+                font-size: 1rem !important; 
+            }
+            .navbar-icons i { 
+                font-size: 1.1rem !important; 
+                margin-left: 10px !important;
+            }
+            
+            /* Reduce container padding */
+            .container-fluid { 
+                padding-left: 8px !important; 
+                padding-right: 8px !important; 
+            }
+            
+            /* Smaller text throughout */
+            body { 
+                font-size: 0.85rem !important; 
+            }
+            h1, .h1 { 
+                font-size: 1.4rem !important; 
+            }
+            h2, .h2 { 
+                font-size: 1.2rem !important; 
+            }
+            h3, .h3 { 
+                font-size: 1.1rem !important; 
+            }
+            h4, .h4 { 
+                font-size: 1rem !important; 
+            }
+            h5, .h5 { 
+                font-size: 0.9rem !important; 
+            }
+            h6, .h6 { 
+                font-size: 0.85rem !important; 
+            }
+            p, .card-text { 
+                font-size: 0.8rem !important; 
+            }
+            
+            /* Smaller cards */
+            .card { 
+                margin-bottom: 0.75rem; 
+            }
+            .card-body { 
+                padding: 0.75rem !important; 
+            }
+            .card-title { 
+                font-size: 0.9rem !important; 
+            }
+            
+            /* Smaller buttons */
+            .btn { 
+                font-size: 0.8rem !important; 
+                padding: 0.4rem 0.8rem !important; 
+            }
+            .btn-sm { 
+                font-size: 0.75rem !important; 
+                padding: 0.3rem 0.6rem !important; 
+            }
+            
+            /* Smaller form elements */
+            .form-control, .form-select { 
+                font-size: 0.85rem !important; 
+                padding: 0.4rem 0.6rem !important; 
+            }
+            .form-label { 
+                font-size: 0.85rem !important; 
+            }
+            
+            /* Smaller badges */
+            .badge { 
+                font-size: 0.7rem !important; 
+                padding: 0.25rem 0.5rem !important; 
+            }
+            
+            /* Smaller icons */
+            .bi, i { 
+                font-size: 0.9rem !important; 
+            }
+            .fs-1 { font-size: 1.5rem !important; }
+            .fs-2 { font-size: 1.3rem !important; }
+            .fs-3 { font-size: 1.1rem !important; }
+            .fs-4 { font-size: 1rem !important; }
+            .fs-5 { font-size: 0.9rem !important; }
+            .fs-6 { font-size: 0.8rem !important; }
+            
+            /* Reduce spacing */
+            .mb-3 { margin-bottom: 0.75rem !important; }
+            .mb-4 { margin-bottom: 1rem !important; }
+            .mt-3 { margin-top: 0.75rem !important; }
+            .mt-4 { margin-top: 1rem !important; }
+            .py-3 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+            .py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+            
+            /* Smaller mobile bottom nav */
+            .mobile-bottom-nav { 
+                height: 55px; 
+            }
+            .mobile-bottom-nav .nav-item i,
+            .mobile-bottom-nav .nav-item .bi { 
+                font-size: 18px !important; 
+            }
+            .mobile-bottom-nav .nav-item span { 
+                font-size: 10px !important; 
+            }
+            
+            /* Smaller alerts */
+            .alert { 
+                font-size: 0.8rem !important; 
+                padding: 0.6rem 0.8rem !important; 
+            }
+        }
+        
         @media (max-width: 992px) {
             .customer-right-icons { padding-top: 10px; }
         }
