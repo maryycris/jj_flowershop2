@@ -98,6 +98,11 @@ class AdminController extends Controller
         $onlineOrdersCount = Order::where('type', 'online')->count();
         $walkinOrdersCount = Order::where('type', 'walkin')->count();
 
+            // Check if Cloudinary is configured
+            $cloudinaryConfigured = !empty(env('CLOUDINARY_CLOUD_NAME')) && 
+                                   !empty(env('CLOUDINARY_API_KEY')) && 
+                                   !empty(env('CLOUDINARY_API_SECRET'));
+
             return view('admin.dashboard', [
             'pendingOrdersCount' => $orderCounts['pending'],
             'approvedOrdersCount' => $orderCounts['approved'],
@@ -119,6 +124,7 @@ class AdminController extends Controller
             'topProductsThisMonth' => $topProductsThisMonth,
             'onlineOrdersCount' => $onlineOrdersCount,
             'walkinOrdersCount' => $walkinOrdersCount,
+            'cloudinaryConfigured' => $cloudinaryConfigured,
         ]);
         } catch (\Exception $e) {
             \Log::error('Admin dashboard error', [
