@@ -6,21 +6,22 @@
 
 $uri = urldecode(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
 
-// Handle storage files - check if symlink exists and file is accessible
+// Handle storage files - CRITICAL for product images and banners
 if (strpos($uri, '/storage/') === 0) {
     $filePath = __DIR__ . $uri;
-    // Check if file exists (following symlinks)
+    // Check if file exists via symlink
     if (file_exists($filePath) && is_file($filePath)) {
         // Let PHP server serve the file directly
         return false;
     }
-    // If file doesn't exist, try to find it in backend storage
+    // If symlink doesn't work, try direct backend storage path
     $storagePath = str_replace('/storage/', '', $uri);
     $backendStoragePath = __DIR__ . '/../backend/storage/app/public/' . $storagePath;
     if (file_exists($backendStoragePath) && is_file($backendStoragePath)) {
         // Serve the file with correct MIME type
         $mimeType = mime_content_type($backendStoragePath) ?: 'application/octet-stream';
         header('Content-Type: ' . $mimeType);
+        header('Content-Length: ' . filesize($backendStoragePath));
         readfile($backendStoragePath);
         exit;
     }
