@@ -174,8 +174,9 @@
             align-items: flex-start;
             justify-content: flex-start;
             padding: 0;
-            background: none !important;
+            background: transparent !important;
             background-image: none !important;
+            background-color: transparent !important;
         }
         /* Hero with carousel background */
         .hero-row { 
@@ -183,8 +184,9 @@
             min-height: 580px; 
             height: 80vh; 
             overflow: hidden;
-            background: none !important;
+            background: transparent !important;
             background-image: none !important;
+            background-color: transparent !important;
         }
         /* Removed flower-img and related classes - using carousel instead */
         .flower-img { display: none !important; }
@@ -651,29 +653,32 @@
             $carouselImages = [asset('images/landingpagebm.png')];
         }
     ?>
-    <div class="row w-100 align-items-center hero-row g-0 fade-in-section" id="home" style="background: none !important; background-image: none !important;">
-        <div id="lpCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4000" style="width: 100%; height: 100%;">
+    <div class="row w-100 align-items-center hero-row g-0 fade-in-section" id="home" style="background: transparent !important; background-image: none !important; background-color: transparent !important; position: relative;">
+        <!-- Background Carousel - covers entire hero section -->
+        <div id="lpCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4000" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 0;">
             <div class="carousel-inner" style="width: 100%; height: 100%;">
-                <?php foreach($carouselImages as $idx => $img): ?>
-                    <div class="carousel-item <?= $idx === 0 ? 'active' : '' ?>" style="width: 100%; height: 100%;">
-                        <img src="<?= $img ?>" alt="Background Slide <?= $idx+1 ?>" style="width: 100%; height: 100%; object-fit: cover; display: block;">
-                    </div>
-                <?php endforeach; ?>
+                    <?php foreach($carouselImages as $idx => $img): ?>
+                    <div class="carousel-item <?= $idx === 0 ? 'active' : '' ?>" style="width: 100%; height: 100%; position: relative;">
+                        <img src="<?= $img ?>" alt="Background Slide <?= $idx+1 ?>" style="width: 100%; height: 100%; object-fit: cover; display: block; position: absolute; top: 0; left: 0;">
+                        </div>
+                    <?php endforeach; ?>
             </div>
             <?php if(count($carouselImages) > 1): ?>
-                <button class="carousel-control-prev" type="button" data-bs-target="#lpCarousel" data-bs-slide="prev">
+                <button class="carousel-control-prev" type="button" data-bs-target="#lpCarousel" data-bs-slide="prev" style="z-index: 10;">
                     <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                     <span class="visually-hidden">Previous</span>
                 </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#lpCarousel" data-bs-slide="next">
+                <button class="carousel-control-next" type="button" data-bs-target="#lpCarousel" data-bs-slide="next" style="z-index: 10;">
                     <span class="carousel-control-next-icon" aria-hidden="true"></span>
                     <span class="visually-hidden">Next</span>
                 </button>
             <?php endif; ?>
         </div>
-        <div class="col-lg-6"></div>
-        <div class="col-lg-6 d-flex justify-content-center hero-content">
-            <div class="content-box" style="min-width: 370px; max-width: 470px; margin-left: 0; margin-top: 0;">
+        <!-- Empty column for spacing -->
+        <div class="col-lg-6" style="position: relative; z-index: 1;"></div>
+        <!-- Content box overlay -->
+        <div class="col-lg-6 d-flex justify-content-center hero-content" style="position: relative; z-index: 1;">
+            <div class="content-box" style="min-width: 370px; max-width: 470px; margin-left: 0; margin-top: 0; background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
                 <div class="d-flex flex-column justify-content-center w-100">
                 <h1>Send Love, Send</h1>
                 <h2>Blooms,</h2>
