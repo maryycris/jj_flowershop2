@@ -40,6 +40,12 @@ fi
 php artisan route:clear 2>&1 || echo "Route clear failed (non-critical)" >&2
 php artisan view:clear 2>&1 || echo "View clear failed (non-critical)" >&2
 
+# Create storage symlink if it doesn't exist
+if [ ! -L "../public/storage" ]; then
+    echo "Creating storage symlink..." >&2
+    php artisan storage:link 2>&1 || echo "Storage link failed (non-critical)" >&2
+fi
+
 # Run migrations if database is configured
 if [ -n "$DB_CONNECTION" ] && [ "$DB_CONNECTION" != "sqlite" ]; then
     echo "Running database migrations..." >&2
@@ -96,6 +102,12 @@ if [ -z "$APP_KEY" ]; then
         echo "You can generate one locally with: php artisan key:generate --show" >&2
         exit 1
     fi
+fi
+
+# Set APP_URL if not set (Railway provides this via RAILWAY_PUBLIC_DOMAIN)
+if [ -z "$APP_URL" ] && [ -n "$RAILWAY_PUBLIC_DOMAIN" ]; then
+    export APP_URL="https://$RAILWAY_PUBLIC_DOMAIN"
+    echo "Set APP_URL to: $APP_URL" >&2
 fi
 
 # Start the server from root public directory
