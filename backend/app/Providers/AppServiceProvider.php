@@ -49,19 +49,26 @@ class AppServiceProvider extends ServiceProvider
             config(['filesystems.disks.cloudinary.secret' => $apiSecret]);
             config(['filesystems.disks.cloudinary.secure' => true]);
             
-            // For now, keep using local storage until we verify Cloudinary works
-            // We'll let the upload handler try Cloudinary and fallback if needed
-            // This prevents the app from breaking if Cloudinary has issues
-            \Log::info('Cloudinary credentials found, but using local storage as default for safety', [
-                'cloud_name' => $cloudName,
-                'api_key_set' => !empty($apiKey),
-                'api_secret_set' => !empty($apiSecret),
-                'note' => 'Cloudinary will be used if explicitly requested, with local fallback'
-            ]);
-            
-            // Keep local as default - we'll handle Cloudinary in the controllers with fallback
-            // config(['filesystems.disks.public.driver' => 'cloudinary']);
-            // config(['filesystems.default' => 'cloudinary']);
+            // Enable Cloudinary as the default driver for permanent image storage
+            try {
+                config(['filesystems.disks.public.driver' => 'cloudinary']);
+                config(['filesystems.default' => 'cloudinary']);
+                
+                \Log::info('Cloudinary storage ENABLED - Images will be PERMANENT', [
+                    'cloud_name' => $cloudName,
+                    'api_key_set' => !empty($apiKey),
+                    'api_secret_set' => !empty($apiSecret),
+                    'note' => 'All new uploads will go to Cloudinary and persist forever'
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Failed to enable Cloudinary, falling back to local storage', [
+                    'error' => $e->getMessage(),
+                    'cloud_name' => $cloudName
+                ]);
+                // Fall back to local storage if Cloudinary configuration fails
+                config(['filesystems.disks.public.driver' => 'local']);
+                config(['filesystems.default' => 'local']);
+            }
         } else {
             \Log::warning('Cloudinary not configured - using local storage (ephemeral)', [
                 'cloud_name_set' => !empty($cloudName),

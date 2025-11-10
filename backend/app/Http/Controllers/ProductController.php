@@ -347,19 +347,22 @@ class ProductController extends Controller
 
         if ($request->hasFile('image')) {
             $driver = config('filesystems.disks.public.driver');
-            \Log::info('Attempting image upload', [
+            \Log::info('Attempting image upload to Cloudinary (permanent storage)', [
                 'driver' => $driver,
                 'file_size' => $request->file('image')->getSize(),
                 'file_name' => $request->file('image')->getClientOriginalName()
             ]);
             
             try {
-                // Always try local storage first as fallback-safe option
-                // If Cloudinary is configured and works, great. If not, local storage will work.
+                // Upload to Cloudinary (permanent storage)
                 $productData['image'] = $request->file('image')->store('catalog_products', 'public');
-                \Log::info('Image uploaded successfully', ['path' => $productData['image'], 'driver' => $driver]);
+                \Log::info('Image uploaded successfully to Cloudinary (PERMANENT)', [
+                    'path' => $productData['image'],
+                    'driver' => $driver,
+                    'note' => 'This image will persist across all deployments'
+                ]);
             } catch (\Exception $e) {
-                \Log::error('Failed to upload image to public disk', [
+                \Log::error('Failed to upload image to Cloudinary', [
                     'error' => $e->getMessage(),
                     'error_class' => get_class($e),
                     'driver' => $driver,
@@ -371,10 +374,12 @@ class ProductController extends Controller
                     strpos($e->getMessage(), 'Cloudinary') !== false ||
                     strpos($e->getMessage(), 'cloudinary') !== false) {
                     try {
-                        \Log::info('Cloudinary failed, attempting explicit local storage fallback');
-                        // Force use of local disk
+                        \Log::warning('Cloudinary failed, attempting local storage fallback (TEMPORARY)');
+                        // Force use of local disk as fallback
                         $productData['image'] = $request->file('image')->store('catalog_products', 'local');
-                        \Log::info('Image uploaded to local storage as fallback', ['path' => $productData['image']]);
+                        \Log::info('Image uploaded to local storage as fallback (will be lost on deployment)', [
+                            'path' => $productData['image']
+                        ]);
                     } catch (\Exception $fallbackError) {
                         \Log::error('Fallback to local storage also failed', [
                             'error' => $fallbackError->getMessage(),
@@ -463,12 +468,19 @@ class ProductController extends Controller
 
         // Handle image upload
         if ($request->hasFile('image')) {
+            $driver = config('filesystems.disks.public.driver');
+            \Log::info('Attempting image update to Cloudinary (permanent storage)', [
+                'driver' => $driver,
+                'file_size' => $request->file('image')->getSize(),
+                'file_name' => $request->file('image')->getClientOriginalName()
+            ]);
+            
             try {
                 // Delete old image if exists
                 if ($product->image) {
                     try {
                         Storage::disk('public')->delete($product->image);
-                        \Log::info('Old image deleted', ['path' => $product->image]);
+                        \Log::info('Old image deleted from Cloudinary', ['path' => $product->image]);
                     } catch (\Exception $e) {
                         \Log::warning('Failed to delete old image (non-critical)', [
                             'path' => $product->image,
@@ -477,50 +489,45 @@ class ProductController extends Controller
                     }
                 }
                 
-                // Check if Cloudinary is configured, if not use local storage
-                $driver = config('filesystems.disks.public.driver');
-                if ($driver === 'cloudinary') {
-                    // Verify Cloudinary credentials are actually set
-                    $cloudName = env('CLOUDINARY_CLOUD_NAME');
-                    $apiKey = env('CLOUDINARY_API_KEY');
-                    $apiSecret = env('CLOUDINARY_API_SECRET');
-                    
-                    if (!$cloudName || !$apiKey || !$apiSecret) {
-                        // Fall back to local storage if credentials are missing
-                        \Log::warning('Cloudinary driver set but credentials missing, using local storage');
-                        $newImagePath = $request->file('image')->store('catalog_products', 'local');
-                    } else {
-                        $newImagePath = $request->file('image')->store('catalog_products', 'public');
-                    }
-                } else {
-                    $newImagePath = $request->file('image')->store('catalog_products', 'public');
-                }
-                
+                // Upload new image to Cloudinary (permanent storage)
+                $newImagePath = $request->file('image')->store('catalog_products', 'public');
                 $validated['image'] = $newImagePath;
-                \Log::info('New image uploaded successfully', ['path' => $newImagePath, 'driver' => $driver]);
+                \Log::info('New image uploaded successfully to Cloudinary (PERMANENT)', [
+                    'path' => $newImagePath,
+                    'driver' => $driver,
+                    'note' => 'This image will persist across all deployments'
+                ]);
             } catch (\Exception $e) {
-                \Log::error('Failed to upload image during update', [
+                \Log::error('Failed to upload image to Cloudinary during update', [
                     'error' => $e->getMessage(),
+                    'error_class' => get_class($e),
+                    'driver' => $driver,
                     'trace' => $e->getTraceAsString()
                 ]);
                 
                 // If Cloudinary error, try falling back to local storage
                 if (strpos($e->getMessage(), 'Invalid configuration') !== false || 
-                    strpos($e->getMessage(), 'Cloudinary') !== false) {
+                    strpos($e->getMessage(), 'Cloudinary') !== false ||
+                    strpos($e->getMessage(), 'cloudinary') !== false) {
                     try {
-                        \Log::info('Cloudinary failed, attempting local storage fallback');
+                        \Log::warning('Cloudinary failed, attempting local storage fallback (TEMPORARY)');
                         $newImagePath = $request->file('image')->store('catalog_products', 'local');
                         $validated['image'] = $newImagePath;
-                        \Log::info('Image uploaded to local storage as fallback', ['path' => $newImagePath]);
+                        \Log::info('Image uploaded to local storage as fallback (will be lost on deployment)', [
+                            'path' => $newImagePath
+                        ]);
                     } catch (\Exception $fallbackError) {
-                        \Log::error('Fallback to local storage also failed', ['error' => $fallbackError->getMessage()]);
+                        \Log::error('Fallback to local storage also failed', [
+                            'error' => $fallbackError->getMessage(),
+                            'error_class' => get_class($fallbackError)
+                        ]);
                         if ($request->expectsJson()) {
                             return response()->json([
                                 'success' => false,
-                                'message' => 'Failed to upload image. Please check storage configuration.'
+                                'message' => 'Failed to upload image. Please check storage configuration. Error: ' . $fallbackError->getMessage()
                             ], 500);
                         }
-                        return redirect()->back()->withErrors(['image' => 'Failed to upload image. Please try again.'])->withInput();
+                        return redirect()->back()->withErrors(['image' => 'Failed to upload image: ' . $fallbackError->getMessage()])->withInput();
                     }
                 } else {
                     if ($request->expectsJson()) {
@@ -529,7 +536,7 @@ class ProductController extends Controller
                             'message' => 'Failed to upload image: ' . $e->getMessage()
                         ], 500);
                     }
-                    return redirect()->back()->withErrors(['image' => 'Failed to upload image. Please try again.'])->withInput();
+                    return redirect()->back()->withErrors(['image' => 'Failed to upload image: ' . $e->getMessage()])->withInput();
                 }
             }
         }
