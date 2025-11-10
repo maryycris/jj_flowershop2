@@ -12,17 +12,24 @@ trait CustomizeFilterTrait
      * Get filtered customize items for admin, clerk, and customer
      * Ensures all three use exactly the same data source and filtering
      * Shows all items from customize_items table (regardless of inventory_item_id)
+     * 
+     * @param bool $approvedOnly If true, only show approved items (for customer/clerk). If false, show all (for admin).
      */
-    public function getCustomizeItems()
+    public function getCustomizeItems($approvedOnly = true)
     {
         // Get customize items from the separate customize_items table
         // Eager load inventory item relationship to get latest price
-        $customizeItems = CustomizeItem::where('status', true)
-            ->where('is_approved', true) // Only show approved items
+        $query = CustomizeItem::where('status', true)
             ->with('inventoryItem')
             ->orderBy('category')
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
+            
+        // Only filter by approval status if requested (for customer/clerk views)
+        if ($approvedOnly) {
+            $query->where('is_approved', true);
+        }
+        
+        $customizeItems = $query->get();
 
         // Compute display price: use inventory price if linked, otherwise use own price
         foreach ($customizeItems as $ci) {

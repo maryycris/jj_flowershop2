@@ -14,17 +14,10 @@ class CustomizeController extends Controller
     use CustomizeFilterTrait;
     public function index(Request $request)
     {
-        $items = $this->getCustomizeItems();
+        // Admin can see all items (approved and unapproved) for management
+        $items = $this->getCustomizeItems(false);
         $categories = $this->getCustomizeCategories();
         $assemblingFee = Setting::get('assembling_fee', 150);
-        
-        // Debug: Log items count
-        \Log::info('Customize items loaded', [
-            'total_items' => $items->flatten()->count(),
-            'by_category' => $items->map(function($categoryItems) {
-                return $categoryItems->count();
-            })->toArray()
-        ]);
         
         return view('admin.customize.index', compact('items','categories', 'assemblingFee'));
     }
