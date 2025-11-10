@@ -346,7 +346,22 @@ class ProductController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $productData['image'] = $request->file('image')->store('catalog_products', 'public');
+            try {
+                $productData['image'] = $request->file('image')->store('catalog_products', 'public');
+                \Log::info('Image uploaded successfully', ['path' => $productData['image']]);
+            } catch (\Exception $e) {
+                \Log::error('Failed to upload image', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                if ($request->expectsJson() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Failed to upload image: ' . $e->getMessage()
+                    ], 500);
+                }
+                return redirect()->back()->withErrors(['image' => 'Failed to upload image. Please try again.'])->withInput();
+            }
         }
 
         try {
@@ -412,12 +427,35 @@ class ProductController extends Controller
 
         // Handle image upload
         if ($request->hasFile('image')) {
-            // Delete old image if exists
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
+            try {
+                // Delete old image if exists
+                if ($product->image) {
+                    try {
+                        Storage::disk('public')->delete($product->image);
+                        \Log::info('Old image deleted', ['path' => $product->image]);
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to delete old image (non-critical)', [
+                            'path' => $product->image,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+                $newImagePath = $request->file('image')->store('catalog_products', 'public');
+                $validated['image'] = $newImagePath;
+                \Log::info('New image uploaded successfully', ['path' => $newImagePath]);
+            } catch (\Exception $e) {
+                \Log::error('Failed to upload image during update', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Failed to upload image: ' . $e->getMessage()
+                    ], 500);
+                }
+                return redirect()->back()->withErrors(['image' => 'Failed to upload image. Please try again.'])->withInput();
             }
-            $newImagePath = $request->file('image')->store('catalog_products', 'public');
-            $validated['image'] = $newImagePath;
         }
 
         // Handle compositions
