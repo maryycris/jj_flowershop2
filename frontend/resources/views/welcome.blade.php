@@ -660,12 +660,12 @@
             $carouselImages = [asset('images/landingpagebm.png')];
         }
     ?>
-    <div class="row w-100 align-items-center hero-row g-0 fade-in-section" id="home">
-        <div id="lpCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4000">
-            <div class="carousel-inner">
+    <div class="row w-100 align-items-center hero-row g-0 fade-in-section" id="home" style="background: none !important; background-image: none !important;">
+        <div id="lpCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4000" style="width: 100%; height: 100%;">
+            <div class="carousel-inner" style="width: 100%; height: 100%;">
                 <?php foreach($carouselImages as $idx => $img): ?>
-                    <div class="carousel-item <?= $idx === 0 ? 'active' : '' ?>">
-                        <img src="<?= $img ?>" alt="Background Slide <?= $idx+1 ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div class="carousel-item <?= $idx === 0 ? 'active' : '' ?>" style="width: 100%; height: 100%;">
+                        <img src="<?= $img ?>" alt="Background Slide <?= $idx+1 ?>" style="width: 100%; height: 100%; object-fit: cover; display: block;">
                     </div>
                 <?php endforeach; ?>
             </div>
