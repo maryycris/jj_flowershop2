@@ -1,0 +1,65 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node modules (will be installed during build)
+node_modules
+frontend/node_modules
+
+# Vendor (will be installed during build)
+vendor
+backend/vendor
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+storage/logs/*
+backend/storage/logs/*
+
+# Cache
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+bootstrap/cache/*
+backend/bootstrap/cache/*
+
+# Testing
+.phpunit.result.cache
+backend/phpunit.xml
+backend/tests
+
+# Build artifacts
+public/hot
+public/storage
+frontend/public/hot
+
+# Windows batch files
+*.bat
+
+# Temporary files
+*.tmp
+*.temp
+

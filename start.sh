@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Change to backend directory where Laravel app is located
+cd backend || {
+    echo "ERROR: backend directory not found!" >&2
+    exit 1
+}
+
 # Output immediately to ensure logs are captured
 echo "=== Starting Laravel Application ===" >&2
 echo "PORT: $PORT" >&2
@@ -92,7 +98,8 @@ if [ -z "$APP_KEY" ]; then
     fi
 fi
 
-# Start the server
+# Start the server from root public directory
 echo "Starting PHP server on 0.0.0.0:$PORT..." >&2
-php artisan serve --host=0.0.0.0 --port=$PORT 2>&1
+cd .. || exit 1
+php -S 0.0.0.0:$PORT -t public public/index.php 2>&1
 
