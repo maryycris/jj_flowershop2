@@ -19,7 +19,12 @@ class AdminProductApprovalController extends Controller
         $pendingProducts = CatalogProduct::where('is_approved', false)
             ->with(['compositions'])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function($product) {
+                // Append image_url accessor to the product
+                $product->image_url = $product->image_url;
+                return $product;
+            });
 
         return response()->json($pendingProducts);
     }
@@ -46,7 +51,12 @@ class AdminProductApprovalController extends Controller
         
         $products = $query->with(['compositions'])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function($product) {
+                // Append image_url accessor to the product for Cloudinary support
+                $product->image_url = $product->image_url;
+                return $product;
+            });
 
         // Check availability for all products
         $availabilityService = new ProductAvailabilityService();
@@ -137,6 +147,9 @@ class AdminProductApprovalController extends Controller
                 return $composition;
             });
 
+            // Append image_url accessor for Cloudinary support
+            $product->image_url = $product->image_url;
+            
             return response()->json([
                 'success' => true,
                 'product' => $product

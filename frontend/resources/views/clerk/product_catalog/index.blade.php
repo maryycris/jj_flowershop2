@@ -214,7 +214,7 @@
                 <div class="col-6 col-md-4 col-lg-3">
                     <div class="card product-card h-100" data-product-id="{{ $product->id }}" style="{{ $isOutOfStock ? 'opacity: 0.6;' : '' }}">
                         <div style="position: relative;">
-                            <img src="{{ $product->image ? '/storage/' . $product->image : '/images/logo.png' }}" class="card-img-top product-image" alt="{{ $product->name }}" style="{{ $isOutOfStock ? 'filter: grayscale(50%);' : '' }}">
+                            <img src="{{ $product->image_url ?? '/images/logo.png' }}" class="card-img-top product-image" alt="{{ $product->name }}" style="{{ $isOutOfStock ? 'filter: grayscale(50%);' : '' }}" onerror="this.onerror=null; this.src='/images/logo.png';">
                             @if($isOutOfStock)
                                 <div class="position-absolute" style="top: 10px; right: 10px; z-index: 10;">
                                     <span class="badge bg-danger" style="font-size: 0.7rem;">OUT OF STOCK</span>
