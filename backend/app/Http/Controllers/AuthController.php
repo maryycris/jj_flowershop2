@@ -61,7 +61,24 @@ class AuthController extends Controller
                 }
                 
                 \Log::info('Login successful, redirecting', ['user_id' => $user->id, 'role' => $role, 'route' => "$role.dashboard"]);
-                return redirect()->route("$role.dashboard");
+                
+                // Check if route exists before redirecting
+                try {
+                    $routeName = "$role.dashboard";
+                    if (!\Route::has($routeName)) {
+                        \Log::error('Dashboard route not found', ['route' => $routeName, 'role' => $role]);
+                        return back()->withErrors(['login_field' => "Dashboard route not found for role: $role"]);
+                    }
+                    return redirect()->route($routeName);
+                } catch (\Exception $e) {
+                    \Log::error('Route redirect error', [
+                        'error' => $e->getMessage(),
+                        'route' => "$role.dashboard",
+                        'role' => $role
+                    ]);
+                    // Fallback to role-specific URL
+                    return redirect("/$role/dashboard");
+                }
             } else {
                 \Log::info('Auth attempt failed', ['login_field' => $loginField]);
             }
@@ -750,7 +767,24 @@ class AuthController extends Controller
                 }
                 
                 \Log::info('Staff login successful, redirecting', ['user_id' => $user->id, 'role' => $user->role]);
-                return redirect()->route($user->role . '.dashboard');
+                
+                // Check if route exists before redirecting
+                try {
+                    $routeName = $user->role . '.dashboard';
+                    if (!\Route::has($routeName)) {
+                        \Log::error('Dashboard route not found', ['route' => $routeName, 'role' => $user->role]);
+                        return back()->withErrors(['login_field' => "Dashboard route not found for role: {$user->role}"]);
+                    }
+                    return redirect()->route($routeName);
+                } catch (\Exception $e) {
+                    \Log::error('Route redirect error', [
+                        'error' => $e->getMessage(),
+                        'route' => $user->role . '.dashboard',
+                        'role' => $user->role
+                    ]);
+                    // Fallback to role-specific URL
+                    return redirect("/{$user->role}/dashboard");
+                }
             } else {
                 \Log::info('Staff auth attempt failed', ['login_field' => $loginField]);
             }
