@@ -586,13 +586,6 @@ async function handleAddForm(event) {
         selectedItemName.value = itemName;
     }
     
-    // Clear inventory_item_id to prevent linking to inventory items
-    // Customize items should be independent
-    if (selectedItemId) {
-        formData.delete('inventory_item_id');
-        selectedItemId.value = '';
-    }
-    
     // Show loading state
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
