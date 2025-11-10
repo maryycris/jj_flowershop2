@@ -127,7 +127,7 @@
                 <div class="carousel-inner">
                     @foreach($banners as $i => $b)
                     <div class="carousel-item @if($i === 0) active @endif text-center">
-                        <img src="{{ asset('storage/' . $b->image) }}" alt="{{ $b->title ?? 'Banner' }}" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;">
+                        <img src="{{ $b->image_url }}" alt="{{ $b->title ?? 'Banner' }}" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;" onerror="this.onerror=null; this.src='{{ asset('images/logo.png') }}';">
                     </div>
                     @endforeach
                 </div>

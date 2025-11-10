@@ -19,7 +19,7 @@
                     @foreach($banners as $i => $b)
                     <div class="carousel-item @if($i === 0) active @endif text-center">
                         <a href="{{ $b->link_url ?? '#' }}" @if($b->link_url) target="_self" @endif>
-                            <img src="{{ asset('storage/' . $b->image) }}" alt="{{ $b->title ?? 'Banner' }}" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;">
+                            <img src="{{ $b->image_url }}" alt="{{ $b->title ?? 'Banner' }}" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;" onerror="this.onerror=null; this.src='{{ asset('images/logo.png') }}';">
                         </a>
                     </div>
                     @endforeach
