@@ -316,11 +316,21 @@ class ProductController extends Controller
                 'image' => 'required|image|max:2048',
                 'description' => 'nullable|string',
                 'compositions' => 'nullable|array',
-                'compositions.*.component_id' => 'required_with:compositions|integer|exists:products,id',
-                'compositions.*.component_name' => 'required_with:compositions|string|max:255',
-                'compositions.*.quantity' => 'required_with:compositions|numeric|min:1',
-                'compositions.*.unit' => 'required_with:compositions|string|max:50',
+                // Only validate composition fields if component_id is present (meaning it's a complete entry)
+                'compositions.*.component_id' => 'nullable|integer|exists:products,id',
+                'compositions.*.component_name' => 'nullable|string|max:255',
+                'compositions.*.quantity' => 'nullable|numeric|min:1',
+                'compositions.*.unit' => 'nullable|string|max:50',
             ]);
+            
+            // Filter out incomplete composition entries (where component_id is null)
+            if (isset($validated['compositions']) && is_array($validated['compositions'])) {
+                $validated['compositions'] = array_filter($validated['compositions'], function($comp) {
+                    return !empty($comp['component_id']) && !empty($comp['component_name']);
+                });
+                // Re-index array after filtering
+                $validated['compositions'] = array_values($validated['compositions']);
+            }
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Validation failed:', $e->errors());
             if ($request->expectsJson() || $request->wantsJson()) {
@@ -410,19 +420,25 @@ class ProductController extends Controller
             \Log::info('Catalog product created:', ['id' => $catalogProduct->id, 'name' => $catalogProduct->name]);
 
             // Save product compositions (materials from inventory)
-            if ($request->has('compositions') && is_array($request->compositions)) {
-                foreach ($request->compositions as $composition) {
+            // Use validated compositions (already filtered to remove incomplete entries)
+            if (!empty($validated['compositions']) && is_array($validated['compositions'])) {
+                foreach ($validated['compositions'] as $composition) {
                     if (!empty($composition['component_id']) && !empty($composition['component_name']) && !empty($composition['quantity'])) {
                         $catalogProduct->compositions()->create([
                             'component_id' => $composition['component_id'],
                             'component_name' => $composition['component_name'],
                             'quantity' => $composition['quantity'],
-                            'unit' => $composition['unit'],
+                            'unit' => $composition['unit'] ?? 'pieces',
                             'description' => $composition['description'] ?? null,
                         ]);
                     }
                 }
-                \Log::info('Compositions saved for product:', ['product_id' => $catalogProduct->id, 'compositions_count' => count($request->compositions)]);
+                \Log::info('Compositions saved for product:', [
+                    'product_id' => $catalogProduct->id, 
+                    'compositions_count' => count($validated['compositions'])
+                ]);
+            } else {
+                \Log::info('No compositions to save for product:', ['product_id' => $catalogProduct->id]);
             }
 
             if ($request->expectsJson() || $request->wantsJson()) {
