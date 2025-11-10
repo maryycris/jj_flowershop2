@@ -671,7 +671,7 @@
                 </button>
             <?php endif; ?>
         </div>
-        <!-- Empty column removed - carousel covers full width -->
+        <div class="col-lg-6"></div>
         <div class="col-lg-6 d-flex justify-content-center hero-content">
             <div class="content-box" style="min-width: 370px; max-width: 470px; margin-left: 0; margin-top: 0;">
                 <div class="d-flex flex-column justify-content-center w-100">
