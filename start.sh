@@ -51,31 +51,50 @@ if [ "$APP_ENV" = "production" ]; then
     php artisan route:list --name=dashboard 2>&1 | head -20 >&2 || echo "Could not list routes" >&2
 fi
 
-# Create storage symlink if it doesn't exist
+# Create storage symlink at root public directory (not backend/public)
 echo "Checking storage symlink..." >&2
-if [ ! -L "../public/storage" ]; then
-    echo "Creating storage symlink..." >&2
+# We're in backend/ directory, so root public is ../public
+ROOT_PUBLIC="../public"
+ROOT_STORAGE="../backend/storage/app/public"
+
+if [ ! -L "$ROOT_PUBLIC/storage" ]; then
+    echo "Creating storage symlink at root public directory..." >&2
     # Remove existing symlink if it's broken
-    rm -f ../public/storage 2>&1 || true
-    php artisan storage:link 2>&1 || {
-        echo "Storage link failed, trying manual symlink..." >&2
-        # Manual symlink as fallback
-        ln -sfn ../backend/storage/app/public ../public/storage 2>&1 || echo "Manual symlink also failed" >&2
+    rm -f "$ROOT_PUBLIC/storage" 2>&1 || true
+    # Create symlink from root public/storage to backend/storage/app/public
+    ln -sfn "$ROOT_STORAGE" "$ROOT_PUBLIC/storage" 2>&1 || {
+        echo "Manual symlink failed, trying php artisan storage:link..." >&2
+        # Try Laravel's storage:link command (creates at backend/public/storage)
+        php artisan storage:link 2>&1 || echo "Storage link command also failed" >&2
+        # If Laravel created it at backend/public/storage, copy/create at root too
+        if [ -L "public/storage" ] && [ ! -L "$ROOT_PUBLIC/storage" ]; then
+            echo "Laravel created symlink at backend/public/storage, creating at root..." >&2
+            ln -sfn "$ROOT_STORAGE" "$ROOT_PUBLIC/storage" 2>&1 || echo "Root symlink creation failed" >&2
+        fi
     }
     # Verify symlink was created
-    if [ -L "../public/storage" ]; then
-        echo "Storage symlink created successfully" >&2
-        ls -la ../public/storage >&2 || echo "Warning: Could not list symlink" >&2
+    if [ -L "$ROOT_PUBLIC/storage" ]; then
+        echo "Storage symlink created successfully at $ROOT_PUBLIC/storage" >&2
+        ls -la "$ROOT_PUBLIC/storage" >&2 || echo "Warning: Could not list symlink" >&2
+        # Test if symlink works
+        if [ -e "$ROOT_PUBLIC/storage" ]; then
+            echo "Storage symlink is working" >&2
+            ls -la "$ROOT_PUBLIC/storage/catalog_products" 2>&1 | head -5 >&2 || echo "catalog_products directory not found in symlink" >&2
+        else
+            echo "WARNING: Storage symlink exists but is broken!" >&2
+        fi
     else
-        echo "WARNING: Storage symlink was not created!" >&2
+        echo "WARNING: Storage symlink was not created at $ROOT_PUBLIC/storage!" >&2
     fi
 else
-    echo "Storage symlink already exists" >&2
+    echo "Storage symlink already exists at $ROOT_PUBLIC/storage" >&2
     # Verify it's not broken
-    if [ ! -e "../public/storage" ]; then
+    if [ ! -e "$ROOT_PUBLIC/storage" ]; then
         echo "WARNING: Storage symlink exists but is broken, recreating..." >&2
-        rm -f ../public/storage 2>&1 || true
-        php artisan storage:link 2>&1 || echo "Storage link recreation failed" >&2
+        rm -f "$ROOT_PUBLIC/storage" 2>&1 || true
+        ln -sfn "$ROOT_STORAGE" "$ROOT_PUBLIC/storage" 2>&1 || echo "Storage link recreation failed" >&2
+    else
+        echo "Storage symlink is working correctly" >&2
     fi
 fi
 
