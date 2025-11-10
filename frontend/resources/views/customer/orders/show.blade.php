@@ -830,9 +830,9 @@
                             // Wrapper (background) - matches customize page: fills container
                             if ($bouquet->wrapper) {
                                 $wrapperItem = $items->firstWhere('name', $bouquet->wrapper);
-                                if ($wrapperItem && $wrapperItem->image && file_exists(storage_path('app/public/' . $wrapperItem->image))) {
+                                if ($wrapperItem && $wrapperItem->image) {
                                     $componentImages[] = [
-                                        'image' => '/storage/' . $wrapperItem->image, 
+                                        'image' => $wrapperItem->image_url, 
                                         'type' => 'wrapper',
                                         'z' => 10,
                                         'style' => 'inset: 0; width: 100%; height: 100%; object-fit: cover;'
@@ -844,7 +844,7 @@
                             foreach (['focal_flower_1', 'focal_flower_2', 'focal_flower_3'] as $flowerField) {
                                 if ($bouquet->$flowerField) {
                                     $flowerItem = $items->firstWhere('name', $bouquet->$flowerField);
-                                    if ($flowerItem && $flowerItem->image && file_exists(storage_path('app/public/' . $flowerItem->image))) {
+                                    if ($flowerItem && $flowerItem->image) {
                                         // Match customize page: first flower centered, others positioned relative
                                         if ($flowerIndex == 0) {
                                             // First flower: matches customize page style (centered, 45% from bottom)
@@ -857,7 +857,7 @@
                                             $style = 'width: 18%; height: auto; object-fit: contain; bottom: 45%; left: 32%; transform: translateX(-50%);';
                                         }
                                         $componentImages[] = [
-                                            'image' => '/storage/' . $flowerItem->image, 
+                                            'image' => $flowerItem->image_url, 
                                             'type' => 'flower',
                                             'z' => 60,
                                             'style' => $style
@@ -870,9 +870,9 @@
                             // Greenery - matches customize page: 42% width, centered, 44% from bottom
                             if ($bouquet->greenery) {
                                 $greeneryItem = $items->firstWhere('name', $bouquet->greenery);
-                                if ($greeneryItem && $greeneryItem->image && file_exists(storage_path('app/public/' . $greeneryItem->image))) {
+                                if ($greeneryItem && $greeneryItem->image) {
                                     $componentImages[] = [
-                                        'image' => '/storage/' . $greeneryItem->image, 
+                                        'image' => $greeneryItem->image_url, 
                                         'type' => 'greenery',
                                         'z' => 20,
                                         'style' => 'width: 42%; height: auto; object-fit: contain; bottom: 44%; left: 50%; transform: translateX(-50%); opacity: 0.95;'
@@ -883,9 +883,9 @@
                             // Filler - matches customize page: 20% width, right side, 45% from bottom
                             if ($bouquet->filler) {
                                 $fillerItem = $items->firstWhere('name', $bouquet->filler);
-                                if ($fillerItem && $fillerItem->image && file_exists(storage_path('app/public/' . $fillerItem->image))) {
+                                if ($fillerItem && $fillerItem->image) {
                                     $componentImages[] = [
-                                        'image' => '/storage/' . $fillerItem->image, 
+                                        'image' => $fillerItem->image_url, 
                                         'type' => 'filler',
                                         'z' => 25,
                                         'style' => 'width: 20%; height: auto; object-fit: contain; bottom: 45%; left: 56%; transform: translateX(-50%);'
@@ -896,9 +896,9 @@
                             // Ribbon (top layer) - matches customize page: 20% width, centered, 29% from bottom
                             if ($bouquet->ribbon) {
                                 $ribbonItem = $items->firstWhere('name', $bouquet->ribbon);
-                                if ($ribbonItem && $ribbonItem->image && file_exists(storage_path('app/public/' . $ribbonItem->image))) {
+                                if ($ribbonItem && $ribbonItem->image) {
                                     $componentImages[] = [
-                                        'image' => '/storage/' . $ribbonItem->image, 
+                                        'image' => $ribbonItem->image_url, 
                                         'type' => 'ribbon',
                                         'z' => 80,
                                         'style' => 'width: 20%; height: auto; object-fit: contain; bottom: 29%; left: 50%; transform: translateX(-50%);'
@@ -916,7 +916,8 @@
                                 @foreach($componentImages as $comp)
                                     <img src="{{ $comp['image'] }}" 
                                          alt="Component {{ $comp['type'] }}" 
-                                         style="position: absolute; z-index: {{ $comp['z'] }}; {{ $comp['style'] }}">
+                                         style="position: absolute; z-index: {{ $comp['z'] }}; {{ $comp['style'] }}"
+                                         onerror="this.onerror=null; this.style.display='none';">
                                 @endforeach
                             </div>
                         @else

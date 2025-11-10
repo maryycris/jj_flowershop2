@@ -78,4 +78,28 @@ class CustomizeItem extends Model
     {
         return $query->where('category', $category);
     }
+
+    /**
+     * Get the full URL for the image
+     * Works with both local storage and Cloudinary
+     */
+    public function getImageUrlAttribute()
+    {
+        if (!$this->image) {
+            return asset('images/logo.png'); // Fallback image
+        }
+
+        // If image is already a full URL (Cloudinary), return it
+        if (filter_var($this->image, FILTER_VALIDATE_URL)) {
+            return $this->image;
+        }
+
+        // Use Storage to get the correct URL (works for both local and Cloudinary)
+        try {
+            return \Storage::disk('public')->url($this->image);
+        } catch (\Exception $e) {
+            // Fallback to asset if Storage fails
+            return asset('storage/' . $this->image);
+        }
+    }
 }

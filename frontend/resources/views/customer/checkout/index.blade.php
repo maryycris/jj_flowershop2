@@ -188,7 +188,10 @@
                                 <div class="ms-3" style="font-weight: 500; font-size: 1.08rem;">₱{{ number_format($item->quantity * ($item->customBouquet ? ($item->customBouquet->unit_price ?? ($item->customBouquet->total_price / max($item->customBouquet->quantity, 1))) : 0), 2) }}</div>
                             @else
                                 <!-- Regular Product Display -->
-                                <img src="{{ asset('storage/' . $item->product->image) }}" style="width: 54px; height: 54px; object-fit: cover; border-radius: 8px;">
+                                <img src="{{ $item->product->image_url ?? asset('images/logo.png') }}" 
+                                     style="width: 54px; height: 54px; object-fit: cover; border-radius: 8px;"
+                                     alt="{{ $item->product->name }}"
+                                     onerror="this.onerror=null; this.src='{{ asset('images/logo.png') }}'; this.style.opacity='0.5';">
                                 <div class="flex-grow-1 ms-2">
                                     <div style="font-weight: 500;">{{ $item->product->name }}</div>
                                 </div>
@@ -1452,9 +1455,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 // Wrapper (background) - matches customize page: fills container
                                 if ($bouquet->wrapper) {
                                     $wrapperItem = $items->firstWhere('name', $bouquet->wrapper);
-                                    if ($wrapperItem && $wrapperItem->image && file_exists(storage_path('app/public/' . $wrapperItem->image))) {
+                                    if ($wrapperItem && $wrapperItem->image) {
                                         $componentImages[] = [
-                                            'image' => asset('storage/' . $wrapperItem->image), 
+                                            'image' => $wrapperItem->image_url, 
                                             'type' => 'wrapper',
                                             'z' => 10,
                                             'style' => 'inset: 0; width: 100%; height: 100%; object-fit: cover;'
@@ -1466,7 +1469,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 foreach (['focal_flower_1', 'focal_flower_2', 'focal_flower_3'] as $flowerField) {
                                     if ($bouquet->$flowerField) {
                                         $flowerItem = $items->firstWhere('name', $bouquet->$flowerField);
-                                        if ($flowerItem && $flowerItem->image && file_exists(storage_path('app/public/' . $flowerItem->image))) {
+                                        if ($flowerItem && $flowerItem->image) {
                                             // Match customize page: first flower centered, others positioned relative
                                             if ($flowerIndex == 0) {
                                                 // First flower: matches customize page style (centered, 45% from bottom)
@@ -1479,7 +1482,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 $style = 'width: 18%; height: auto; object-fit: contain; bottom: 45%; left: 32%; transform: translateX(-50%);';
                                             }
                                             $componentImages[] = [
-                                                'image' => asset('storage/' . $flowerItem->image), 
+                                                'image' => $flowerItem->image_url, 
                                                 'type' => 'flower',
                                                 'z' => 60,
                                                 'style' => $style
@@ -1492,9 +1495,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 // Greenery - matches customize page: 42% width, centered, 44% from bottom
                                 if ($bouquet->greenery) {
                                     $greeneryItem = $items->firstWhere('name', $bouquet->greenery);
-                                    if ($greeneryItem && $greeneryItem->image && file_exists(storage_path('app/public/' . $greeneryItem->image))) {
+                                    if ($greeneryItem && $greeneryItem->image) {
                                         $componentImages[] = [
-                                            'image' => asset('storage/' . $greeneryItem->image), 
+                                            'image' => $greeneryItem->image_url, 
                                             'type' => 'greenery',
                                             'z' => 20,
                                             'style' => 'width: 42%; height: auto; object-fit: contain; bottom: 44%; left: 50%; transform: translateX(-50%); opacity: 0.95;'
@@ -1505,9 +1508,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 // Filler - matches customize page: 20% width, right side, 45% from bottom
                                 if ($bouquet->filler) {
                                     $fillerItem = $items->firstWhere('name', $bouquet->filler);
-                                    if ($fillerItem && $fillerItem->image && file_exists(storage_path('app/public/' . $fillerItem->image))) {
+                                    if ($fillerItem && $fillerItem->image) {
                                         $componentImages[] = [
-                                            'image' => asset('storage/' . $fillerItem->image), 
+                                            'image' => $fillerItem->image_url, 
                                             'type' => 'filler',
                                             'z' => 25,
                                             'style' => 'width: 20%; height: auto; object-fit: contain; bottom: 45%; left: 56%; transform: translateX(-50%);'
@@ -1518,9 +1521,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 // Ribbon (top layer) - matches customize page: 20% width, centered, 29% from bottom
                                 if ($bouquet->ribbon) {
                                     $ribbonItem = $items->firstWhere('name', $bouquet->ribbon);
-                                    if ($ribbonItem && $ribbonItem->image && file_exists(storage_path('app/public/' . $ribbonItem->image))) {
+                                    if ($ribbonItem && $ribbonItem->image) {
                                         $componentImages[] = [
-                                            'image' => asset('storage/' . $ribbonItem->image), 
+                                            'image' => $ribbonItem->image_url, 
                                             'type' => 'ribbon',
                                             'z' => 80,
                                             'style' => 'width: 20%; height: auto; object-fit: contain; bottom: 29%; left: 50%; transform: translateX(-50%);'
@@ -1538,7 +1541,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     @foreach($componentImages as $comp)
                                         <img src="{{ $comp['image'] }}" 
                                              alt="Component {{ $comp['type'] }}" 
-                                             style="position: absolute; z-index: {{ $comp['z'] }}; {{ $comp['style'] }}">
+                                             style="position: absolute; z-index: {{ $comp['z'] }}; {{ $comp['style'] }}"
+                                             onerror="this.onerror=null; this.style.display='none';">
                                     @endforeach
                                 </div>
                             @else
