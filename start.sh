@@ -16,15 +16,31 @@ echo "DB_HOST: ${DB_HOST:-not set}" >&2
 echo "DB_PORT: ${DB_PORT:-not set}" >&2
 
 # Check Cloudinary configuration
+echo "=== Cloudinary Configuration Check ===" >&2
+echo "CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-NOT SET}" >&2
+echo "CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:+SET (hidden)}${CLOUDINARY_API_KEY:-NOT SET}" >&2
+echo "CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:+SET (hidden)}${CLOUDINARY_API_SECRET:-NOT SET}" >&2
+
 if [ -n "$CLOUDINARY_CLOUD_NAME" ] && [ -n "$CLOUDINARY_API_KEY" ] && [ -n "$CLOUDINARY_API_SECRET" ]; then
     echo "✅ Cloudinary is CONFIGURED - Images will persist across deployments!" >&2
     echo "   Cloud Name: ${CLOUDINARY_CLOUD_NAME}" >&2
 else
     echo "⚠️  WARNING: Cloudinary is NOT configured!" >&2
     echo "   Images will be LOST on every deployment!" >&2
-    echo "   To fix: Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to Railway Variables" >&2
-    echo "   See CLOUDINARY_QUICK_SETUP.md for instructions" >&2
+    echo "" >&2
+    echo "   To fix: Add these 3 variables to Railway (jj_flowershop2 service → Variables tab):" >&2
+    echo "   1. CLOUDINARY_CLOUD_NAME=dd1tm1i6n" >&2
+    echo "   2. CLOUDINARY_API_KEY=212579362264116" >&2
+    echo "   3. CLOUDINARY_API_SECRET=GI4faXUOA_0Xaas9TbwPjKYSqTk" >&2
+    echo "" >&2
+    echo "   Make sure:" >&2
+    echo "   - Variable names are EXACT (case-sensitive)" >&2
+    echo "   - Values have NO quotes" >&2
+    echo "   - Variables are in jj_flowershop2 service (NOT database)" >&2
+    echo "   - After adding, wait for Railway to redeploy" >&2
+    echo "   See CLOUDINARY_SETUP_NOW.md for detailed instructions" >&2
 fi
+echo "=====================================" >&2
 
 # Check if PORT is set
 if [ -z "$PORT" ]; then
