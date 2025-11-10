@@ -330,6 +330,117 @@
     background: transparent !important;
     background-color: transparent !important;
 }
+/* Mobile View (410x740 and similar) - Aggressive optimization */
+@media (max-width: 450px) {
+    /* Reduce all text sizes aggressively */
+    .container-fluid {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    
+    /* Category Tabs - Smaller */
+    .nav-tabs .nav-link {
+        font-size: 0.7rem !important;
+        padding: 0.4rem 0.6rem !important;
+    }
+    
+    /* Section Headers - Smaller */
+    h5 {
+        font-size: 0.85rem !important;
+    }
+    
+    /* Buttons - Much Smaller */
+    .btn {
+        font-size: 0.7rem !important;
+        padding: 0.3rem 0.5rem !important;
+    }
+    .btn-sm {
+        font-size: 0.65rem !important;
+        padding: 0.25rem 0.4rem !important;
+    }
+    .btn i {
+        font-size: 0.75rem !important;
+    }
+    
+    /* Action Buttons - Smaller */
+    .action-btn {
+        width: 30px !important;
+        height: 28px !important;
+        font-size: 0.7rem !important;
+    }
+    .action-btn i {
+        font-size: 0.7rem !important;
+    }
+    
+    /* Cards - Much Smaller */
+    .card {
+        font-size: 0.7rem !important;
+    }
+    .card-img-top {
+        height: 80px !important;
+    }
+    .card-body {
+        padding: 6px 8px !important;
+    }
+    .card-body .fw-semibold {
+        font-size: 0.65rem !important;
+    }
+    .card-body .text-muted {
+        font-size: 0.6rem !important;
+    }
+    .card-footer {
+        padding: 4px 6px !important;
+    }
+    
+    /* Checkbox - Smaller */
+    .item-checkbox {
+        width: 14px !important;
+        height: 14px !important;
+    }
+    
+    /* Product Grid - 2 columns on mobile */
+    .col-6.col-md-4 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+        padding: 4px !important;
+    }
+    
+    /* Modal - Smaller */
+    .modal-title {
+        font-size: 0.9rem !important;
+    }
+    .modal-body .form-label {
+        font-size: 0.75rem !important;
+    }
+    .modal-body .form-control,
+    .modal-body .form-select {
+        font-size: 0.75rem !important;
+        padding: 0.35rem 0.5rem !important;
+    }
+    
+    /* Reduce spacing */
+    .mb-3 {
+        margin-bottom: 0.5rem !important;
+    }
+    .mb-2 {
+        margin-bottom: 0.4rem !important;
+    }
+    .p-3 {
+        padding: 0.5rem !important;
+    }
+    .gap-2 {
+        gap: 0.3rem !important;
+    }
+    .gap-3 {
+        gap: 0.4rem !important;
+    }
+    .g-3 {
+        gap: 0.4rem !important;
+    }
+}
+
 </style>
 @endpush
 
