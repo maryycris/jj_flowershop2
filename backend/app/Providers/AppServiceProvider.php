@@ -64,20 +64,30 @@ class AppServiceProvider extends ServiceProvider
             }
             
             // Always set individual credentials (more reliable)
-            config(['filesystems.disks.cloudinary.cloud' => $cloudName]);
-            config(['filesystems.disks.cloudinary.key' => $apiKey]);
-            config(['filesystems.disks.cloudinary.secret' => $apiSecret]);
-            config(['filesystems.disks.cloudinary.secure' => true]);
+            // Get current config and ensure URL is completely removed if invalid
+            $cloudinaryConfig = config('filesystems.disks.cloudinary', []);
+            $cloudinaryConfig['cloud'] = $cloudName;
+            $cloudinaryConfig['key'] = $apiKey;
+            $cloudinaryConfig['secret'] = $apiSecret;
+            $cloudinaryConfig['secure'] = true;
             
             // Only set URL if it's a valid Cloudinary URL
-            // If URL is invalid or not set, CloudinaryServiceProvider will use individual credentials
+            // If URL is invalid or not set, completely remove it to force use of individual credentials
             if ($isValidUrl && $cloudinaryUrl) {
-                config(['filesystems.disks.cloudinary.url' => $cloudinaryUrl]);
+                $cloudinaryConfig['url'] = $cloudinaryUrl;
+                \Log::info('Cloudinary config: Using CLOUDINARY_URL', ['url_preview' => substr($cloudinaryUrl, 0, 30) . '...']);
             } else {
-                // Explicitly unset URL to force use of individual credentials
-                // This prevents CloudinaryServiceProvider from using an invalid URL
-                config(['filesystems.disks.cloudinary.url' => null]);
+                // Completely remove URL key - isset() returns true even for null, so we must remove the key entirely
+                unset($cloudinaryConfig['url']);
+                \Log::info('Cloudinary config: Using individual credentials (cloud, key, secret)', [
+                    'cloud' => $cloudName,
+                    'key_set' => !empty($apiKey),
+                    'secret_set' => !empty($apiSecret)
+                ]);
             }
+            
+            // Set the complete config at once
+            config(['filesystems.disks.cloudinary' => $cloudinaryConfig]);
             
             // Enable Cloudinary as the default driver for permanent image storage
             try {
