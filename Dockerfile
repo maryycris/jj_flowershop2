@@ -43,13 +43,15 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 WORKDIR /var/www/html/frontend
 RUN npm install && npm run build
 
-# Copy built assets from frontend/public/build to root public/build
+# Copy built assets from frontend/public/build to root public/build AND backend/public/build
 WORKDIR /var/www/html
-RUN mkdir -p public/build && \
+RUN mkdir -p public/build backend/public/build && \
     if [ -d "frontend/public/build" ]; then \
         cp -r frontend/public/build/* public/build/ 2>&1 || true; \
-        echo "Copied Vite assets to public/build" && \
+        cp -r frontend/public/build/* backend/public/build/ 2>&1 || true; \
+        echo "Copied Vite assets to public/build and backend/public/build" && \
         ls -la public/build/ || echo "Warning: public/build directory is empty"; \
+        ls -la backend/public/build/ || echo "Warning: backend/public/build directory is empty"; \
     else \
         echo "Warning: frontend/public/build directory not found"; \
     fi
