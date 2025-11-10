@@ -43,6 +43,13 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 WORKDIR /var/www/html/frontend
 RUN npm install && npm run build
 
+# Copy built assets from frontend/public/build to root public/build
+WORKDIR /var/www/html
+RUN mkdir -p public/build && \
+    if [ -d "frontend/public/build" ]; then \
+        cp -r frontend/public/build/* public/build/; \
+    fi
+
 # Optimize autoloader
 WORKDIR /var/www/html/backend
 RUN composer dump-autoload --optimize
