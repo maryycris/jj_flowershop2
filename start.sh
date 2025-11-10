@@ -40,6 +40,12 @@ fi
 php artisan route:clear 2>&1 || echo "Route clear failed (non-critical)" >&2
 php artisan view:clear 2>&1 || echo "View clear failed (non-critical)" >&2
 
+# List all routes for debugging (only in production to help diagnose)
+if [ "$APP_ENV" = "production" ]; then
+    echo "Listing available dashboard routes..." >&2
+    php artisan route:list --name=dashboard 2>&1 | head -20 >&2 || echo "Could not list routes" >&2
+fi
+
 # Create storage symlink if it doesn't exist
 if [ ! -L "../public/storage" ]; then
     echo "Creating storage symlink..." >&2
