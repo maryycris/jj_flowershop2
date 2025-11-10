@@ -27,15 +27,49 @@ class PromotedBannerController extends Controller
         $index = 0;
         foreach ($request->file('images', []) as $img) {
             if ($index >= 3) { break; }
-            $path = $img->store('promoted_banners', 'public');
-            PromotedBanner::create([
-                'image' => $path,
-                'title' => null,
-                'link_url' => $request->input('link_url'),
-                'is_active' => true,
-                'sort_order' => $sortBase + $index,
-            ]);
-            $index++;
+            try {
+                $path = $img->store('promoted_banners', 'public');
+                PromotedBanner::create([
+                    'image' => $path,
+                    'title' => null,
+                    'link_url' => $request->input('link_url'),
+                    'is_active' => true,
+                    'sort_order' => $sortBase + $index,
+                ]);
+                $index++;
+                \Log::info('Banner uploaded successfully', ['path' => $path]);
+            } catch (\Exception $e) {
+                \Log::error('Failed to upload banner image', [
+                    'error' => $e->getMessage(),
+                    'error_class' => get_class($e),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                
+                // If Cloudinary error, try falling back to local storage
+                if (strpos($e->getMessage(), 'Invalid configuration') !== false || 
+                    strpos($e->getMessage(), 'Cloudinary') !== false) {
+                    try {
+                        \Log::warning('Cloudinary failed for banner, attempting local storage fallback');
+                        $path = $img->store('promoted_banners', 'local');
+                        PromotedBanner::create([
+                            'image' => $path,
+                            'title' => null,
+                            'link_url' => $request->input('link_url'),
+                            'is_active' => true,
+                            'sort_order' => $sortBase + $index,
+                        ]);
+                        $index++;
+                        \Log::info('Banner uploaded to local storage as fallback', ['path' => $path]);
+                    } catch (\Exception $fallbackError) {
+                        \Log::error('Fallback to local storage also failed for banner', [
+                            'error' => $fallbackError->getMessage()
+                        ]);
+                        return back()->withErrors(['images' => 'Failed to upload banner: ' . $fallbackError->getMessage()]);
+                    }
+                } else {
+                    return back()->withErrors(['images' => 'Failed to upload banner: ' . $e->getMessage()]);
+                }
+            }
         }
 
         return back()->with('success','Banners added');
@@ -55,7 +89,40 @@ class PromotedBannerController extends Controller
             'is_active' => 'nullable|boolean'
         ]);
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('promoted_banners','public');
+            try {
+                // Delete old image if exists
+                if ($banner->image) {
+                    try {
+                        \Storage::disk('public')->delete($banner->image);
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to delete old banner image (non-critical)', ['error' => $e->getMessage()]);
+                    }
+                }
+                $data['image'] = $request->file('image')->store('promoted_banners','public');
+                \Log::info('Banner image updated successfully', ['path' => $data['image']]);
+            } catch (\Exception $e) {
+                \Log::error('Failed to upload banner image during update', [
+                    'error' => $e->getMessage(),
+                    'error_class' => get_class($e)
+                ]);
+                
+                // If Cloudinary error, try falling back to local storage
+                if (strpos($e->getMessage(), 'Invalid configuration') !== false || 
+                    strpos($e->getMessage(), 'Cloudinary') !== false) {
+                    try {
+                        \Log::warning('Cloudinary failed for banner update, attempting local storage fallback');
+                        $data['image'] = $request->file('image')->store('promoted_banners','local');
+                        \Log::info('Banner image updated to local storage as fallback', ['path' => $data['image']]);
+                    } catch (\Exception $fallbackError) {
+                        \Log::error('Fallback to local storage also failed for banner update', [
+                            'error' => $fallbackError->getMessage()
+                        ]);
+                        return back()->withErrors(['image' => 'Failed to upload banner: ' . $fallbackError->getMessage()]);
+                    }
+                } else {
+                    return back()->withErrors(['image' => 'Failed to upload banner: ' . $e->getMessage()]);
+                }
+            }
         }
         $banner->update($data);
         return back()->with('success','Banner updated');
@@ -66,8 +133,17 @@ class PromotedBannerController extends Controller
         $banner = PromotedBanner::findOrFail($id);
         
         // Delete the image file
-        if ($banner->image && \Storage::disk('public')->exists($banner->image)) {
-            \Storage::disk('public')->delete($banner->image);
+        if ($banner->image) {
+            try {
+                \Storage::disk('public')->delete($banner->image);
+                \Log::info('Banner image deleted', ['path' => $banner->image]);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to delete banner image (non-critical)', [
+                    'path' => $banner->image,
+                    'error' => $e->getMessage()
+                ]);
+                // Continue with deletion even if image delete fails
+            }
         }
         
         $banner->delete();

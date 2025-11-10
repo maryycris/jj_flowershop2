@@ -44,10 +44,27 @@ class AppServiceProvider extends ServiceProvider
         
         if ($cloudName && $apiKey && $apiSecret) {
             // Update Cloudinary disk config with correct key names
+            // DO NOT use CLOUDINARY_URL if it's set to the app URL (common mistake)
+            $cloudinaryUrl = env('CLOUDINARY_URL');
+            if ($cloudinaryUrl && !str_starts_with($cloudinaryUrl, 'cloudinary://')) {
+                // If CLOUDINARY_URL is set but not a valid Cloudinary URL, ignore it
+                \Log::warning('CLOUDINARY_URL is set but invalid, ignoring it', [
+                    'url_preview' => substr($cloudinaryUrl, 0, 50) . '...'
+                ]);
+                $cloudinaryUrl = null;
+            }
+            
             config(['filesystems.disks.cloudinary.cloud' => $cloudName]);
             config(['filesystems.disks.cloudinary.key' => $apiKey]);
             config(['filesystems.disks.cloudinary.secret' => $apiSecret]);
             config(['filesystems.disks.cloudinary.secure' => true]);
+            // Only set URL if it's a valid Cloudinary URL
+            if ($cloudinaryUrl && str_starts_with($cloudinaryUrl, 'cloudinary://')) {
+                config(['filesystems.disks.cloudinary.url' => $cloudinaryUrl]);
+            } else {
+                // Remove URL config to use individual credentials
+                config(['filesystems.disks.cloudinary.url' => null]);
+            }
             
             // Enable Cloudinary as the default driver for permanent image storage
             try {
@@ -58,12 +75,14 @@ class AppServiceProvider extends ServiceProvider
                     'cloud_name' => $cloudName,
                     'api_key_set' => !empty($apiKey),
                     'api_secret_set' => !empty($apiSecret),
+                    'using_url' => !empty($cloudinaryUrl),
                     'note' => 'All new uploads will go to Cloudinary and persist forever'
                 ]);
             } catch (\Exception $e) {
                 \Log::error('Failed to enable Cloudinary, falling back to local storage', [
                     'error' => $e->getMessage(),
-                    'cloud_name' => $cloudName
+                    'cloud_name' => $cloudName,
+                    'trace' => $e->getTraceAsString()
                 ]);
                 // Fall back to local storage if Cloudinary configuration fails
                 config(['filesystems.disks.public.driver' => 'local']);
