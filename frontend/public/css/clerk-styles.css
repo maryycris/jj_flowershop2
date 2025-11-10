@@ -1,0 +1,278 @@
+body { 
+    font-family: 'Poppins', sans-serif; 
+    min-height: 100vh; 
+    background: #f8f9fa; 
+    padding-top: 100px; 
+}
+
+.clerk-navbar-bg {
+    background: #5E8458;
+    color: #fff;
+    min-height: 108px;
+    border-bottom: none;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    padding-bottom: 10px;
+    position: fixed;
+    top: 0;
+    z-index: 1000;
+}
+
+.clerk-navbar-content { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    width: 100%; 
+    padding: 0 6.0vw; 
+    height: 56px; 
+    padding-top: 6px; 
+}
+
+.clerk-logo-title { 
+    display: flex; 
+    align-items: center; 
+    gap: 1.2rem; 
+}
+
+.clerk-logo-img { 
+    height: 56px; 
+    width: 56px; 
+    background: transparent; 
+    margin-left: -8px; 
+}
+
+.clerk-shop-title { 
+    font-size: 1.25rem; 
+    font-weight: bold; 
+    color: #fff; 
+    line-height: 1.1; 
+}
+
+.clerk-shop-title span { 
+    font-size: 0.9rem; 
+    font-weight: 400; 
+}
+
+.clerk-user { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.6rem; 
+    font-size: 1.1rem; 
+    color: #fff; 
+}
+
+.clerk-user i { 
+    font-size: 2rem; 
+}
+
+.clerk-navbar-divider {
+    border: none; 
+    border-top: 2px solid #fff; 
+    opacity: 0.7; 
+    margin: 0; 
+    width: 88%; 
+    margin-left: 5.4%; 
+    margin-top: 6px; 
+}
+
+.clerk-navbar-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+    padding-top: 6px;
+    padding-bottom: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+    z-index: 11;
+    white-space: nowrap;
+}
+
+.clerk-navbar-link {
+    color: #fff !important;
+    font-weight: 500;
+    font-size: 0.92rem;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4rem;
+    text-decoration: none;
+    transition: color 0.18s;
+    padding: 0 6px;
+    text-align: left;
+    line-height: 1.1;
+}
+
+.clerk-navbar-link span {
+    color: #fff !important;
+    font-size: 0.92rem;
+    display: inline-block;
+    margin-top: 0;
+}
+
+.clerk-navbar-link i {
+    font-size: 1rem;
+    margin-bottom: 0;
+    color: #fff !important;
+}
+
+.clerk-navbar-link.active, .clerk-navbar-link:hover {
+    color: #fff !important;
+    border-bottom: 2px solid #fff;
+}
+
+.clerk-navbar-link.active span, .clerk-navbar-link:hover span {
+    color: #fff !important;
+}
+
+@media (max-width: 900px) {
+    .clerk-navbar-content, .clerk-navbar-divider {
+        padding-left: 2vw;
+        padding-right: 2vw;
+    }
+    .clerk-navbar-links {
+        gap: 1.2rem;
+    }
+}
+
+/* Hide Bootstrap dropdown caret for clerk profile */
+#clerkProfileDropdown::after {
+    display: none !important;
+}
+
+/* --- Updated Sidebar Styles --- */
+.sidebar-container {
+    min-width: 240px;
+    max-width: 260px;
+    background: #f8f9f4;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-profile {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.sidebar-profile-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-profile-icon img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.sidebar-profile-icon i {
+    font-size: 3.5rem;
+    color: #888;
+}
+
+.sidebar-profile-label {
+    font-size: 1.1rem;
+    color: #222;
+    font-weight: 500;
+    margin: 0;
+}
+
+.sidebar-link {
+    display: block;
+    text-align: left;
+    color: #222;
+    text-decoration: none;
+    padding: 12px 0 12px 32px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-radius: 0;
+    margin-bottom: 0;
+    position: relative;
+}
+
+.sidebar-link.active {
+    color: #4CAF50;
+    font-weight: 600;
+    border-left: 4px solid transparent;
+    background: none;
+}
+
+.sidebar-link:hover {
+    color: #4CAF50;
+    background: #F0F8F0;
+}
+
+.sidebar-link.active::after {
+    content: '';
+    display: block;
+    width: 150px;
+    height: 2.5px;
+    background: #4CAF50;
+    position: absolute;
+    bottom: 0;
+    left: 32px;
+    border-radius: 2px;
+}
+
+.sidebar-link:not(.active)::after {
+    display: none;
+}
+
+.sidebar-container .nav-item {
+    width: 100%;
+}
+
+/* Remove default list styles */
+.sidebar-container ul.nav {
+    list-style: none;
+}
+
+/* Responsive: sidebar stays fixed width */
+@media (max-width: 900px) {
+    .sidebar-container {
+        min-width: 180px;
+        max-width: 200px;
+    }
+    .sidebar-link {
+        font-size: 1rem;
+        padding-left: 18px;
+    }
+}
+
+/* Remove Bootstrap's default .active background */
+.sidebar-link.active, .sidebar-link:active {
+    background: none !important;
+}
+
+.clerk-navbar-spacer {
+    height: 28px;
+    width: 100%;
+}
+
+#wrapper {
+    min-height: calc(100vh - 56px);
+    display: flex;
+}
+
+#page-content-wrapper {
+    padding: 20px 4vw;
+    background: #f8f9fa;
+    min-height: calc(100vh - 56px);
+}
+
+@media (max-width: 768px) {
+    .sidebar-container {
+        display: none;
+    }
+    #page-content-wrapper {
+        padding: 20px 2vw;
+    }
+}
