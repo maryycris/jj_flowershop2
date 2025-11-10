@@ -744,7 +744,7 @@ class AuthController extends Controller
             \Log::info('Staff login attempt', ['login_field' => $loginField]);
             error_log("STAFF LOGIN ATTEMPT: login_field=$loginField");
             
-            // Check if user exists first
+            // Check if user exists first and verify password manually
             $user = \App\Models\User::where('username', $loginField)->first();
             if ($user) {
                 error_log("USER FOUND: user_id={$user->id}, username={$user->username}, role={$user->role}");
@@ -754,6 +754,41 @@ class AuthController extends Controller
                     // Manually log in the user
                     Auth::login($user);
                     error_log("USER LOGGED IN VIA MANUAL AUTH");
+                    
+                    // Skip Auth::attempt() and go straight to redirect logic
+                    $user = Auth::user();
+                    if (!$user) {
+                        \Log::warning('Staff auth: User logged in but Auth::user() returned null');
+                        error_log("ERROR: Auth::user() returned null after login");
+                        return back()->withErrors(['login_field' => 'Authentication failed. Please try again.']);
+                    }
+                    
+                    if (!in_array($user->role, ['admin', 'clerk', 'driver'])) {
+                        \Log::info('User role not allowed for staff login', ['user_id' => $user->id, 'role' => $user->role]);
+                        error_log("ROLE NOT ALLOWED: role={$user->role}");
+                        Auth::logout();
+                        return back()->withErrors(['login_field' => 'Only staff (admin, clerk, driver) can log in here.']);
+                    }
+                    
+                    if (!$user->role) {
+                        \Log::error('Staff user has no role', ['user_id' => $user->id]);
+                        error_log("ERROR: User has no role");
+                        return back()->withErrors(['login_field' => 'User role not found.']);
+                    }
+                    
+                    \Log::info('Staff login successful, redirecting', ['user_id' => $user->id, 'role' => $user->role]);
+                    error_log("STAFF LOGIN SUCCESS: user_id={$user->id}, role={$user->role}");
+                    
+                    // Use direct URL redirect to avoid route resolution issues
+                    $dashboardUrl = "/{$user->role}/dashboard";
+                    \Log::info('Redirecting to dashboard', ['url' => $dashboardUrl, 'role' => $user->role]);
+                    error_log("REDIRECTING TO: $dashboardUrl");
+                    
+                    // Ensure session is saved before redirect
+                    \Session::save();
+                    error_log("SESSION SAVED");
+                    
+                    return redirect($dashboardUrl);
                 } else {
                     error_log("PASSWORD MISMATCH");
                 }
@@ -761,6 +796,7 @@ class AuthController extends Controller
                 error_log("USER NOT FOUND with username=$loginField");
             }
             
+            // Fallback to standard Auth::attempt() if manual login didn't work
             if (Auth::attempt($credentials)) {
                 $user = Auth::user();
                 \Log::info('Staff auth attempt successful', ['user_id' => $user ? $user->id : null]);
