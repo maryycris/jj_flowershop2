@@ -207,5 +207,6 @@ fi
 # Start the server from root public directory
 echo "Starting PHP server on 0.0.0.0:$PORT..." >&2
 cd .. || exit 1
-php -S 0.0.0.0:$PORT -t public public/index.php 2>&1
+# Use router.php to serve static files directly, then route to Laravel
+php -S 0.0.0.0:$PORT -t public public/router.php 2>&1
 
