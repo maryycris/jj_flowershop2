@@ -174,9 +174,8 @@
             align-items: flex-start;
             justify-content: flex-start;
             padding: 0;
-            background: transparent !important;
+            background: none !important;
             background-image: none !important;
-            background-color: transparent !important;
         }
         /* Hero with carousel background */
         .hero-row { 
@@ -184,9 +183,8 @@
             min-height: 580px; 
             height: 80vh; 
             overflow: hidden;
-            background: transparent !important;
+            background: none !important;
             background-image: none !important;
-            background-color: transparent !important;
         }
         /* Removed flower-img and related classes - using carousel instead */
         .flower-img { display: none !important; }
@@ -653,12 +651,12 @@
             $carouselImages = [asset('images/landingpagebm.png')];
         }
     ?>
-    <div class="row w-100 align-items-center hero-row g-0 fade-in-section" id="home" style="background: transparent !important; background-image: none !important; background-color: transparent !important;">
-        <div id="lpCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4000" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; right: 0; bottom: 0;">
+    <div class="row w-100 align-items-center hero-row g-0 fade-in-section" id="home" style="background: none !important; background-image: none !important;">
+        <div id="lpCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4000" style="width: 100%; height: 100%;">
             <div class="carousel-inner" style="width: 100%; height: 100%;">
                 <?php foreach($carouselImages as $idx => $img): ?>
-                    <div class="carousel-item <?= $idx === 0 ? 'active' : '' ?>" style="width: 100%; height: 100%; position: relative;">
-                        <img src="<?= $img ?>" alt="Background Slide <?= $idx+1 ?>" style="width: 100%; height: 100%; object-fit: cover; display: block; position: absolute; top: 0; left: 0;">
+                    <div class="carousel-item <?= $idx === 0 ? 'active' : '' ?>" style="width: 100%; height: 100%;">
+                        <img src="<?= $img ?>" alt="Background Slide <?= $idx+1 ?>" style="width: 100%; height: 100%; object-fit: cover; display: block;">
                     </div>
                 <?php endforeach; ?>
             </div>
