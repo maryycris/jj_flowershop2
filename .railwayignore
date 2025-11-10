@@ -1,0 +1,4 @@
+# Prevent Railway from using Railpack/Nixpacks
+# Force it to use Dockerfile instead
+nixpacks.toml
+
