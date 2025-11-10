@@ -15,6 +15,17 @@ echo "DB_CONNECTION: ${DB_CONNECTION:-not set}" >&2
 echo "DB_HOST: ${DB_HOST:-not set}" >&2
 echo "DB_PORT: ${DB_PORT:-not set}" >&2
 
+# Check Cloudinary configuration
+if [ -n "$CLOUDINARY_CLOUD_NAME" ] && [ -n "$CLOUDINARY_API_KEY" ] && [ -n "$CLOUDINARY_API_SECRET" ]; then
+    echo "✅ Cloudinary is CONFIGURED - Images will persist across deployments!" >&2
+    echo "   Cloud Name: ${CLOUDINARY_CLOUD_NAME}" >&2
+else
+    echo "⚠️  WARNING: Cloudinary is NOT configured!" >&2
+    echo "   Images will be LOST on every deployment!" >&2
+    echo "   To fix: Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to Railway Variables" >&2
+    echo "   See CLOUDINARY_QUICK_SETUP.md for instructions" >&2
+fi
+
 # Check if PORT is set
 if [ -z "$PORT" ]; then
     echo "ERROR: PORT environment variable is not set!" >&2
