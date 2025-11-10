@@ -26,6 +26,45 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Test route to check Cloudinary configuration
+Route::get('/test-cloudinary', function() {
+    $cloudName = env('CLOUDINARY_CLOUD_NAME');
+    $apiKey = env('CLOUDINARY_API_KEY');
+    $apiSecret = env('CLOUDINARY_API_SECRET');
+    
+    $configured = !empty($cloudName) && !empty($apiKey) && !empty($apiSecret);
+    $driver = config('filesystems.disks.public.driver');
+    $defaultDriver = config('filesystems.default');
+    
+    // Check if old images exist in local storage
+    $localImages = [];
+    $storagePath = storage_path('app/public');
+    if (is_dir($storagePath . '/catalog_products')) {
+        $localImages['catalog_products'] = count(glob($storagePath . '/catalog_products/*'));
+    }
+    if (is_dir($storagePath . '/customize')) {
+        $localImages['customize'] = count(glob($storagePath . '/customize/*'));
+    }
+    if (is_dir($storagePath . '/promoted_banners')) {
+        $localImages['promoted_banners'] = count(glob($storagePath . '/promoted_banners/*'));
+    }
+    
+    return response()->json([
+        'cloudinary_configured' => $configured,
+        'cloud_name_set' => !empty($cloudName),
+        'api_key_set' => !empty($apiKey),
+        'api_secret_set' => !empty($apiSecret),
+        'cloud_name' => $cloudName ? substr($cloudName, 0, 3) . '...' : 'NOT SET',
+        'public_disk_driver' => $driver,
+        'default_disk_driver' => $defaultDriver,
+        'local_images_count' => $localImages,
+        'note' => $configured 
+            ? 'Cloudinary is configured. OLD images in local storage will still disappear. You need to RE-UPLOAD them so they go to Cloudinary.' 
+            : 'Cloudinary is NOT configured. Add variables to Railway.',
+        'important' => 'Even if Cloudinary is configured, OLD images uploaded BEFORE configuration will still be lost. Only NEW uploads will persist.'
+    ]);
+});
+
 // Serve storage files - fallback route if symlink doesn't work
 Route::get('/storage/{path}', function ($path) {
     // Try multiple possible paths
