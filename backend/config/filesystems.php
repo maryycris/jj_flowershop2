@@ -13,12 +13,7 @@ return [
     |
     */
 
-    // Use Cloudinary if credentials are set, otherwise use local
-    'default' => env('FILESYSTEM_DISK', 
-        (env('CLOUDINARY_CLOUD_NAME') && env('CLOUDINARY_API_KEY') && env('CLOUDINARY_API_SECRET')) 
-            ? 'cloudinary' 
-            : 'local'
-    ),
+    'default' => env('FILESYSTEM_DISK', 'local'),
 
     /*
     |--------------------------------------------------------------------------
@@ -44,16 +39,13 @@ return [
         ],
 
         'public' => [
-            // Use Cloudinary if credentials are set, otherwise use local storage
-            'driver' => (env('CLOUDINARY_CLOUD_NAME') && env('CLOUDINARY_API_KEY') && env('CLOUDINARY_API_SECRET')) 
-                ? 'cloudinary' 
-                : 'local',
+            'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => env('APP_URL').'/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
-            // Cloudinary-specific config (only used when driver is 'cloudinary')
+            // Cloudinary config (will be set dynamically in AppServiceProvider if credentials exist)
             'api_key' => env('CLOUDINARY_API_KEY'),
             'api_secret' => env('CLOUDINARY_API_SECRET'),
             'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),

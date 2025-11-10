@@ -33,6 +33,12 @@ class AppServiceProvider extends ServiceProvider
             return base_path('../public');
         });
         
+        // Configure filesystem to use Cloudinary if credentials are available
+        if (env('CLOUDINARY_CLOUD_NAME') && env('CLOUDINARY_API_KEY') && env('CLOUDINARY_API_SECRET')) {
+            config(['filesystems.disks.public.driver' => 'cloudinary']);
+            config(['filesystems.default' => 'cloudinary']);
+        }
+        
         // Force HTTPS in production or if FORCE_HTTPS is set (Railway provides HTTPS)
         if (config('app.env') === 'production' || 
             config('app.env') === 'staging' || 
