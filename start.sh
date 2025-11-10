@@ -116,6 +116,18 @@ if [ -z "$SESSION_SECURE_COOKIE" ]; then
     echo "Set SESSION_SECURE_COOKIE to true for HTTPS" >&2
 fi
 
+# Verify Vite manifest exists
+if [ -f "../public/build/manifest.json" ]; then
+    echo "Vite manifest found at public/build/manifest.json" >&2
+else
+    echo "WARNING: Vite manifest not found at public/build/manifest.json" >&2
+    echo "This may cause 500 errors on pages using Vite assets" >&2
+    if [ -d "../public/build" ]; then
+        echo "Contents of public/build:" >&2
+        ls -la ../public/build/ >&2 || true
+    fi
+fi
+
 # Start the server from root public directory
 echo "Starting PHP server on 0.0.0.0:$PORT..." >&2
 cd .. || exit 1
