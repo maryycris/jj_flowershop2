@@ -609,7 +609,16 @@ async function handleAddForm(event) {
             }
         });
         
-        const result = await response.json();
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        let result;
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON response:', text);
+            throw new Error('Server returned an invalid response. Please check the console for details.');
+        }
+        
+        result = await response.json();
         
         // Restore button
         submitBtn.disabled = false;
