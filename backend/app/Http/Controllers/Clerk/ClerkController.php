@@ -25,42 +25,79 @@ class ClerkController extends Controller
             $orderStatusService = new OrderStatusService();
             $orderCounts = $orderStatusService->getOrderCounts();
         
-        // Get low stock alerts using InventoryService
-        $inventoryService = new \App\Services\InventoryService();
-        $lowStockAlerts = $inventoryService->checkLowStock();
-        $restockRecommendations = $inventoryService->getRestockRecommendations();
+        // Get low stock alerts using InventoryService (with error handling)
+        $lowStockAlerts = [];
+        $restockRecommendations = [];
+        try {
+            $inventoryService = new \App\Services\InventoryService();
+            $lowStockAlerts = $inventoryService->checkLowStock();
+            $restockRecommendations = $inventoryService->getRestockRecommendations();
+        } catch (\Exception $e) {
+            \Log::error('InventoryService error in clerk dashboard', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            error_log("INVENTORY SERVICE ERROR: " . $e->getMessage());
+            // Continue with empty arrays if inventory service fails
+        }
         
-        // Most popular products (all-time by quantity sold)
-        $popularProducts = \DB::table('order_product')
-            ->join('products', 'order_product.product_id', '=', 'products.id')
-            ->select('products.id', 'products.name', \DB::raw('SUM(order_product.quantity) as total_quantity'))
-            ->groupBy('products.id', 'products.name')
-            ->orderByDesc('total_quantity')
-            ->limit(5)
-            ->get();
+        // Most popular products (all-time by quantity sold) - with error handling
+        $popularProducts = [];
+        try {
+            $popularProducts = \DB::table('order_product')
+                ->join('products', 'order_product.product_id', '=', 'products.id')
+                ->select('products.id', 'products.name', \DB::raw('SUM(order_product.quantity) as total_quantity'))
+                ->groupBy('products.id', 'products.name')
+                ->orderByDesc('total_quantity')
+                ->limit(5)
+                ->get();
+        } catch (\Exception $e) {
+            \Log::error('Error fetching popular products', ['error' => $e->getMessage()]);
+            error_log("POPULAR PRODUCTS ERROR: " . $e->getMessage());
+        }
 
-        // Top selling products this month
-        $topProductsThisMonth = \DB::table('order_product')
-            ->join('products', 'order_product.product_id', '=', 'products.id')
-            ->join('orders', 'order_product.order_id', '=', 'orders.id')
-            ->whereMonth('orders.created_at', \Carbon\Carbon::now()->month)
-            ->whereYear('orders.created_at', \Carbon\Carbon::now()->year)
-            ->whereIn('orders.order_status', ['completed', 'delivered', 'paid'])
-            ->select('products.name', \DB::raw('SUM(order_product.quantity) as total_sold'), \DB::raw('SUM(order_product.quantity * products.price) as total_revenue'))
-            ->groupBy('products.name')
-            ->orderByDesc('total_sold')
-            ->limit(5)
-            ->get();
+        // Top selling products this month - with error handling
+        $topProductsThisMonth = [];
+        try {
+            $topProductsThisMonth = \DB::table('order_product')
+                ->join('products', 'order_product.product_id', '=', 'products.id')
+                ->join('orders', 'order_product.order_id', '=', 'orders.id')
+                ->whereMonth('orders.created_at', \Carbon\Carbon::now()->month)
+                ->whereYear('orders.created_at', \Carbon\Carbon::now()->year)
+                ->whereIn('orders.order_status', ['completed', 'delivered', 'paid'])
+                ->select('products.name', \DB::raw('SUM(order_product.quantity) as total_sold'), \DB::raw('SUM(order_product.quantity * products.price) as total_revenue'))
+                ->groupBy('products.name')
+                ->orderByDesc('total_sold')
+                ->limit(5)
+                ->get();
+        } catch (\Exception $e) {
+            \Log::error('Error fetching top products this month', ['error' => $e->getMessage()]);
+            error_log("TOP PRODUCTS ERROR: " . $e->getMessage());
+        }
 
-        // Order type distribution
-        $onlineOrdersCount = Order::where('type', 'online')->count();
-        $walkinOrdersCount = Order::where('type', 'walkin')->count();
+        // Order type distribution - with error handling
+        $onlineOrdersCount = 0;
+        $walkinOrdersCount = 0;
+        try {
+            $onlineOrdersCount = Order::where('type', 'online')->count();
+            $walkinOrdersCount = Order::where('type', 'walkin')->count();
+        } catch (\Exception $e) {
+            \Log::error('Error counting order types', ['error' => $e->getMessage()]);
+            error_log("ORDER TYPE COUNT ERROR: " . $e->getMessage());
+        }
 
-        // Recent activity (inventory movements)
-        $recentMovements = \App\Models\InventoryMovement::with(['product', 'user', 'order'])
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
+        // Recent activity (inventory movements) - with error handling
+        $recentMovements = [];
+        try {
+            $recentMovements = \App\Models\InventoryMovement::with(['product', 'user', 'order'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+        } catch (\Exception $e) {
+            \Log::error('Error fetching recent movements', ['error' => $e->getMessage()]);
+            error_log("RECENT MOVEMENTS ERROR: " . $e->getMessage());
+        }
         
         return view('clerk.dashboard', [
             'pendingOrdersCount' => $orderCounts['pending'],
