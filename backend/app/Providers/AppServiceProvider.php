@@ -38,8 +38,19 @@ class AppServiceProvider extends ServiceProvider
         $apiKey = env('CLOUDINARY_API_KEY');
         $apiSecret = env('CLOUDINARY_API_SECRET');
         
+        // Always ensure local storage is the default first
+        config(['filesystems.disks.public.driver' => 'local']);
+        config(['filesystems.default' => 'local']);
+        
         if ($cloudName && $apiKey && $apiSecret) {
+            // Update Cloudinary disk config with correct key names
+            config(['filesystems.disks.cloudinary.cloud' => $cloudName]);
+            config(['filesystems.disks.cloudinary.key' => $apiKey]);
+            config(['filesystems.disks.cloudinary.secret' => $apiSecret]);
+            
             try {
+                // Test if Cloudinary can be initialized (this will throw if invalid)
+                // We'll catch this during actual usage instead
                 config(['filesystems.disks.public.driver' => 'cloudinary']);
                 config(['filesystems.default' => 'cloudinary']);
                 
@@ -58,10 +69,6 @@ class AppServiceProvider extends ServiceProvider
                 config(['filesystems.default' => 'local']);
             }
         } else {
-            // Ensure we're using local storage when Cloudinary is not configured
-            config(['filesystems.disks.public.driver' => 'local']);
-            config(['filesystems.default' => 'local']);
-            
             \Log::warning('Cloudinary not configured - using local storage (ephemeral)', [
                 'cloud_name_set' => !empty($cloudName),
                 'api_key_set' => !empty($apiKey),
