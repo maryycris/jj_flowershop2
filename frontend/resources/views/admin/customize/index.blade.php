@@ -565,10 +565,39 @@ async function handleAddForm(event) {
     // Ensure the hidden name field has the value from visible input
     const itemSearchInput = document.getElementById('itemSearchInput');
     const selectedItemName = document.getElementById('selectedItemName');
-    if (itemSearchInput && selectedItemName && itemSearchInput.value.trim() && !selectedItemName.value) {
-        selectedItemName.value = itemSearchInput.value.trim();
-        formData.set('name', itemSearchInput.value.trim());
+    const selectedItemId = document.getElementById('selectedItemId');
+    
+    // Get the name - use selected name if available, otherwise use input value
+    let itemName = '';
+    if (selectedItemName && selectedItemName.value.trim()) {
+        itemName = selectedItemName.value.trim();
+    } else if (itemSearchInput && itemSearchInput.value.trim()) {
+        itemName = itemSearchInput.value.trim();
     }
+    
+    if (!itemName) {
+        showAlert('error', 'Please enter an item name');
+        return;
+    }
+    
+    // Set the name in form data
+    formData.set('name', itemName);
+    if (selectedItemName) {
+        selectedItemName.value = itemName;
+    }
+    
+    // Clear inventory_item_id to prevent linking to inventory items
+    // Customize items should be independent
+    if (selectedItemId) {
+        formData.delete('inventory_item_id');
+        selectedItemId.value = '';
+    }
+    
+    // Show loading state
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
     
     try {
         const response = await fetch(form.action, {
@@ -582,13 +611,23 @@ async function handleAddForm(event) {
         
         const result = await response.json();
         
+        // Restore button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        
         if (result.success) {
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('addModal'));
             modal.hide();
             
+            // Reset form
+            form.reset();
+            if (selectedItemName) selectedItemName.value = '';
+            if (selectedItemId) selectedItemId.value = '';
+            if (itemSearchInput) itemSearchInput.value = '';
+            
             // Show success message
-            showAlert('success', result.message);
+            showAlert('success', result.message || 'Item added successfully');
             
             // Reload the page to show the new item and preserve tab state
             setTimeout(() => {
@@ -599,11 +638,23 @@ async function handleAddForm(event) {
                 location.reload();
             }, 1000);
         } else {
-            showAlert('error', result.message || 'An error occurred');
+            // Show error message with details
+            const errorMsg = result.message || result.errors?.name?.[0] || 'An error occurred while adding the item';
+            showAlert('error', errorMsg);
+            
+            // If validation errors, show them
+            if (result.errors) {
+                console.error('Validation errors:', result.errors);
+            }
         }
     } catch (error) {
         console.error('Error:', error);
-        showAlert('error', 'An error occurred while adding the item');
+        
+        // Restore button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        
+        showAlert('error', 'An error occurred while adding the item. Please check the console for details.');
     }
 }
 
