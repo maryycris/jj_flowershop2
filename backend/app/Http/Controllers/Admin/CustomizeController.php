@@ -3,15 +3,18 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CustomizeItem;
+use App\Models\Product;
+use App\Models\Setting;
 use App\Traits\CustomizeFilterTrait;
 use Illuminate\Http\Request;
-use App\Models\Product;
-use App\Models\CustomizeItem;
-use App\Models\Setting;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class CustomizeController extends Controller
 {
     use CustomizeFilterTrait;
+    
     public function index(Request $request)
     {
         // Admin can see all items (approved and unapproved) for management
@@ -19,26 +22,17 @@ class CustomizeController extends Controller
         $categories = $this->getCustomizeCategories();
         $assemblingFee = Setting::get('assembling_fee', 150);
         
-        return view('admin.customize.index', compact('items','categories', 'assemblingFee'));
-    }
-
-    public function updateAssemblingFee(Request $request)
-    {
-        $request->validate([
-            'assembling_fee' => 'required|numeric|min:0'
+        // Log Cloudinary status for debugging
+        $cloudinaryConfigured = !empty(env('CLOUDINARY_CLOUD_NAME')) && 
+                               !empty(env('CLOUDINARY_API_KEY')) && 
+                               !empty(env('CLOUDINARY_API_SECRET'));
+        Log::info('Customize page loaded', [
+            'cloudinary_configured' => $cloudinaryConfigured,
+            'items_count' => $items->flatten()->count(),
+            'storage_driver' => config('filesystems.disks.public.driver')
         ]);
-
-        Setting::set('assembling_fee', $request->assembling_fee);
-
-        if ($request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Assembling fee updated successfully.',
-                'assembling_fee' => $request->assembling_fee
-            ]);
-        }
-
-        return back()->with('success', 'Assembling fee updated successfully.');
+        
+        return view('admin.customize.index', compact('items','categories', 'assemblingFee'));
     }
 
     public function store(Request $request)
@@ -51,27 +45,70 @@ class CustomizeController extends Controller
             'inventory_item_id' => 'nullable|exists:products,id'
         ]);
 
-        $path = $request->file('image')->store('customize', 'public');
-
-        $customizeItem = new CustomizeItem();
-        $customizeItem->name = $validated['name'];
-        $customizeItem->category = $validated['category'];
-        $customizeItem->price = $validated['price'] ?? 0;
-        $customizeItem->image = $path;
-        $customizeItem->inventory_item_id = $validated['inventory_item_id'] ?? null;
-        $customizeItem->is_approved = true; // Admin can directly approve
-        $customizeItem->status = true;
-        $customizeItem->save();
-
-        if ($request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Item added successfully.',
-                'item' => $customizeItem
+        try {
+            // Check Cloudinary configuration
+            $cloudinaryConfigured = !empty(env('CLOUDINARY_CLOUD_NAME')) && 
+                                   !empty(env('CLOUDINARY_API_KEY')) && 
+                                   !empty(env('CLOUDINARY_API_SECRET'));
+            
+            Log::info('Uploading customize item image', [
+                'cloudinary_configured' => $cloudinaryConfigured,
+                'storage_driver' => config('filesystems.disks.public.driver'),
+                'file_name' => $request->file('image')->getClientOriginalName()
             ]);
-        }
+            
+            // Store image - will use Cloudinary if configured, otherwise local
+            $path = $request->file('image')->store('customize', 'public');
+            
+            // If using Cloudinary, get the full URL
+            if ($cloudinaryConfigured && config('filesystems.disks.public.driver') === 'cloudinary') {
+                $imageUrl = Storage::disk('public')->url($path);
+                Log::info('Image uploaded to Cloudinary', [
+                    'path' => $path,
+                    'url' => $imageUrl
+                ]);
+            } else {
+                Log::warning('Image uploaded to LOCAL storage (will be lost on deployment)', [
+                    'path' => $path,
+                    'note' => 'Configure Cloudinary to persist images'
+                ]);
+            }
 
-        return back()->with('success','Item added successfully.');
+            $customizeItem = new CustomizeItem();
+            $customizeItem->name = $validated['name'];
+            $customizeItem->category = $validated['category'];
+            $customizeItem->price = $validated['price'] ?? 0;
+            $customizeItem->image = $path;
+            $customizeItem->inventory_item_id = $validated['inventory_item_id'] ?? null;
+            $customizeItem->is_approved = true; // Admin can directly approve
+            $customizeItem->status = true;
+            $customizeItem->save();
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Item added successfully.',
+                    'item' => $customizeItem,
+                    'cloudinary_configured' => $cloudinaryConfigured
+                ]);
+            }
+
+            return back()->with('success','Item added successfully.');
+        } catch (\Exception $e) {
+            Log::error('Error uploading customize item image', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error uploading image: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return back()->withErrors(['error' => 'Error uploading image. Please try again.']);
+        }
     }
 
     public function update(Request $request, $id)
@@ -86,12 +123,25 @@ class CustomizeController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            // Delete old image
-            if ($customizeItem->image && \Storage::disk('public')->exists($customizeItem->image)) {
-                \Storage::disk('public')->delete($customizeItem->image);
+            try {
+                // Delete old image
+                if ($customizeItem->image && \Storage::disk('public')->exists($customizeItem->image)) {
+                    \Storage::disk('public')->delete($customizeItem->image);
+                }
+                $path = $request->file('image')->store('customize', 'public');
+                $customizeItem->image = $path;
+                
+                Log::info('Customize item image updated', [
+                    'item_id' => $id,
+                    'path' => $path,
+                    'cloudinary_configured' => !empty(env('CLOUDINARY_CLOUD_NAME'))
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Error updating customize item image', [
+                    'item_id' => $id,
+                    'error' => $e->getMessage()
+                ]);
             }
-            $path = $request->file('image')->store('customize', 'public');
-            $customizeItem->image = $path;
         }
 
         $customizeItem->name = $validated['name'];
@@ -115,67 +165,83 @@ class CustomizeController extends Controller
     {
         $customizeItem = CustomizeItem::findOrFail($id);
         
-        // Delete image if exists
-        if ($customizeItem->image && \Storage::disk('public')->exists($customizeItem->image)) {
-            \Storage::disk('public')->delete($customizeItem->image);
+        try {
+            if ($customizeItem->image && \Storage::disk('public')->exists($customizeItem->image)) {
+                \Storage::disk('public')->delete($customizeItem->image);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error deleting customize item image', [
+                'item_id' => $id,
+                'error' => $e->getMessage()
+            ]);
         }
         
         $customizeItem->delete();
-        
+
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => 'Item deleted successfully.'
             ]);
         }
-        
+
         return back()->with('success','Item deleted successfully.');
+    }
+
+    public function toggleApproval(Request $request, $id)
+    {
+        $customizeItem = CustomizeItem::findOrFail($id);
+        $customizeItem->is_approved = !$customizeItem->is_approved;
+        $customizeItem->save();
+
+        return back()->with('success', $customizeItem->is_approved ? 'Item approved.' : 'Item unapproved.');
+    }
+
+    public function updateAssemblingFee(Request $request)
+    {
+        $request->validate([
+            'assembling_fee' => 'required|numeric|min:0'
+        ]);
+
+        Setting::set('assembling_fee', $request->assembling_fee);
+
+        return back()->with('success', 'Assembling fee updated successfully.');
     }
 
     public function bulkDelete(Request $request)
     {
-        try {
-            // Debug: Log the request details
-            \Log::info('Bulk delete request received', [
-                'method' => $request->method(),
-                'url' => $request->url(),
-                'data' => $request->all(),
-                'ids' => $request->input('ids', [])
-            ]);
+        $ids = $request->input('ids', []);
+        
+        if (empty($ids)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No items selected.'
+            ], 400);
+        }
 
-            $request->validate([
-                'ids' => 'required|array|min:1',
-                'ids.*' => 'integer|exists:customize_items,id'
-            ]);
-
-            $deletedCount = 0;
-            foreach ($request->ids as $id) {
+        $deleted = 0;
+        foreach ($ids as $id) {
+            try {
                 $customizeItem = CustomizeItem::find($id);
                 if ($customizeItem) {
-                    if ($customizeItem->image && \Storage::disk('public')->exists($customizeItem->image)) { 
-                        \Storage::disk('public')->delete($customizeItem->image); 
+                    // Delete associated image
+                    if ($customizeItem->image && \Storage::disk('public')->exists($customizeItem->image)) {
+                        \Storage::disk('public')->delete($customizeItem->image);
                     }
                     $customizeItem->delete();
-                    $deletedCount++;
+                    $deleted++;
                 }
+            } catch (\Exception $e) {
+                Log::error('Error in bulk delete', [
+                    'item_id' => $id,
+                    'error' => $e->getMessage()
+                ]);
             }
-
-            \Log::info('Bulk delete completed', ['deleted_count' => $deletedCount]);
-
-            if ($request->expectsJson()) {
-                return response()->json(['success' => true, 'message' => "Successfully deleted {$deletedCount} item(s)."]);
-            }
-            
-            return redirect()->route('admin.customize.index')->with('success', "Successfully deleted {$deletedCount} item(s).");
-            
-        } catch (\Exception $e) {
-            \Log::error('Bulk delete error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            
-            if ($request->expectsJson()) {
-                return response()->json(['success' => false, 'message' => 'Error deleting items: ' . $e->getMessage()], 500);
-            }
-            
-            return redirect()->route('admin.customize.index')->with('error', 'Error deleting items: ' . $e->getMessage());
         }
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$deleted} item(s) deleted successfully."
+        ]);
     }
 }
