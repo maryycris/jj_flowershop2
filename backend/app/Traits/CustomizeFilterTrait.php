@@ -11,9 +11,15 @@ trait CustomizeFilterTrait
     /**
      * Get filtered customize items for admin, clerk, and customer
      * Ensures all three use exactly the same data source and filtering
+     * EXCLUDES items that exist in inventory (Product table)
      */
     public function getCustomizeItems()
     {
+        // Get all product names from inventory to exclude them
+        $inventoryProductNames = Product::pluck('name')->map(function($name) {
+            return mb_strtolower(trim($name));
+        })->toArray();
+        
         // Get customize items from the separate customize_items table
         // Eager load inventory item relationship to get latest price
         $customizeItems = CustomizeItem::where('status', true)
@@ -22,36 +28,33 @@ trait CustomizeFilterTrait
             ->orderBy('name')
             ->get();
 
-        // Compute display price: prefer linked inventory price; fallback to own price;
-        // if still empty or zero, try to match Product by name and use its price
-        foreach ($customizeItems as $ci) {
-            $price = null;
+        // Filter out items that are in inventory:
+        // 1. Items with inventory_item_id (linked to Product)
+        // 2. Items whose name matches a Product name
+        $customizeItems = $customizeItems->filter(function($ci) use ($inventoryProductNames) {
+            // Exclude if linked to inventory item
             if ($ci->inventoryItem) {
-                $price = $ci->inventoryItem->price;
+                return false;
             }
-            if ($price === null || $price == 0) {
-                $price = $ci->price;
+            
+            // Exclude if name matches any inventory product name
+            $itemName = mb_strtolower(trim($ci->name));
+            if (in_array($itemName, $inventoryProductNames)) {
+                return false;
             }
-            if (($price === null || $price == 0) && !empty($ci->name)) {
-                $matched = Product::where('name', $ci->name)->orderBy('id', 'desc')->first();
-                if ($matched) {
-                    $price = $matched->price;
-                }
-            }
+            
+            return true;
+        });
+
+        // Compute display price: use own price (since we're excluding inventory items)
+        foreach ($customizeItems as $ci) {
+            $price = $ci->price ?? 0;
             // Attach a non-persistent attribute for views
-            $ci->computed_price = $price ?? 0;
+            $ci->computed_price = $price;
         }
             
-        // If customize_items table is empty, fallback to products table
-        if ($customizeItems->isEmpty()) {
-            $categories = ['Fresh Flowers', 'Greenery', 'Artificial Flowers', 'Ribbon', 'Wrappers'];
-            $customizeItems = Product::whereIn('category', $categories)
-                ->where('status', true)
-                ->where('is_approved', true)
-                ->orderBy('category')
-                ->orderBy('name')
-                ->get();
-        }
+        // DO NOT fallback to products table - only show CustomizeItems that are NOT in inventory
+        // If customize_items table is empty or all items are filtered out, return empty collection
         
         return $customizeItems->groupBy('category');
     }
