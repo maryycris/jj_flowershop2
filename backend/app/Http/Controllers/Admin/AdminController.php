@@ -16,8 +16,8 @@ class AdminController extends Controller
     public function dashboard()
     {
         try {
-            $orderStatusService = new OrderStatusService();
-            $orderCounts = $orderStatusService->getOrderCounts();
+        $orderStatusService = new OrderStatusService();
+        $orderCounts = $orderStatusService->getOrderCounts();
 
         // Aggregate totals for dashboard analytics
         $totalOrders = Order::count();
@@ -103,7 +103,7 @@ class AdminController extends Controller
                                    !empty(env('CLOUDINARY_API_KEY')) && 
                                    !empty(env('CLOUDINARY_API_SECRET'));
 
-            return view('admin.dashboard', [
+        return view('admin.dashboard', [
             'pendingOrdersCount' => $orderCounts['pending'],
             'approvedOrdersCount' => $orderCounts['approved'],
             'onDeliveryCount' => $orderCounts['on_delivery'],

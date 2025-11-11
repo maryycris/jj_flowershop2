@@ -20,11 +20,18 @@ class PromotedBanner extends Model
     public function getImageUrlAttribute()
     {
         if (!$this->image) {
+            \Log::warning('Banner image URL accessor: No image set, returning logo', [
+                'banner_id' => $this->id
+            ]);
             return asset('images/logo.png'); // Fallback image
         }
 
         // If image is already a full URL (Cloudinary), return it directly
         if (filter_var($this->image, FILTER_VALIDATE_URL)) {
+            \Log::info('Banner image URL accessor: Returning full URL directly', [
+                'banner_id' => $this->id,
+                'image' => $this->image
+            ]);
             return $this->image;
         }
 
@@ -40,11 +47,23 @@ class PromotedBanner extends Model
             // Path format: promoted_banners/xxx.png
             // Cloudinary URL format: https://res.cloudinary.com/{cloud_name}/image/upload/{path}
             $cloudinaryUrl = "https://res.cloudinary.com/{$cloudName}/image/upload/{$this->image}";
+            \Log::info('Banner image URL accessor: Constructed Cloudinary URL from path', [
+                'banner_id' => $this->id,
+                'path' => $this->image,
+                'url' => $cloudinaryUrl
+            ]);
             return $cloudinaryUrl;
         }
 
         // Fallback: If Cloudinary not configured, return null so frontend can handle fallback
         // This prevents 404 errors from /storage/ paths on Railway
+        \Log::warning('Banner image URL accessor: Returning null (Cloudinary not configured or invalid path)', [
+            'banner_id' => $this->id,
+            'image' => $this->image,
+            'cloud_name_set' => !empty($cloudName),
+            'api_key_set' => !empty($apiKey),
+            'api_secret_set' => !empty($apiSecret)
+        ]);
         return null;
     }
 }

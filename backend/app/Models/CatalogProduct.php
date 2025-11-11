@@ -75,6 +75,10 @@ class CatalogProduct extends Model
 
         // If image is already a full URL (Cloudinary), return it directly
         if (filter_var($this->image, FILTER_VALIDATE_URL)) {
+            \Log::info('Image URL accessor: Returning full URL directly', [
+                'product_id' => $this->id,
+                'image' => $this->image
+            ]);
             return $this->image;
         }
 
@@ -92,11 +96,23 @@ class CatalogProduct extends Model
             // Note: Old images stored as paths may not exist in Cloudinary, but we'll try anyway
             // The browser's onerror handler will show the logo if the image doesn't exist
             $cloudinaryUrl = "https://res.cloudinary.com/{$cloudName}/image/upload/{$this->image}";
+            \Log::info('Image URL accessor: Constructed Cloudinary URL from path', [
+                'product_id' => $this->id,
+                'path' => $this->image,
+                'url' => $cloudinaryUrl
+            ]);
             return $cloudinaryUrl;
         }
 
         // Fallback: If Cloudinary not configured, return null so frontend can handle fallback
         // This prevents 404 errors from /storage/ paths on Railway
+        \Log::warning('Image URL accessor: Returning null (Cloudinary not configured or invalid path)', [
+            'product_id' => $this->id,
+            'image' => $this->image,
+            'cloud_name_set' => !empty($cloudName),
+            'api_key_set' => !empty($apiKey),
+            'api_secret_set' => !empty($apiSecret)
+        ]);
         return null;
     }
 

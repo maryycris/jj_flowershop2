@@ -527,6 +527,7 @@ class ProductController extends Controller
                         \Log::info('Image uploaded successfully to Cloudinary (PERMANENT)', [
                             'public_id' => $publicId,
                             'full_url' => $fullUrl,
+                            'stored_in_productData' => $productData['image'] ?? 'NOT SET',
                             'note' => 'This image will persist across all deployments'
                         ]);
                     } catch (\Exception $cloudinaryError) {
@@ -632,11 +633,22 @@ class ProductController extends Controller
 
             // Check if request is AJAX/JSON (multiple ways to detect)
             if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                // Refresh the product to ensure image_url is available
+                $catalogProduct->refresh();
+                $catalogProduct->setAppends(['image_url']);
+                
+                \Log::info('Product created - returning JSON response', [
+                    'product_id' => $catalogProduct->id,
+                    'image_field' => $catalogProduct->image,
+                    'image_url_accessor' => $catalogProduct->image_url,
+                    'is_full_url' => filter_var($catalogProduct->image, FILTER_VALIDATE_URL) ? 'YES' : 'NO'
+                ]);
+                
                 return response()->json([
                     'success' => true,
                     'message' => 'Product added successfully to catalog.',
                     'product' => $catalogProduct,
-                    'image_url' => $catalogProduct->image_url ?? null
+                    'image_url' => $catalogProduct->image_url
                 ]);
             }
 
@@ -871,11 +883,22 @@ class ProductController extends Controller
 
         // Check if request is AJAX/JSON (multiple ways to detect)
         if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            // Refresh the product to ensure image_url is available
+            $product->refresh();
+            $product->setAppends(['image_url']);
+            
+            \Log::info('Product updated - returning JSON response', [
+                'product_id' => $product->id,
+                'image_field' => $product->image,
+                'image_url_accessor' => $product->image_url,
+                'is_full_url' => filter_var($product->image, FILTER_VALIDATE_URL) ? 'YES' : 'NO'
+            ]);
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Product updated successfully.',
                 'product' => $product,
-                'image_url' => $product->image_url ?? null
+                'image_url' => $product->image_url
             ]);
         }
 

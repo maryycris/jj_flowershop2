@@ -477,26 +477,26 @@ class OrderStatusService
     public function getOrderCounts()
     {
         try {
-            // Count pending orders, excluding walk-in orders that are still in quotation stage
-            // (walk-in orders in quotation are being created, not waiting for approval)
-            $pendingCount = Order::where('order_status', 'pending')
-                ->where(function($query) {
+        // Count pending orders, excluding walk-in orders that are still in quotation stage
+        // (walk-in orders in quotation are being created, not waiting for approval)
+        $pendingCount = Order::where('order_status', 'pending')
+            ->where(function($query) {
                     $query->where('type', '!=', 'walkin')
-                        ->orWhere(function($q) {
+                    ->orWhere(function($q) {
                             $q->where('type', 'walkin')
                               ->whereNotIn('order_status', ['quotation', 'draft']);
-                        });
-                })
-                ->count();
-            
-            return [
-                'pending' => $pendingCount,
-                'approved' => Order::where('order_status', 'approved')->count(),
-                'on_delivery' => Order::where('order_status', 'on_delivery')->count(),
-                'completed_today' => Order::where('order_status', 'completed')
-                    ->whereDate('completed_at', now()->toDateString())
-                    ->count(),
-            ];
+                    });
+            })
+            ->count();
+        
+        return [
+            'pending' => $pendingCount,
+            'approved' => Order::where('order_status', 'approved')->count(),
+            'on_delivery' => Order::where('order_status', 'on_delivery')->count(),
+            'completed_today' => Order::where('order_status', 'completed')
+                ->whereDate('completed_at', now()->toDateString())
+                ->count(),
+        ];
         } catch (\Exception $e) {
             Log::error('Error in getOrderCounts', [
                 'error' => $e->getMessage(),
