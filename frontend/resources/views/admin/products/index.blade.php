@@ -1019,7 +1019,7 @@ async function viewProductChangeDetails(changeId) {
                 <div class="row">
                     <div class="col-md-4">
                         <div class="text-center mb-3">
-                            <img src="${change.product.image_url || '/storage/' + (change.product.image || 'images/logo.png')}" class="img-fluid rounded" alt="${change.product.name}" style="max-height: 200px;" onerror="this.onerror=null; this.src='/images/logo.png';">
+                            <img src="${change.product.image_url || '/images/logo.png'}" class="img-fluid rounded" alt="${change.product.name}" style="max-height: 200px;" onerror="this.onerror=null; this.src='/images/logo.png';">
                         </div>
                         <div class="text-center">
                             <span class="badge ${change.action === 'edit' ? 'bg-primary' : 'bg-danger'} fs-6">
@@ -1446,7 +1446,7 @@ async function viewProductChangeDetails(changeId) {
             
             if (product.image) {
                 // Use image_url if available (Cloudinary), otherwise construct local path
-                currentImg.src = product.image_url || ('{{ asset('storage') }}' + '/' + product.image);
+                currentImg.src = product.image_url || '{{ asset('images/logo.png') }}';
                 imageContainer.style.display = 'block';
                 deleteImageBtn.style.display = 'flex';
             } else {
@@ -2068,7 +2068,7 @@ async function viewProductChangeDetails(changeId) {
                         </div>
                         
                         <!-- Product Image -->
-                        <img src="${product.image_url || '/storage/' + (product.image || 'images/logo.png')}" class="card-img-top product-image" alt="${product.name}" style="height: 120px; object-fit: cover;" onerror="this.onerror=null; this.src='/images/logo.png';">
+                        <img src="${product.image_url || '/images/logo.png'}" class="card-img-top product-image" alt="${product.name}" style="height: 120px; object-fit: cover;" onerror="this.onerror=null; this.src='/images/logo.png';">
                         
                         <!-- Product Info -->
                         <div class="card-body text-center p-2">
@@ -2108,7 +2108,7 @@ async function viewProductChangeDetails(changeId) {
                         
                         <!-- Product Image -->
                         <div style="position: relative;">
-                            <img src="${change.product.image_url || '/storage/' + (change.product.image || 'images/logo.png')}" class="card-img-top product-image" alt="${change.product.name}" style="height: 120px; object-fit: cover;" onerror="this.onerror=null; this.src='/images/logo.png';">
+                            <img src="${change.product.image_url || '/images/logo.png'}" class="card-img-top product-image" alt="${change.product.name}" style="height: 120px; object-fit: cover;" onerror="this.onerror=null; this.src='/images/logo.png';">
                             ${change.action === 'delete' ? '<div class="position-absolute" style="top: 0; left: 0; right: 0; bottom: 0; background: rgba(220, 53, 69, 0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-trash fa-2x text-white"></i></div>' : ''}
                         </div>
                         
@@ -2197,7 +2197,7 @@ async function viewProductChangeDetails(changeId) {
                 <div class="col-6 col-md-4 col-lg-3">
                     <div class="card product-card h-100" data-product-id="${product.id}" style="${isOutOfStock ? 'opacity: 0.6;' : ''}">
                         <div style="position: relative;">
-                            <img src="${product.image_url || '/storage/' + (product.image || 'images/logo.png')}" class="card-img-top product-image" alt="${product.name}" style="${isOutOfStock ? 'filter: grayscale(50%);' : ''}" onerror="this.onerror=null; this.src='/images/logo.png';">
+                            <img src="${product.image_url || '/images/logo.png'}" class="card-img-top product-image" alt="${product.name}" style="${isOutOfStock ? 'filter: grayscale(50%);' : ''}" onerror="this.onerror=null; this.src='/images/logo.png';">
                             ${isOutOfStock ? '<div class="position-absolute" style="top: 10px; right: 10px; z-index: 10;"><span class="badge bg-danger" style="font-size: 0.7rem;">OUT OF STOCK</span></div>' : ''}
                         </div>
                         <div class="card-body text-center">
@@ -2358,7 +2358,7 @@ async function viewProductChangeDetails(changeId) {
                 document.getElementById('reviewProductContent').innerHTML = `
                     <div class="row">
                         <div class="col-md-4">
-                            <img src="${product.image_url || '/storage/' + (product.image || 'images/logo.png')}" class="img-fluid rounded" alt="${product.name}" onerror="this.onerror=null; this.src='/images/logo.png';">
+                            <img src="${product.image_url || '/images/logo.png'}" class="img-fluid rounded" alt="${product.name}" onerror="this.onerror=null; this.src='/images/logo.png';">
                         </div>
                         <div class="col-md-8">
                             <h5>${product.name}</h5>
@@ -2417,7 +2417,7 @@ async function viewProductChangeDetails(changeId) {
                 document.getElementById('productInfoContent').innerHTML = `
                     <div class="row">
                         <div class="col-md-4">
-                            <img src="${product.image_url || '/storage/' + (product.image || 'images/logo.png')}" class="img-fluid rounded" alt="${product.name}" onerror="this.onerror=null; this.src='/images/logo.png';">
+                            <img src="${product.image_url || '/images/logo.png'}" class="img-fluid rounded" alt="${product.name}" onerror="this.onerror=null; this.src='/images/logo.png';">
                         </div>
                         <div class="col-md-8">
                             <h5>${product.name}</h5>

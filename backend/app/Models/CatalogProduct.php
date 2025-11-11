@@ -89,24 +89,15 @@ class CatalogProduct extends Model
             // Construct Cloudinary URL from path
             // Path format: catalog_products/8z56vsEINMLSYwRkt6nK...9Aso6MFwphyga.png
             // Cloudinary URL format: https://res.cloudinary.com/{cloud_name}/image/upload/{path}
+            // Note: Old images stored as paths may not exist in Cloudinary, but we'll try anyway
+            // The browser's onerror handler will show the logo if the image doesn't exist
             $cloudinaryUrl = "https://res.cloudinary.com/{$cloudName}/image/upload/{$this->image}";
-            \Log::info('Constructed Cloudinary URL from path (bypass Storage)', [
-                'path' => $this->image,
-                'url' => $cloudinaryUrl,
-                'cloud_name' => $cloudName
-            ]);
             return $cloudinaryUrl;
         }
 
-        // Fallback to local storage path (only if Cloudinary not configured)
-        // This should rarely happen in production if Cloudinary is properly set up
-        \Log::warning('Using local storage path for image (Cloudinary not configured)', [
-            'path' => $this->image,
-            'cloud_name_set' => !empty($cloudName),
-            'api_key_set' => !empty($apiKey),
-            'api_secret_set' => !empty($apiSecret)
-        ]);
-        return asset('storage/' . $this->image);
+        // Fallback: If Cloudinary not configured, return null so frontend can handle fallback
+        // This prevents 404 errors from /storage/ paths on Railway
+        return null;
     }
 
     /**
