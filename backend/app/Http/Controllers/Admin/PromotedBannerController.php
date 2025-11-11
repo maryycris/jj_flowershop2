@@ -27,63 +27,82 @@ class PromotedBannerController extends Controller
         $index = 0;
         foreach ($request->file('images', []) as $img) {
             if ($index >= 3) { break; }
-            try {
-                // Check what driver is being used
-                $driver = config('filesystems.disks.public.driver');
-                \Log::info('Attempting banner upload', [
-                    'driver' => $driver,
-                    'file_size' => $img->getSize(),
-                    'file_name' => $img->getClientOriginalName()
-                ]);
-                
-                $path = $img->store('promoted_banners', 'public');
-                
-                // Check if path is a Cloudinary URL (starts with http)
-                $isCloudinary = filter_var($path, FILTER_VALIDATE_URL) !== false;
-                
-                PromotedBanner::create([
-                    'image' => $path,
-                    'title' => null,
-                    'link_url' => $request->input('link_url'),
-                    'is_active' => true,
-                    'sort_order' => $sortBase + $index,
-                ]);
-                $index++;
-                \Log::info('Banner uploaded successfully', [
-                    'path' => $path,
-                    'driver' => $driver,
-                    'is_cloudinary' => $isCloudinary,
-                    'note' => $isCloudinary ? 'PERMANENT - Stored in Cloudinary' : 'TEMPORARY - Stored locally (will be lost on deployment)'
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Failed to upload banner image', [
-                    'error' => $e->getMessage(),
-                    'error_class' => get_class($e),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                
-                // If Cloudinary error, try falling back to local storage
-                if (strpos($e->getMessage(), 'Invalid configuration') !== false || 
-                    strpos($e->getMessage(), 'Cloudinary') !== false) {
-                    try {
-                        \Log::warning('Cloudinary failed for banner, attempting local storage fallback');
-                        $path = $img->store('promoted_banners', 'local');
-                        PromotedBanner::create([
-                            'image' => $path,
-                            'title' => null,
-                            'link_url' => $request->input('link_url'),
-                            'is_active' => true,
-                            'sort_order' => $sortBase + $index,
-                        ]);
-                        $index++;
-                        \Log::info('Banner uploaded to local storage as fallback', ['path' => $path]);
-                    } catch (\Exception $fallbackError) {
-                        \Log::error('Fallback to local storage also failed for banner', [
-                            'error' => $fallbackError->getMessage()
-                        ]);
-                        return back()->withErrors(['images' => 'Failed to upload banner: ' . $fallbackError->getMessage()]);
-                    }
-                } else {
+            
+            // Check if Cloudinary is configured
+            $cloudName = env('CLOUDINARY_CLOUD_NAME');
+            $apiKey = env('CLOUDINARY_API_KEY');
+            $apiSecret = env('CLOUDINARY_API_SECRET');
+            
+            if ($cloudName && $apiKey && $apiSecret) {
+                // Use Cloudinary API directly
+                try {
+                    \Log::info('Uploading banner directly to Cloudinary using API', [
+                        'file_path' => $img->getPathname(),
+                        'file_valid' => $img->isValid()
+                    ]);
+                    
+                    $cloudinary = new \Cloudinary\Cloudinary([
+                        'cloud' => [
+                            'cloud_name' => $cloudName,
+                            'api_key' => $apiKey,
+                            'api_secret' => $apiSecret,
+                        ],
+                        'url' => [
+                            'secure' => true,
+                        ],
+                    ]);
+                    
+                    $filePath = $img->getPathname();
+                    
+                    // Upload to Cloudinary with folder
+                    $uploadResult = $cloudinary->uploadApi()->upload(
+                        $filePath,
+                        [
+                            'folder' => 'promoted_banners',
+                            'resource_type' => 'image',
+                        ]
+                    );
+                    
+                    // Get the secure URL from the upload result
+                    $fullUrl = $uploadResult['secure_url'];
+                    
+                    PromotedBanner::create([
+                        'image' => $fullUrl,
+                        'title' => null,
+                        'link_url' => $request->input('link_url'),
+                        'is_active' => true,
+                        'sort_order' => $sortBase + $index,
+                    ]);
+                    $index++;
+                    \Log::info('Banner uploaded successfully to Cloudinary (PERMANENT)', [
+                        'url' => $fullUrl,
+                        'note' => 'This image will persist across all deployments'
+                    ]);
+                } catch (\Exception $cloudinaryError) {
+                    \Log::error('Direct Cloudinary API upload failed for banner', [
+                        'error' => $cloudinaryError->getMessage(),
+                        'error_class' => get_class($cloudinaryError),
+                        'trace' => $cloudinaryError->getTraceAsString()
+                    ]);
+                    return back()->withErrors(['images' => 'Failed to upload banner to Cloudinary: ' . $cloudinaryError->getMessage()]);
+                }
+            } else {
+                // Cloudinary not configured, use local disk
+                try {
+                    $path = $img->store('promoted_banners', 'local');
+                    PromotedBanner::create([
+                        'image' => $path,
+                        'title' => null,
+                        'link_url' => $request->input('link_url'),
+                        'is_active' => true,
+                        'sort_order' => $sortBase + $index,
+                    ]);
+                    $index++;
+                    \Log::info('Banner uploaded to local storage (Cloudinary not configured)', ['path' => $path]);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to upload banner to local storage', [
+                        'error' => $e->getMessage()
+                    ]);
                     return back()->withErrors(['images' => 'Failed to upload banner: ' . $e->getMessage()]);
                 }
             }
@@ -106,50 +125,87 @@ class PromotedBannerController extends Controller
             'is_active' => 'nullable|boolean'
         ]);
         if ($request->hasFile('image')) {
-            try {
-                // Delete old image if exists
-                if ($banner->image) {
+            // Delete old image if exists
+            if ($banner->image) {
+                $cloudName = env('CLOUDINARY_CLOUD_NAME');
+                $apiKey = env('CLOUDINARY_API_KEY');
+                $apiSecret = env('CLOUDINARY_API_SECRET');
+                
+                if ($cloudName && $apiKey && $apiSecret && str_contains($banner->image, 'cloudinary.com')) {
                     try {
-                        \Storage::disk('public')->delete($banner->image);
-                    } catch (\Exception $e) {
-                        \Log::warning('Failed to delete old banner image (non-critical)', ['error' => $e->getMessage()]);
-                    }
-                }
-                
-                $driver = config('filesystems.disks.public.driver');
-                \Log::info('Attempting banner update upload', ['driver' => $driver]);
-                
-                $data['image'] = $request->file('image')->store('promoted_banners','public');
-                
-                $isCloudinary = filter_var($data['image'], FILTER_VALIDATE_URL) !== false;
-                \Log::info('Banner image updated successfully', [
-                    'path' => $data['image'],
-                    'driver' => $driver,
-                    'is_cloudinary' => $isCloudinary,
-                    'note' => $isCloudinary ? 'PERMANENT - Stored in Cloudinary' : 'TEMPORARY - Stored locally'
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Failed to upload banner image during update', [
-                    'error' => $e->getMessage(),
-                    'error_class' => get_class($e)
-                ]);
-                
-                // If Cloudinary error, try falling back to local storage
-                if (strpos($e->getMessage(), 'Invalid configuration') !== false || 
-                    strpos($e->getMessage(), 'Cloudinary') !== false) {
-                    try {
-                        \Log::warning('Cloudinary failed for banner update, attempting local storage fallback');
-                        $data['image'] = $request->file('image')->store('promoted_banners','local');
-                        \Log::info('Banner image updated to local storage as fallback', ['path' => $data['image']]);
-                    } catch (\Exception $fallbackError) {
-                        \Log::error('Fallback to local storage also failed for banner update', [
-                            'error' => $fallbackError->getMessage()
+                        $cloudinary = new \Cloudinary\Cloudinary([
+                            'cloud' => [
+                                'cloud_name' => $cloudName,
+                                'api_key' => $apiKey,
+                                'api_secret' => $apiSecret,
+                            ],
+                            'url' => ['secure' => true],
                         ]);
-                        return back()->withErrors(['image' => 'Failed to upload banner: ' . $fallbackError->getMessage()]);
+                        
+                        // Extract public_id from URL
+                        $urlParts = parse_url($banner->image);
+                        $path = trim($urlParts['path'] ?? '', '/');
+                        $uploadPos = strpos($path, '/image/upload/');
+                        if ($uploadPos !== false) {
+                            $publicId = substr($path, $uploadPos + strlen('/image/upload/'));
+                            $publicId = preg_replace('/\.(png|jpg|jpeg|gif|webp)$/i', '', $publicId);
+                            $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
+                            \Log::info('Old banner image deleted from Cloudinary', ['public_id' => $publicId]);
+                        }
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to delete old banner image from Cloudinary (non-critical)', [
+                            'error' => $e->getMessage()
+                        ]);
                     }
                 } else {
+                    // Local storage - try to delete using file system directly
+                    $fullPath = storage_path('app/public/' . $banner->image);
+                    if (file_exists($fullPath)) {
+                        unlink($fullPath);
+                        \Log::info('Old banner image deleted from local storage', ['path' => $banner->image]);
+                    }
+                }
+            }
+            
+            // Upload new image using direct Cloudinary API
+            $cloudName = env('CLOUDINARY_CLOUD_NAME');
+            $apiKey = env('CLOUDINARY_API_KEY');
+            $apiSecret = env('CLOUDINARY_API_SECRET');
+            
+            if ($cloudName && $apiKey && $apiSecret) {
+                try {
+                    $cloudinary = new \Cloudinary\Cloudinary([
+                        'cloud' => [
+                            'cloud_name' => $cloudName,
+                            'api_key' => $apiKey,
+                            'api_secret' => $apiSecret,
+                        ],
+                        'url' => ['secure' => true],
+                    ]);
+                    
+                    $filePath = $request->file('image')->getPathname();
+                    
+                    $uploadResult = $cloudinary->uploadApi()->upload(
+                        $filePath,
+                        [
+                            'folder' => 'promoted_banners',
+                            'resource_type' => 'image',
+                        ]
+                    );
+                    
+                    $data['image'] = $uploadResult['secure_url'];
+                    \Log::info('Banner image updated to Cloudinary', ['url' => $data['image']]);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to upload banner image to Cloudinary during update', [
+                        'error' => $e->getMessage(),
+                        'error_class' => get_class($e)
+                    ]);
                     return back()->withErrors(['image' => 'Failed to upload banner: ' . $e->getMessage()]);
                 }
+            } else {
+                // Cloudinary not configured, use local disk
+                $data['image'] = $request->file('image')->store('promoted_banners', 'local');
+                \Log::info('Banner image updated to local storage (Cloudinary not configured)', ['path' => $data['image']]);
             }
         }
         $banner->update($data);
@@ -160,17 +216,46 @@ class PromotedBannerController extends Controller
     {
         $banner = PromotedBanner::findOrFail($id);
         
-        // Delete the image file
+        // Delete the image file from Cloudinary or local storage
         if ($banner->image) {
-            try {
-                \Storage::disk('public')->delete($banner->image);
-                \Log::info('Banner image deleted', ['path' => $banner->image]);
-            } catch (\Exception $e) {
-                \Log::warning('Failed to delete banner image (non-critical)', [
-                    'path' => $banner->image,
-                    'error' => $e->getMessage()
-                ]);
-                // Continue with deletion even if image delete fails
+            $cloudName = env('CLOUDINARY_CLOUD_NAME');
+            $apiKey = env('CLOUDINARY_API_KEY');
+            $apiSecret = env('CLOUDINARY_API_SECRET');
+            
+            if ($cloudName && $apiKey && $apiSecret && str_contains($banner->image, 'cloudinary.com')) {
+                try {
+                    $cloudinary = new \Cloudinary\Cloudinary([
+                        'cloud' => [
+                            'cloud_name' => $cloudName,
+                            'api_key' => $apiKey,
+                            'api_secret' => $apiSecret,
+                        ],
+                        'url' => ['secure' => true],
+                    ]);
+                    
+                    // Extract public_id from URL
+                    $urlParts = parse_url($banner->image);
+                    $path = trim($urlParts['path'] ?? '', '/');
+                    $uploadPos = strpos($path, '/image/upload/');
+                    if ($uploadPos !== false) {
+                        $publicId = substr($path, $uploadPos + strlen('/image/upload/'));
+                        $publicId = preg_replace('/\.(png|jpg|jpeg|gif|webp)$/i', '', $publicId);
+                        $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
+                        \Log::info('Banner image deleted from Cloudinary', ['public_id' => $publicId]);
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Failed to delete banner image from Cloudinary (non-critical)', [
+                        'path' => $banner->image,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            } else {
+                // Local storage - try to delete using file system directly
+                $fullPath = storage_path('app/public/' . $banner->image);
+                if (file_exists($fullPath)) {
+                    unlink($fullPath);
+                    \Log::info('Banner image deleted from local storage', ['path' => $banner->image]);
+                }
             }
         }
         
