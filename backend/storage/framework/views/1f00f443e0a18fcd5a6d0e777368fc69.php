@@ -17,7 +17,7 @@
                     <?php $__currentLoopData = $banners; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <div class="carousel-item <?php if($i === 0): ?> active <?php endif; ?> text-center">
                         <a href="<?php echo e($b->link_url ?? '#'); ?>" <?php if($b->link_url): ?> target="_self" <?php endif; ?>>
-                            <img src="<?php echo e(asset('storage/' . $b->image)); ?>" alt="<?php echo e($b->title ?? 'Banner'); ?>" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;">
+                            <img src="<?php echo e($b->image_url); ?>" alt="<?php echo e($b->title ?? 'Banner'); ?>" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;" onerror="this.onerror=null; this.src='<?php echo e(asset('images/logo.png')); ?>';">
                         </a>
                     </div>
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>

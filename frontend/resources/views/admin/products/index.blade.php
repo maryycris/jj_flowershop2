@@ -214,7 +214,7 @@
                     @endphp
                     @forelse($banners as $i => $b)
                     <div class="carousel-item @if($i === 0) active @endif text-center">
-                        <img src="{{ $b->image_url }}" alt="{{ $b->title ?? 'Banner' }}" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;" onerror="this.onerror=null; this.src='{{ asset('images/logo.png') }}';">
+                        <img src="{{ asset('storage/' . $b->image) }}" alt="{{ $b->title ?? 'Banner' }}" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;" onerror="this.onerror=null; this.src='{{ asset('images/logo.png') }}';">
                     </div>
                     @empty
                     <div class="carousel-item active text-center">
@@ -391,7 +391,7 @@
                     @php $banners = \App\Models\PromotedBanner::orderBy('sort_order')->get(); @endphp
                     @forelse($banners as $banner)
                     <div class="position-relative border rounded p-2" data-banner-id="{{ $banner->id }}">
-                        <img src="{{ $banner->image_url }}" class="img-fluid rounded" style="height: 80px; object-fit: cover; width: 100%;" onerror="this.onerror=null; this.src='{{ asset('images/logo.png') }}';">
+                        <img src="{{ asset('storage/' . $banner->image) }}" class="img-fluid rounded" style="height: 80px; object-fit: cover; width: 100%;" onerror="this.onerror=null; this.src='{{ asset('images/logo.png') }}';">
                         <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 remove-existing-banner" data-banner-id="{{ $banner->id }}">
                             <i class="bi bi-x"></i>
                         </button>

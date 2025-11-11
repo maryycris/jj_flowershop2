@@ -214,7 +214,7 @@
                     ?>
                     <?php $__empty_1 = true; $__currentLoopData = $banners; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                     <div class="carousel-item <?php if($i === 0): ?> active <?php endif; ?> text-center">
-                        <img src="<?php echo e(asset('storage/' . $b->image)); ?>" alt="<?php echo e($b->title ?? 'Banner'); ?>" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;">
+                        <img src="<?php echo e($b->image_url); ?>" alt="<?php echo e($b->title ?? 'Banner'); ?>" style="height: 180px; object-fit: cover; border-radius: 6px; width:100%;" onerror="this.onerror=null; this.src='<?php echo e(asset('images/logo.png')); ?>';">
                     </div>
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                     <div class="carousel-item active text-center">
@@ -406,7 +406,7 @@
                     <?php $banners = \App\Models\PromotedBanner::orderBy('sort_order')->get(); ?>
                     <?php $__empty_1 = true; $__currentLoopData = $banners; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $banner): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                     <div class="position-relative border rounded p-2" data-banner-id="<?php echo e($banner->id); ?>">
-                        <img src="<?php echo e(asset('storage/' . $banner->image)); ?>" class="img-fluid rounded" style="height: 80px; object-fit: cover; width: 100%;">
+                        <img src="<?php echo e($banner->image_url); ?>" class="img-fluid rounded" style="height: 80px; object-fit: cover; width: 100%;" onerror="this.onerror=null; this.src='<?php echo e(asset('images/logo.png')); ?>';">
                         <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 remove-existing-banner" data-banner-id="<?php echo e($banner->id); ?>">
                             <i class="bi bi-x"></i>
                         </button>
@@ -518,7 +518,12 @@
                             <i class="fas fa-upload me-2"></i>Upload Image
                             <input type="file" id="edit_product_image" name="image" style="display:none;" accept="image/*">
                         </label>
-                        <img id="edit_current_image" src="" alt="Current Image" class="img-thumbnail mt-2" style="display:none; max-width: 150px; max-height: 150px;">
+                        <div id="edit_image_container" class="mt-2 position-relative d-inline-block" style="display:none;">
+                            <img id="edit_current_image" src="" alt="Current Image" class="img-thumbnail" style="max-width: 150px; max-height: 150px;">
+                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" id="delete_product_image_btn" title="Delete Image" style="border-radius: 50%; width: 30px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                                <i class="bi bi-x" style="font-size: 16px;"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="edit_product_name" class="form-label">Product name</label>
@@ -766,25 +771,56 @@ async function handleAddProductForm(event) {
     const form = event.target;
     const formData = new FormData(form);
     
+    // Show loading state
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
+    
     try {
         const response = await fetch(form.action, {
             method: 'POST',
             body: formData,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
             }
         });
         
+        // Check if response is ok
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Server error response:', errorText);
+            try {
+                const errorJson = JSON.parse(errorText);
+                showAlert(errorJson.message || 'Failed to upload product. Please check the console for details.', 'error');
+            } catch (e) {
+                showAlert('Failed to upload product. Server returned: ' + response.status, 'error');
+            }
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+            return;
+        }
+        
         const result = await response.json();
+        console.log('Add product response:', result);
         
         if (result.success) {
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('addProductModal'));
             modal.hide();
             
+            // Reset form
+            form.reset();
+            const imagePreview = document.getElementById('image_preview');
+            if (imagePreview) {
+                imagePreview.src = '';
+                imagePreview.style.display = 'none';
+            }
+            
             // Show success message
-            showAlert(result.message, 'success');
+            showAlert(result.message || 'Product added successfully!', 'success');
             
             // Reload the page to show the new product and preserve category state
             setTimeout(() => {
@@ -795,10 +831,14 @@ async function handleAddProductForm(event) {
             }, 1000);
         } else {
             showAlert(result.message || 'An error occurred', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
         }
     } catch (error) {
-        console.error('Error:', error);
-        showAlert('An error occurred while adding the product', 'error');
+        console.error('Error adding product:', error);
+        showAlert('An error occurred while adding the product: ' + error.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
     }
 }
 
@@ -994,7 +1034,7 @@ async function viewProductChangeDetails(changeId) {
                 <div class="row">
                     <div class="col-md-4">
                         <div class="text-center mb-3">
-                            <img src="/storage/${change.product.image || 'images/logo.png'}" class="img-fluid rounded" alt="${change.product.name}" style="max-height: 200px;">
+                            <img src="${change.product.image_url || '/images/logo.png'}" class="img-fluid rounded" alt="${change.product.name}" style="max-height: 200px;" onerror="this.onerror=null; this.src='/images/logo.png';">
                         </div>
                         <div class="text-center">
                             <span class="badge ${change.action === 'edit' ? 'bg-primary' : 'bg-danger'} fs-6">
@@ -1069,7 +1109,7 @@ async function viewProductChangeDetails(changeId) {
                         <div class="mb-2" style="font-size: 0.85rem;">
                             <strong>New Image:</strong>
                             <div class="mt-1 text-center">
-                                <img src="/storage/${change.changes.image}" class="img-fluid rounded" alt="New Image" style="max-height: 100px; max-width: 120px;">
+                                <img src="${change.changes.image_url || change.changes.image || '/images/logo.png'}" class="img-fluid rounded" alt="New Image" style="max-height: 100px; max-width: 120px;" onerror="this.onerror=null; this.src='/images/logo.png';">
                             </div>
                         </div>
                     `;
@@ -1355,23 +1395,40 @@ async function viewProductChangeDetails(changeId) {
                         method: 'DELETE',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
                         }
                     })
-                    .then(response => response.json())
+                    .then(async response => {
+                        // Check if response is ok
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            try {
+                                const errorJson = JSON.parse(errorText);
+                                throw new Error(errorJson.message || 'Failed to delete banner');
+                            } catch (e) {
+                                throw new Error(errorText || 'Failed to delete banner');
+                            }
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.success) {
+                            showAlert(data.message || 'Banner deleted successfully', 'success');
                             // Remove banner from UI
                             e.target.closest('[data-banner-id]').remove();
                             // Refresh the page to update carousel
-                            window.location.reload();
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
                         } else {
-                            showAlert('Error deleting banner', 'error');
+                            showAlert(data.message || 'Error deleting banner', 'error');
                         }
                     })
                     .catch(error => {
-                        console.error('Error:', error);
-                        showAlert('Error deleting banner', 'error');
+                        console.error('Error deleting banner:', error);
+                        showAlert('Error deleting banner: ' + error.message, 'error');
                     });
                 }
             }
@@ -1416,12 +1473,18 @@ async function viewProductChangeDetails(changeId) {
 
             // show current image if any
             var currentImg = document.getElementById('edit_current_image');
+            var imageContainer = document.getElementById('edit_image_container');
+            var deleteImageBtn = document.getElementById('delete_product_image_btn');
+            
             if (product.image) {
-                currentImg.src = '<?php echo e(asset('storage')); ?>' + '/' + product.image;
-                currentImg.style.display = 'block';
+                // Use image_url if available (Cloudinary), otherwise construct local path
+                currentImg.src = product.image_url || '<?php echo e(asset('images/logo.png')); ?>';
+                imageContainer.style.display = 'block';
+                deleteImageBtn.style.display = 'flex';
             } else {
                 currentImg.src = '';
-                currentImg.style.display = 'none';
+                imageContainer.style.display = 'none';
+                deleteImageBtn.style.display = 'none';
             }
 
             // Load current compositions
@@ -1431,6 +1494,7 @@ async function viewProductChangeDetails(changeId) {
         // Image replacement functionality for edit modal
         const editProductImageInput = document.getElementById('edit_product_image');
         const editCurrentImage = document.getElementById('edit_current_image');
+        const editImageContainer = document.getElementById('edit_image_container');
         
         if (editProductImageInput) {
             editProductImageInput.addEventListener('change', function(event) {
@@ -1438,9 +1502,54 @@ async function viewProductChangeDetails(changeId) {
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         editCurrentImage.src = e.target.result;
-                        editCurrentImage.style.display = 'block';
+                        editImageContainer.style.display = 'block';
                     };
                     reader.readAsDataURL(event.target.files[0]);
+                }
+            });
+        }
+
+        // Delete image functionality
+        const deleteImageBtn = document.getElementById('delete_product_image_btn');
+        if (deleteImageBtn) {
+            deleteImageBtn.addEventListener('click', async function() {
+                if (!currentEditProductId) {
+                    showAlert('No product selected', 'error');
+                    return;
+                }
+
+                if (!confirm('Are you sure you want to delete this image? The product will show the default logo instead.')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/admin/products/${currentEditProductId}/images/delete`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Show logo placeholder
+                        editCurrentImage.src = '<?php echo e(asset('images/logo.png')); ?>';
+                        editImageContainer.style.display = 'block';
+                        deleteImageBtn.style.display = 'none';
+                        
+                        // Clear the file input
+                        editProductImageInput.value = '';
+                        
+                        showAlert(result.message, 'success');
+                    } else {
+                        showAlert(result.message || 'Failed to delete image', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showAlert('An error occurred while deleting the image', 'error');
                 }
             });
         }
@@ -1991,7 +2100,7 @@ async function viewProductChangeDetails(changeId) {
                         </div>
                         
                         <!-- Product Image -->
-                        <img src="/storage/${product.image}" class="card-img-top product-image" alt="${product.name}" style="height: 120px; object-fit: cover;">
+                        <img src="${product.image_url || '/images/logo.png'}" class="card-img-top product-image" alt="${product.name}" style="height: 120px; object-fit: cover;" onerror="this.onerror=null; this.src='/images/logo.png';">
                         
                         <!-- Product Info -->
                         <div class="card-body text-center p-2">
@@ -2031,7 +2140,7 @@ async function viewProductChangeDetails(changeId) {
                         
                         <!-- Product Image -->
                         <div style="position: relative;">
-                            <img src="/storage/${change.product.image || 'images/logo.png'}" class="card-img-top product-image" alt="${change.product.name}" style="height: 120px; object-fit: cover;">
+                            <img src="${change.product.image_url || '/images/logo.png'}" class="card-img-top product-image" alt="${change.product.name}" style="height: 120px; object-fit: cover;" onerror="this.onerror=null; this.src='/images/logo.png';">
                             ${change.action === 'delete' ? '<div class="position-absolute" style="top: 0; left: 0; right: 0; bottom: 0; background: rgba(220, 53, 69, 0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-trash fa-2x text-white"></i></div>' : ''}
                         </div>
                         
@@ -2120,7 +2229,7 @@ async function viewProductChangeDetails(changeId) {
                 <div class="col-6 col-md-4 col-lg-3">
                     <div class="card product-card h-100" data-product-id="${product.id}" style="${isOutOfStock ? 'opacity: 0.6;' : ''}">
                         <div style="position: relative;">
-                            <img src="/storage/${product.image}" class="card-img-top product-image" alt="${product.name}" style="${isOutOfStock ? 'filter: grayscale(50%);' : ''}">
+                            <img src="${product.image_url || '/images/logo.png'}" class="card-img-top product-image" alt="${product.name}" style="${isOutOfStock ? 'filter: grayscale(50%);' : ''}" onerror="this.onerror=null; this.src='/images/logo.png';">
                             ${isOutOfStock ? '<div class="position-absolute" style="top: 10px; right: 10px; z-index: 10;"><span class="badge bg-danger" style="font-size: 0.7rem;">OUT OF STOCK</span></div>' : ''}
                         </div>
                         <div class="card-body text-center">
@@ -2281,7 +2390,7 @@ async function viewProductChangeDetails(changeId) {
                 document.getElementById('reviewProductContent').innerHTML = `
                     <div class="row">
                         <div class="col-md-4">
-                            <img src="/storage/${product.image}" class="img-fluid rounded" alt="${product.name}">
+                            <img src="${product.image_url || '/images/logo.png'}" class="img-fluid rounded" alt="${product.name}" onerror="this.onerror=null; this.src='/images/logo.png';">
                         </div>
                         <div class="col-md-8">
                             <h5>${product.name}</h5>
@@ -2340,7 +2449,7 @@ async function viewProductChangeDetails(changeId) {
                 document.getElementById('productInfoContent').innerHTML = `
                     <div class="row">
                         <div class="col-md-4">
-                            <img src="/storage/${product.image}" class="img-fluid rounded" alt="${product.name}">
+                            <img src="${product.image_url || '/images/logo.png'}" class="img-fluid rounded" alt="${product.name}" onerror="this.onerror=null; this.src='/images/logo.png';">
                         </div>
                         <div class="col-md-8">
                             <h5>${product.name}</h5>
@@ -2541,5 +2650,6 @@ async function viewProductChangeDetails(changeId) {
 
 </script>
 <?php $__env->stopPush(); ?>
+
 
 <?php echo $__env->make('layouts.admin_app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\JJ_FLOWERSHOP CAPSTONE\backend\../frontend/resources/views/admin/products/index.blade.php ENDPATH**/ ?>

@@ -2,6 +2,21 @@
 <div class="container-fluid py-3">
     <div class="row">
         <div class="col-12">
+            <?php if(!isset($cloudinaryConfigured) || !$cloudinaryConfigured): ?>
+            <!-- URGENT WARNING: Cloudinary Not Configured -->
+            <div class="alert alert-danger alert-dismissible fade show" role="alert" style="background: #dc3545; color: white; border: none; font-weight: 600;">
+                <h5 class="alert-heading mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>⚠️ URGENT: Images Will Disappear!</h5>
+                <p class="mb-2"><strong>Your images are being deleted on every deployment because Cloudinary is not configured.</strong></p>
+                <p class="mb-2">To fix this permanently (5 minutes):</p>
+                <ol class="mb-2">
+                    <li>Go to <a href="https://cloudinary.com/users/register/free" target="_blank" style="color: #ffeb3b; text-decoration: underline;">https://cloudinary.com/users/register/free</a> (FREE account)</li>
+                    <li>Get your Cloud Name, API Key, and API Secret from Cloudinary Dashboard</li>
+                    <li>Add them to Railway Variables (jj_flowershop2 service → Variables tab)</li>
+                </ol>
+                <p class="mb-0"><strong>See <code>URGENT_IMAGE_FIX.md</code> for detailed instructions.</strong></p>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <?php endif; ?>
             
             <!-- Order Stats -->
             <div class="row mb-3 g-2">
