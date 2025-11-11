@@ -8,6 +8,32 @@ use App\Models\PromotedBanner;
 
 class PromotedBannerController extends Controller
 {
+    /**
+     * Extract public_id from Cloudinary URL
+     */
+    private function extractPublicIdFromCloudinaryUrl($url)
+    {
+        if (!str_contains($url, 'cloudinary.com')) {
+            return null;
+        }
+        
+        $urlParts = parse_url($url);
+        $path = trim($urlParts['path'] ?? '', '/');
+        
+        $uploadPos = strpos($path, '/image/upload/');
+        if ($uploadPos === false) {
+            $uploadPos = strpos($path, 'image/upload/');
+            if ($uploadPos === false) {
+                return null;
+            }
+            $publicId = substr($path, $uploadPos + strlen('image/upload/'));
+        } else {
+            $publicId = substr($path, $uploadPos + strlen('/image/upload/'));
+        }
+        
+        return preg_replace('/\.(png|jpg|jpeg|gif|webp)$/i', '', $publicId);
+    }
+
     public function index()
     {
         return redirect('/admin/products');
@@ -143,12 +169,8 @@ class PromotedBannerController extends Controller
                         ]);
                         
                         // Extract public_id from URL
-                        $urlParts = parse_url($banner->image);
-                        $path = trim($urlParts['path'] ?? '', '/');
-                        $uploadPos = strpos($path, '/image/upload/');
-                        if ($uploadPos !== false) {
-                            $publicId = substr($path, $uploadPos + strlen('/image/upload/'));
-                            $publicId = preg_replace('/\.(png|jpg|jpeg|gif|webp)$/i', '', $publicId);
+                        $publicId = $this->extractPublicIdFromCloudinaryUrl($banner->image);
+                        if ($publicId) {
                             $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
                             \Log::info('Old banner image deleted from Cloudinary', ['public_id' => $publicId]);
                         }
@@ -234,12 +256,8 @@ class PromotedBannerController extends Controller
                     ]);
                     
                     // Extract public_id from URL
-                    $urlParts = parse_url($banner->image);
-                    $path = trim($urlParts['path'] ?? '', '/');
-                    $uploadPos = strpos($path, '/image/upload/');
-                    if ($uploadPos !== false) {
-                        $publicId = substr($path, $uploadPos + strlen('/image/upload/'));
-                        $publicId = preg_replace('/\.(png|jpg|jpeg|gif|webp)$/i', '', $publicId);
+                    $publicId = $this->extractPublicIdFromCloudinaryUrl($banner->image);
+                    if ($publicId) {
                         $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
                         \Log::info('Banner image deleted from Cloudinary', ['public_id' => $publicId]);
                     }

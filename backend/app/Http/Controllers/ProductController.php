@@ -8,7 +8,6 @@ use App\Models\PendingProductChange;
 use App\Services\ProductAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
@@ -464,9 +463,7 @@ class ProductController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $driver = config('filesystems.disks.public.driver');
             \Log::info('Attempting image upload', [
-                'driver' => $driver,
                 'file_size' => $request->file('image')->getSize(),
                 'file_name' => $request->file('image')->getClientOriginalName()
             ]);
@@ -530,7 +527,6 @@ class ProductController extends Controller
                         \Log::info('Image uploaded successfully to Cloudinary (PERMANENT)', [
                             'public_id' => $publicId,
                             'full_url' => $fullUrl,
-                            'driver' => $driver,
                             'note' => 'This image will persist across all deployments'
                         ]);
                     } catch (\Exception $cloudinaryError) {
@@ -560,7 +556,6 @@ class ProductController extends Controller
                 \Log::error('Failed to upload image to Cloudinary', [
                     'error' => $errorMessage,
                     'error_class' => $errorClass,
-                    'driver' => $driver,
                     'file_name' => $request->file('image')->getClientOriginalName(),
                     'file_size' => $request->file('image')->getSize(),
                     'trace' => $e->getTraceAsString()
@@ -680,9 +675,7 @@ class ProductController extends Controller
 
         // Handle image upload
         if ($request->hasFile('image')) {
-            $driver = config('filesystems.disks.public.driver');
             \Log::info('Attempting image update', [
-                'driver' => $driver,
                 'file_size' => $request->file('image')->getSize(),
                 'file_name' => $request->file('image')->getClientOriginalName()
             ]);
@@ -790,7 +783,6 @@ class ProductController extends Controller
                         \Log::info('New image uploaded successfully to Cloudinary (PERMANENT)', [
                             'public_id' => $publicId,
                             'full_url' => $fullUrl,
-                            'driver' => $driver,
                             'note' => 'This image will persist across all deployments'
                         ]);
                     } catch (\Exception $cloudinaryError) {
@@ -817,7 +809,6 @@ class ProductController extends Controller
                 \Log::error('Failed to upload image to Cloudinary during update', [
                     'error' => $e->getMessage(),
                     'error_class' => get_class($e),
-                    'driver' => $driver,
                     'trace' => $e->getTraceAsString()
                 ]);
                 
@@ -998,8 +989,6 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $driver = config('filesystems.disks.public.driver');
-            
             // Delete old image if exists using direct Cloudinary API
             if ($product->image) {
                 try {

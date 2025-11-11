@@ -7,7 +7,6 @@ use App\Models\CatalogProduct;
 use App\Models\ProductComposition;
 use App\Services\ProductAvailabilityService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class AdminProductApprovalController extends Controller
 {
