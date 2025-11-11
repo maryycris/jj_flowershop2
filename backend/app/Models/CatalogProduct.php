@@ -32,6 +32,12 @@ class CatalogProduct extends Model
         'approved_at' => 'datetime',
     ];
 
+    /**
+     * The accessors to append to the model's array form.
+     * This ensures image_url is always included in JSON responses.
+     */
+    protected $appends = ['image_url'];
+
     public function compositions()
     {
         return $this->hasMany(CatalogProductComposition::class);
