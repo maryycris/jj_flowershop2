@@ -73,34 +73,34 @@ class CatalogProduct extends Model
         }
 
         // If it's a path (not a full URL), check if Cloudinary is configured
-        $driver = config('filesystems.disks.public.driver');
         $cloudName = env('CLOUDINARY_CLOUD_NAME');
+        $apiKey = env('CLOUDINARY_API_KEY');
+        $apiSecret = env('CLOUDINARY_API_SECRET');
         
-        // If using Cloudinary and we have a path, construct Cloudinary URL
-        if ($driver === 'cloudinary' && $cloudName && strpos($this->image, 'http') !== 0) {
+        // If Cloudinary is configured and we have a path, construct Cloudinary URL
+        // DON'T use Storage facade to avoid configuration errors
+        if ($cloudName && $apiKey && $apiSecret && strpos($this->image, 'http') !== 0) {
             // Construct Cloudinary URL from path
             // Path format: catalog_products/8z56vsEINMLSYwRkt6nK...9Aso6MFwphyga.png
             // Cloudinary URL format: https://res.cloudinary.com/{cloud_name}/image/upload/{path}
             $cloudinaryUrl = "https://res.cloudinary.com/{$cloudName}/image/upload/{$this->image}";
-            \Log::info('Constructed Cloudinary URL from path', [
+            \Log::info('Constructed Cloudinary URL from path (bypass Storage)', [
                 'path' => $this->image,
-                'url' => $cloudinaryUrl
+                'url' => $cloudinaryUrl,
+                'cloud_name' => $cloudName
             ]);
             return $cloudinaryUrl;
         }
 
-        // For local storage, use Storage facade or asset
-        try {
-            $url = \Storage::disk('public')->url($this->image);
-            // If Storage returns a local path that doesn't look like Cloudinary, use asset
-            if (strpos($url, 'cloudinary.com') === false && strpos($url, 'res.cloudinary.com') === false) {
-                return asset('storage/' . $this->image);
-            }
-            return $url;
-        } catch (\Exception $e) {
-            // Fallback to asset if Storage fails
-            return asset('storage/' . $this->image);
-        }
+        // Fallback to local storage path (only if Cloudinary not configured)
+        // This should rarely happen in production if Cloudinary is properly set up
+        \Log::warning('Using local storage path for image (Cloudinary not configured)', [
+            'path' => $this->image,
+            'cloud_name_set' => !empty($cloudName),
+            'api_key_set' => !empty($apiKey),
+            'api_secret_set' => !empty($apiSecret)
+        ]);
+        return asset('storage/' . $this->image);
     }
 
     /**

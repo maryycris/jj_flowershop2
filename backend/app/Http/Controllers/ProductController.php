@@ -884,11 +884,27 @@ class ProductController extends Controller
                                     \Log::warning('Could not extract public_id from Cloudinary URL', ['url' => $image]);
                                 }
                             } else {
-                                // Local storage - try to delete using file system directly
-                                $fullPath = storage_path('app/public/' . $image);
-                                if (file_exists($fullPath)) {
-                                    unlink($fullPath);
-                                    \Log::info('Image deleted from local storage (destroy)', ['path' => $image]);
+                                // If it's a path (old format), try to delete from Cloudinary using path as public_id
+                                // Remove file extension for public_id
+                                $publicId = preg_replace('/\.(png|jpg|jpeg|gif|webp)$/i', '', $image);
+                                
+                                try {
+                                    $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
+                                    \Log::info('Image deleted from Cloudinary using path as public_id (destroy)', [
+                                        'path' => $image,
+                                        'public_id' => $publicId
+                                    ]);
+                                } catch (\Exception $cloudinaryError) {
+                                    // If Cloudinary delete fails, try local storage
+                                    \Log::warning('Cloudinary delete failed, trying local storage', [
+                                        'path' => $image,
+                                        'error' => $cloudinaryError->getMessage()
+                                    ]);
+                                    $fullPath = storage_path('app/public/' . $image);
+                                    if (file_exists($fullPath)) {
+                                        unlink($fullPath);
+                                        \Log::info('Image deleted from local storage (destroy)', ['path' => $image]);
+                                    }
                                 }
                             }
                         } catch (\Exception $e) {
