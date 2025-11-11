@@ -13,6 +13,38 @@ use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
+    /**
+     * Extract public_id from Cloudinary URL
+     * Example: https://res.cloudinary.com/cloud/image/upload/catalog_products/abc123.png
+     * Returns: catalog_products/abc123
+     */
+    private function extractPublicIdFromCloudinaryUrl($url)
+    {
+        if (!str_contains($url, 'cloudinary.com')) {
+            return null;
+        }
+        
+        $urlParts = parse_url($url);
+        $path = trim($urlParts['path'] ?? '', '/');
+        
+        // Find the position of '/image/upload/' in the path
+        $uploadPos = strpos($path, '/image/upload/');
+        if ($uploadPos === false) {
+            // Try alternative format
+            $uploadPos = strpos($path, 'image/upload/');
+            if ($uploadPos === false) {
+                return null;
+            }
+            $publicId = substr($path, $uploadPos + strlen('image/upload/'));
+        } else {
+            $publicId = substr($path, $uploadPos + strlen('/image/upload/'));
+        }
+        
+        // Remove file extension
+        $publicId = preg_replace('/\.(png|jpg|jpeg|gif|webp)$/i', '', $publicId);
+        
+        return $publicId;
+    }
     public function index(Request $request)
     {
         // Only load approved products for the main display
@@ -84,9 +116,40 @@ class ProductController extends Controller
                 
                 // Handle image update
                 if (isset($changes['image'])) {
-                    // Delete old image if exists
+                    // Delete old image if exists using direct Cloudinary API
                     if ($product->image) {
-                        \Storage::disk('public')->delete($product->image);
+                        try {
+                            $cloudName = env('CLOUDINARY_CLOUD_NAME');
+                            $apiKey = env('CLOUDINARY_API_KEY');
+                            $apiSecret = env('CLOUDINARY_API_SECRET');
+                            
+                            if (str_contains($product->image, 'cloudinary.com') && $cloudName && $apiKey && $apiSecret) {
+                                $cloudinary = new \Cloudinary\Cloudinary([
+                                    'cloud' => [
+                                        'cloud_name' => $cloudName,
+                                        'api_key' => $apiKey,
+                                        'api_secret' => $apiSecret,
+                                    ],
+                                    'url' => ['secure' => true],
+                                ]);
+                                
+                                $publicId = $this->extractPublicIdFromCloudinaryUrl($product->image);
+                                if ($publicId) {
+                                    $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
+                                } else {
+                                    \Log::warning('Could not extract public_id from Cloudinary URL during approval', ['url' => $product->image]);
+                                }
+                            } else {
+                                $fullPath = storage_path('app/public/' . $product->image);
+                                if (file_exists($fullPath)) {
+                                    unlink($fullPath);
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            \Log::warning('Failed to delete old image during approval (non-critical)', [
+                                'error' => $e->getMessage()
+                            ]);
+                        }
                     }
                     $product->update(['image' => $changes['image']]);
                 }
@@ -106,7 +169,38 @@ class ProductController extends Controller
                 // Delete the product
                 $product = $change->product;
                 if ($product->image) {
-                    \Storage::disk('public')->delete($product->image);
+                    try {
+                        $cloudName = env('CLOUDINARY_CLOUD_NAME');
+                        $apiKey = env('CLOUDINARY_API_KEY');
+                        $apiSecret = env('CLOUDINARY_API_SECRET');
+                        
+                        if (str_contains($product->image, 'cloudinary.com') && $cloudName && $apiKey && $apiSecret) {
+                            $cloudinary = new \Cloudinary\Cloudinary([
+                                'cloud' => [
+                                    'cloud_name' => $cloudName,
+                                    'api_key' => $apiKey,
+                                    'api_secret' => $apiSecret,
+                                ],
+                                'url' => ['secure' => true],
+                            ]);
+                            
+                            $publicId = $this->extractPublicIdFromCloudinaryUrl($product->image);
+                            if ($publicId) {
+                                $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
+                            } else {
+                                \Log::warning('Could not extract public_id from Cloudinary URL during product deletion', ['url' => $product->image]);
+                            }
+                        } else {
+                            $fullPath = storage_path('app/public/' . $product->image);
+                            if (file_exists($fullPath)) {
+                                unlink($fullPath);
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to delete image during product deletion (non-critical)', [
+                            'error' => $e->getMessage()
+                        ]);
+                    }
                 }
                 $product->delete();
             }
@@ -333,10 +427,12 @@ class ProductController extends Controller
             }
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Validation failed:', $e->errors());
-            if ($request->expectsJson() || $request->wantsJson()) {
+            if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => 'Validation failed: ' . implode(', ', array_map(function($errors) {
+                        return implode(', ', $errors);
+                    }, $e->errors())),
                     'errors' => $e->errors()
                 ], 422);
             }
@@ -357,34 +453,104 @@ class ProductController extends Controller
 
         if ($request->hasFile('image')) {
             $driver = config('filesystems.disks.public.driver');
-            \Log::info('Attempting image upload to Cloudinary (permanent storage)', [
+            \Log::info('Attempting image upload', [
                 'driver' => $driver,
                 'file_size' => $request->file('image')->getSize(),
                 'file_name' => $request->file('image')->getClientOriginalName()
             ]);
             
             try {
-                // Upload to Cloudinary (permanent storage)
-                $productData['image'] = $request->file('image')->store('catalog_products', 'public');
-                \Log::info('Image uploaded successfully to Cloudinary (PERMANENT)', [
-                    'path' => $productData['image'],
-                    'driver' => $driver,
-                    'note' => 'This image will persist across all deployments'
-                ]);
+                // Check if Cloudinary is configured
+                $cloudName = env('CLOUDINARY_CLOUD_NAME');
+                $apiKey = env('CLOUDINARY_API_KEY');
+                $apiSecret = env('CLOUDINARY_API_SECRET');
+                
+                if ($driver === 'cloudinary' && $cloudName && $apiKey && $apiSecret) {
+                    // Use Cloudinary API directly to bypass Storage facade issues
+                    \Log::info('Uploading directly to Cloudinary using API', [
+                        'file_path' => $request->file('image')->getPathname(),
+                        'file_valid' => $request->file('image')->isValid()
+                    ]);
+                    
+                    try {
+                        $cloudinary = new \Cloudinary\Cloudinary([
+                            'cloud' => [
+                                'cloud_name' => $cloudName,
+                                'api_key' => $apiKey,
+                                'api_secret' => $apiSecret,
+                            ],
+                            'url' => [
+                                'secure' => true,
+                            ],
+                        ]);
+                        
+                        // Use getPathname() instead of getRealPath() for uploaded files
+                        $filePath = $request->file('image')->getPathname();
+                        
+                        // Upload to Cloudinary with folder
+                        $uploadResult = $cloudinary->uploadApi()->upload(
+                            $filePath,
+                            [
+                                'folder' => 'catalog_products',
+                                'resource_type' => 'image',
+                            ]
+                        );
+                        
+                        // Get the secure URL from the upload result
+                        $fullUrl = $uploadResult['secure_url'];
+                        $publicId = $uploadResult['public_id'];
+                        
+                        // Store the full Cloudinary URL
+                        $productData['image'] = $fullUrl;
+                        
+                        \Log::info('Image uploaded successfully to Cloudinary (PERMANENT)', [
+                            'public_id' => $publicId,
+                            'full_url' => $fullUrl,
+                            'driver' => $driver,
+                            'note' => 'This image will persist across all deployments'
+                        ]);
+                    } catch (\Exception $cloudinaryError) {
+                        \Log::error('Direct Cloudinary API upload failed', [
+                            'error' => $cloudinaryError->getMessage(),
+                            'error_class' => get_class($cloudinaryError),
+                            'trace' => $cloudinaryError->getTraceAsString()
+                        ]);
+                        throw $cloudinaryError; // Re-throw to be caught by outer catch
+                    }
+                } else {
+                    // Fallback to Storage facade (for local or if Cloudinary not configured)
+                    $imagePath = $request->file('image')->store('catalog_products', 'public');
+                    $productData['image'] = $imagePath;
+                    \Log::info('Image uploaded successfully to local storage', [
+                        'path' => $imagePath,
+                        'driver' => $driver
+                    ]);
+                }
             } catch (\Exception $e) {
+                $errorMessage = $e->getMessage();
+                $errorClass = get_class($e);
+                
                 \Log::error('Failed to upload image to Cloudinary', [
-                    'error' => $e->getMessage(),
-                    'error_class' => get_class($e),
+                    'error' => $errorMessage,
+                    'error_class' => $errorClass,
                     'driver' => $driver,
+                    'file_name' => $request->file('image')->getClientOriginalName(),
+                    'file_size' => $request->file('image')->getSize(),
                     'trace' => $e->getTraceAsString()
                 ]);
                 
-                // If Cloudinary error, try falling back to local storage explicitly
-                if (strpos($e->getMessage(), 'Invalid configuration') !== false || 
-                    strpos($e->getMessage(), 'Cloudinary') !== false ||
-                    strpos($e->getMessage(), 'cloudinary') !== false) {
+                // Check if it's a Cloudinary-related error
+                $isCloudinaryError = strpos(strtolower($errorMessage), 'cloudinary') !== false || 
+                                    strpos(strtolower($errorMessage), 'invalid configuration') !== false ||
+                                    strpos(strtolower($errorMessage), 'authentication') !== false ||
+                                    $errorClass === 'Cloudinary\Api\ApiError';
+                
+                if ($isCloudinaryError) {
+                    \Log::warning('Cloudinary upload failed, attempting local storage fallback (TEMPORARY)', [
+                        'original_error' => $errorMessage
+                    ]);
+                    
                     try {
-                        \Log::warning('Cloudinary failed, attempting local storage fallback (TEMPORARY)');
                         // Force use of local disk as fallback
                         $productData['image'] = $request->file('image')->store('catalog_products', 'local');
                         \Log::info('Image uploaded to local storage as fallback (will be lost on deployment)', [
@@ -395,22 +561,23 @@ class ProductController extends Controller
                             'error' => $fallbackError->getMessage(),
                             'error_class' => get_class($fallbackError)
                         ]);
-                        if ($request->expectsJson() || $request->wantsJson()) {
+                        if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                             return response()->json([
                                 'success' => false,
-                                'message' => 'Failed to upload image. Please check storage configuration. Error: ' . $fallbackError->getMessage()
+                                'message' => 'Failed to upload image. Cloudinary error: ' . $errorMessage . '. Local fallback also failed: ' . $fallbackError->getMessage()
                             ], 500);
                         }
                         return redirect()->back()->withErrors(['image' => 'Failed to upload image: ' . $fallbackError->getMessage()])->withInput();
                     }
                 } else {
-                    if ($request->expectsJson() || $request->wantsJson()) {
+                    // Non-Cloudinary error (file size, validation, etc.)
+                    if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                         return response()->json([
                             'success' => false,
-                            'message' => 'Failed to upload image: ' . $e->getMessage()
+                            'message' => 'Failed to upload image: ' . $errorMessage
                         ], 500);
                     }
-                    return redirect()->back()->withErrors(['image' => 'Failed to upload image: ' . $e->getMessage()])->withInput();
+                    return redirect()->back()->withErrors(['image' => 'Failed to upload image: ' . $errorMessage])->withInput();
                 }
             }
         }
@@ -441,11 +608,13 @@ class ProductController extends Controller
                 \Log::info('No compositions to save for product:', ['product_id' => $catalogProduct->id]);
             }
 
-            if ($request->expectsJson() || $request->wantsJson()) {
+            // Check if request is AJAX/JSON (multiple ways to detect)
+            if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => true,
                     'message' => 'Product added successfully to catalog.',
-                    'product' => $catalogProduct
+                    'product' => $catalogProduct,
+                    'image_url' => $catalogProduct->image_url ?? null
                 ]);
             }
 
@@ -456,7 +625,7 @@ class ProductController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
-            if ($request->expectsJson() || $request->wantsJson()) {
+            if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
                     'message' => 'An error occurred while adding the product: ' . $e->getMessage()
@@ -485,18 +654,49 @@ class ProductController extends Controller
         // Handle image upload
         if ($request->hasFile('image')) {
             $driver = config('filesystems.disks.public.driver');
-            \Log::info('Attempting image update to Cloudinary (permanent storage)', [
+            \Log::info('Attempting image update', [
                 'driver' => $driver,
                 'file_size' => $request->file('image')->getSize(),
                 'file_name' => $request->file('image')->getClientOriginalName()
             ]);
             
             try {
-                // Delete old image if exists
+                // Delete old image if exists (only if it's a Cloudinary URL, extract public_id)
                 if ($product->image) {
                     try {
-                        Storage::disk('public')->delete($product->image);
-                        \Log::info('Old image deleted from Cloudinary', ['path' => $product->image]);
+                        // If it's a Cloudinary URL, extract public_id and delete
+                        if (str_contains($product->image, 'cloudinary.com')) {
+                            $cloudName = env('CLOUDINARY_CLOUD_NAME');
+                            $apiKey = env('CLOUDINARY_API_KEY');
+                            $apiSecret = env('CLOUDINARY_API_SECRET');
+                            
+                            if ($cloudName && $apiKey && $apiSecret) {
+                                $cloudinary = new \Cloudinary\Cloudinary([
+                                    'cloud' => [
+                                        'cloud_name' => $cloudName,
+                                        'api_key' => $apiKey,
+                                        'api_secret' => $apiSecret,
+                                    ],
+                                    'url' => ['secure' => true],
+                                ]);
+                                
+                                // Extract public_id from URL
+                                $publicId = $this->extractPublicIdFromCloudinaryUrl($product->image);
+                                if ($publicId) {
+                                    $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
+                                    \Log::info('Old image deleted from Cloudinary', ['public_id' => $publicId]);
+                                } else {
+                                    \Log::warning('Could not extract public_id from Cloudinary URL during update', ['url' => $product->image]);
+                                }
+                            } else {
+                                // Local storage - try to delete using file system directly
+                                $fullPath = storage_path('app/public/' . $product->image);
+                                if (file_exists($fullPath)) {
+                                    unlink($fullPath);
+                                    \Log::info('Old image deleted from local storage', ['path' => $product->image]);
+                                }
+                            }
+                        }
                     } catch (\Exception $e) {
                         \Log::warning('Failed to delete old image (non-critical)', [
                             'path' => $product->image,
@@ -505,14 +705,72 @@ class ProductController extends Controller
                     }
                 }
                 
-                // Upload new image to Cloudinary (permanent storage)
-                $newImagePath = $request->file('image')->store('catalog_products', 'public');
-                $validated['image'] = $newImagePath;
-                \Log::info('New image uploaded successfully to Cloudinary (PERMANENT)', [
-                    'path' => $newImagePath,
-                    'driver' => $driver,
-                    'note' => 'This image will persist across all deployments'
-                ]);
+                // Check if Cloudinary is configured
+                $cloudName = env('CLOUDINARY_CLOUD_NAME');
+                $apiKey = env('CLOUDINARY_API_KEY');
+                $apiSecret = env('CLOUDINARY_API_SECRET');
+                
+                if ($driver === 'cloudinary' && $cloudName && $apiKey && $apiSecret) {
+                    // Use Cloudinary API directly to bypass Storage facade issues
+                    \Log::info('Uploading directly to Cloudinary using API (update)', [
+                        'file_path' => $request->file('image')->getPathname(),
+                        'file_valid' => $request->file('image')->isValid()
+                    ]);
+                    
+                    try {
+                        $cloudinary = new \Cloudinary\Cloudinary([
+                            'cloud' => [
+                                'cloud_name' => $cloudName,
+                                'api_key' => $apiKey,
+                                'api_secret' => $apiSecret,
+                            ],
+                            'url' => [
+                                'secure' => true,
+                            ],
+                        ]);
+                        
+                        // Use getPathname() instead of getRealPath() for uploaded files
+                        $filePath = $request->file('image')->getPathname();
+                        
+                        // Upload to Cloudinary with folder
+                        $uploadResult = $cloudinary->uploadApi()->upload(
+                            $filePath,
+                            [
+                                'folder' => 'catalog_products',
+                                'resource_type' => 'image',
+                            ]
+                        );
+                        
+                        // Get the secure URL from the upload result
+                        $fullUrl = $uploadResult['secure_url'];
+                        $publicId = $uploadResult['public_id'];
+                        
+                        // Store the full Cloudinary URL
+                        $validated['image'] = $fullUrl;
+                        
+                        \Log::info('New image uploaded successfully to Cloudinary (PERMANENT)', [
+                            'public_id' => $publicId,
+                            'full_url' => $fullUrl,
+                            'driver' => $driver,
+                            'note' => 'This image will persist across all deployments'
+                        ]);
+                    } catch (\Exception $cloudinaryError) {
+                        \Log::error('Direct Cloudinary API upload failed during update', [
+                            'error' => $cloudinaryError->getMessage(),
+                            'error_class' => get_class($cloudinaryError),
+                            'trace' => $cloudinaryError->getTraceAsString()
+                        ]);
+                        throw $cloudinaryError; // Re-throw to be caught by outer catch
+                    }
+                } else {
+                    // Fallback to Storage facade (for local or if Cloudinary not configured)
+                    $newImagePath = $request->file('image')->store('catalog_products', 'public');
+                    $validated['image'] = $newImagePath;
+                    \Log::info('New image uploaded successfully to local storage', [
+                        'path' => $newImagePath,
+                        'driver' => $driver
+                    ]);
+                }
             } catch (\Exception $e) {
                 \Log::error('Failed to upload image to Cloudinary during update', [
                     'error' => $e->getMessage(),
@@ -578,11 +836,13 @@ class ProductController extends Controller
 
         $product->update($validated);
 
-        if ($request->expectsJson()) {
+        // Check if request is AJAX/JSON (multiple ways to detect)
+        if ($request->expectsJson() || $request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json([
                 'success' => true,
                 'message' => 'Product updated successfully.',
-                'product' => $product
+                'product' => $product,
+                'image_url' => $product->image_url ?? null
             ]);
         }
 
@@ -591,27 +851,86 @@ class ProductController extends Controller
 
     public function destroy(Request $request, CatalogProduct $product)
     {
-        // Delete all associated images from storage
-        if ($product->image) {
-            Storage::disk('public')->delete($product->image);
-        }
-        if ($product->image2) {
-            Storage::disk('public')->delete($product->image2);
-        }
-        if ($product->image3) {
-            Storage::disk('public')->delete($product->image3);
-        }
+        try {
+            // Delete all associated images from storage using direct Cloudinary API
+            $cloudName = env('CLOUDINARY_CLOUD_NAME');
+            $apiKey = env('CLOUDINARY_API_KEY');
+            $apiSecret = env('CLOUDINARY_API_SECRET');
+            
+            $imagesToDelete = array_filter([$product->image, $product->image2, $product->image3]);
+            
+            if (!empty($imagesToDelete) && $cloudName && $apiKey && $apiSecret) {
+                try {
+                    $cloudinary = new \Cloudinary\Cloudinary([
+                        'cloud' => [
+                            'cloud_name' => $cloudName,
+                            'api_key' => $apiKey,
+                            'api_secret' => $apiSecret,
+                        ],
+                        'url' => ['secure' => true],
+                    ]);
+                    
+                    foreach ($imagesToDelete as $image) {
+                        if (!$image) continue;
+                        
+                        try {
+                            // If it's a Cloudinary URL, extract public_id and delete
+                            if (str_contains($image, 'cloudinary.com')) {
+                                $publicId = $this->extractPublicIdFromCloudinaryUrl($image);
+                                if ($publicId) {
+                                    $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
+                                    \Log::info('Image deleted from Cloudinary (destroy)', ['public_id' => $publicId]);
+                                } else {
+                                    \Log::warning('Could not extract public_id from Cloudinary URL', ['url' => $image]);
+                                }
+                            } else {
+                                // Local storage - try to delete using file system directly
+                                $fullPath = storage_path('app/public/' . $image);
+                                if (file_exists($fullPath)) {
+                                    unlink($fullPath);
+                                    \Log::info('Image deleted from local storage (destroy)', ['path' => $image]);
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            \Log::warning('Failed to delete image (non-critical)', [
+                                'image' => $image,
+                                'error' => $e->getMessage()
+                            ]);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Failed to initialize Cloudinary for image deletion (non-critical)', [
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
 
-        $product->delete();
+            $product->delete();
 
-        if ($request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Product deleted successfully.'
+            if ($request->expectsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Product deleted successfully.'
+                ]);
+            }
+
+            return Redirect::route('admin.products.index')->with('success', 'Product deleted successfully.');
+        } catch (\Exception $e) {
+            \Log::error('Error deleting product', [
+                'product_id' => $product->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
+            
+            if ($request->expectsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to delete product: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return Redirect::route('admin.products.index')->withErrors(['error' => 'Failed to delete product: ' . $e->getMessage()]);
         }
-
-        return Redirect::route('admin.products.index')->with('success', 'Product deleted successfully.');
     }
 
     public function updateImages(Request $request, CatalogProduct $product)
@@ -621,12 +940,87 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            // Delete old image if exists
+            $driver = config('filesystems.disks.public.driver');
+            
+            // Delete old image if exists using direct Cloudinary API
             if ($product->image) {
-                Storage::disk('public')->delete($product->image);
+                try {
+                    $cloudName = env('CLOUDINARY_CLOUD_NAME');
+                    $apiKey = env('CLOUDINARY_API_KEY');
+                    $apiSecret = env('CLOUDINARY_API_SECRET');
+                    
+                    if (str_contains($product->image, 'cloudinary.com') && $cloudName && $apiKey && $apiSecret) {
+                        $cloudinary = new \Cloudinary\Cloudinary([
+                            'cloud' => [
+                                'cloud_name' => $cloudName,
+                                'api_key' => $apiKey,
+                                'api_secret' => $apiSecret,
+                            ],
+                            'url' => ['secure' => true],
+                        ]);
+                        
+                        $publicId = $this->extractPublicIdFromCloudinaryUrl($product->image);
+                        if ($publicId) {
+                            $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
+                        } else {
+                            \Log::warning('Could not extract public_id from Cloudinary URL in updateImages', ['url' => $product->image]);
+                        }
+                    } else {
+                        $fullPath = storage_path('app/public/' . $product->image);
+                        if (file_exists($fullPath)) {
+                            unlink($fullPath);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Failed to delete old image (non-critical)', [
+                        'path' => $product->image,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
-            $newImagePath = $request->file('image')->store('catalog_products', 'public');
-            $product->image = $newImagePath;
+            
+            // Upload new image using direct Cloudinary API
+            $cloudName = env('CLOUDINARY_CLOUD_NAME');
+            $apiKey = env('CLOUDINARY_API_KEY');
+            $apiSecret = env('CLOUDINARY_API_SECRET');
+            
+            if ($driver === 'cloudinary' && $cloudName && $apiKey && $apiSecret) {
+                try {
+                    $cloudinary = new \Cloudinary\Cloudinary([
+                        'cloud' => [
+                            'cloud_name' => $cloudName,
+                            'api_key' => $apiKey,
+                            'api_secret' => $apiSecret,
+                        ],
+                        'url' => ['secure' => true],
+                    ]);
+                    
+                    $filePath = $request->file('image')->getPathname();
+                    
+                    $uploadResult = $cloudinary->uploadApi()->upload(
+                        $filePath,
+                        [
+                            'folder' => 'catalog_products',
+                            'resource_type' => 'image',
+                        ]
+                    );
+                    
+                    $product->image = $uploadResult['secure_url'];
+                    \Log::info('Image uploaded to Cloudinary in updateImages', [
+                        'url' => $product->image
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to upload image to Cloudinary in updateImages', [
+                        'error' => $e->getMessage()
+                    ]);
+                    // Fallback to local storage
+                    $newImagePath = $request->file('image')->store('catalog_products', 'local');
+                    $product->image = $newImagePath;
+                }
+            } else {
+                $newImagePath = $request->file('image')->store('catalog_products', 'local');
+                $product->image = $newImagePath;
+            }
         }
 
         $product->save();
@@ -634,15 +1028,79 @@ class ProductController extends Controller
         return Redirect::back()->with('success', 'Product image updated successfully.');
     }
 
-    public function deleteImage(CatalogProduct $product)
+    public function deleteImage(Request $request, CatalogProduct $product)
     {
-        if ($product->image) {
-            Storage::disk('public')->delete($product->image);
-            $product->image = null;
-            $product->save();
-        }
+        try {
+            if ($product->image) {
+                // Delete image using direct Cloudinary API (bypass Storage facade)
+                $cloudName = env('CLOUDINARY_CLOUD_NAME');
+                $apiKey = env('CLOUDINARY_API_KEY');
+                $apiSecret = env('CLOUDINARY_API_SECRET');
+                
+                try {
+                    // If it's a Cloudinary URL, extract public_id and delete
+                    if (str_contains($product->image, 'cloudinary.com') && $cloudName && $apiKey && $apiSecret) {
+                        $cloudinary = new \Cloudinary\Cloudinary([
+                            'cloud' => [
+                                'cloud_name' => $cloudName,
+                                'api_key' => $apiKey,
+                                'api_secret' => $apiSecret,
+                            ],
+                            'url' => ['secure' => true],
+                        ]);
+                        
+                        // Extract public_id from URL
+                        $publicId = $this->extractPublicIdFromCloudinaryUrl($product->image);
+                        if ($publicId) {
+                            $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
+                            \Log::info('Image deleted from Cloudinary (deleteImage)', ['public_id' => $publicId]);
+                        } else {
+                            \Log::warning('Could not extract public_id from Cloudinary URL in deleteImage', ['url' => $product->image]);
+                        }
+                    } else {
+                        // Local storage - try to delete using file system directly
+                        $fullPath = storage_path('app/public/' . $product->image);
+                        if (file_exists($fullPath)) {
+                            unlink($fullPath);
+                            \Log::info('Image deleted from local storage (deleteImage)', ['path' => $product->image]);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Failed to delete image from storage (non-critical)', [
+                        'path' => $product->image,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+                
+                // Clear image field in database
+                $product->image = null;
+                $product->save();
+            }
 
-        return Redirect::back()->with('success', 'Product image deleted successfully.');
+            if ($request->expectsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Product image deleted successfully.'
+                ]);
+            }
+
+            return Redirect::back()->with('success', 'Product image deleted successfully.');
+        } catch (\Exception $e) {
+            \Log::error('Error deleting product image', [
+                'product_id' => $product->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            if ($request->expectsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to delete image: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return Redirect::back()->withErrors(['error' => 'Failed to delete image: ' . $e->getMessage()]);
+        }
     }
 
     public function bestsellers() {

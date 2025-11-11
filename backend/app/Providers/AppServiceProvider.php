@@ -64,34 +64,58 @@ class AppServiceProvider extends ServiceProvider
             }
             
             // Always set individual credentials (more reliable)
-            // Get current config and ensure URL is completely removed if invalid
-            $cloudinaryConfig = config('filesystems.disks.cloudinary', []);
-            $cloudinaryConfig['cloud'] = $cloudName;
-            $cloudinaryConfig['key'] = $apiKey;
-            $cloudinaryConfig['secret'] = $apiSecret;
-            $cloudinaryConfig['secure'] = true;
+            // Start with a fresh config array to avoid any URL contamination
+            $cloudinaryConfig = [
+                'driver' => 'cloudinary',
+                'cloud' => $cloudName,
+                'key' => $apiKey,
+                'secret' => $apiSecret,
+                'secure' => true,
+            ];
             
             // Only set URL if it's a valid Cloudinary URL
-            // If URL is invalid or not set, completely remove it to force use of individual credentials
+            // If URL is invalid or not set, DO NOT include it at all
             if ($isValidUrl && $cloudinaryUrl) {
                 $cloudinaryConfig['url'] = $cloudinaryUrl;
                 \Log::info('Cloudinary config: Using CLOUDINARY_URL', ['url_preview' => substr($cloudinaryUrl, 0, 30) . '...']);
             } else {
-                // Completely remove URL key - isset() returns true even for null, so we must remove the key entirely
-                unset($cloudinaryConfig['url']);
+                // DO NOT set URL key at all - this forces use of individual credentials
                 \Log::info('Cloudinary config: Using individual credentials (cloud, key, secret)', [
                     'cloud' => $cloudName,
                     'key_set' => !empty($apiKey),
-                    'secret_set' => !empty($apiSecret)
+                    'secret_set' => !empty($apiSecret),
+                    'note' => 'URL key not set - will use individual credentials'
                 ]);
             }
             
-            // Set the complete config at once
+            // Set the complete config at once - this overwrites any previous config
             config(['filesystems.disks.cloudinary' => $cloudinaryConfig]);
+            
+            // Double-check: ensure URL is not set if invalid
+            $finalConfig = config('filesystems.disks.cloudinary');
+            if (isset($finalConfig['url']) && !$isValidUrl) {
+                unset($finalConfig['url']);
+                config(['filesystems.disks.cloudinary' => $finalConfig]);
+                \Log::warning('Removed invalid URL from Cloudinary config after setting', [
+                    'had_url' => true
+                ]);
+            }
             
             // Enable Cloudinary as the default driver for permanent image storage
             try {
-                config(['filesystems.disks.public.driver' => 'cloudinary']);
+                // IMPORTANT: Clear the 'url' field from public disk config
+                // The public disk originally has 'url' => env('APP_URL').'/storage'
+                // This URL will be passed to Cloudinary constructor if not cleared!
+                $publicDiskConfig = config('filesystems.disks.public', []);
+                unset($publicDiskConfig['url']); // Remove APP_URL from public disk config
+                $publicDiskConfig['driver'] = 'cloudinary';
+                // Copy Cloudinary config to public disk
+                $publicDiskConfig['cloud'] = $cloudName;
+                $publicDiskConfig['key'] = $apiKey;
+                $publicDiskConfig['secret'] = $apiSecret;
+                $publicDiskConfig['secure'] = true;
+                
+                config(['filesystems.disks.public' => $publicDiskConfig]);
                 config(['filesystems.default' => 'cloudinary']);
                 
                 \Log::info('Cloudinary storage ENABLED - Images will be PERMANENT', [
@@ -99,6 +123,7 @@ class AppServiceProvider extends ServiceProvider
                     'api_key_set' => !empty($apiKey),
                     'api_secret_set' => !empty($apiSecret),
                     'using_url' => !empty($cloudinaryUrl),
+                    'public_disk_url_cleared' => true,
                     'note' => 'All new uploads will go to Cloudinary and persist forever'
                 ]);
             } catch (\Exception $e) {

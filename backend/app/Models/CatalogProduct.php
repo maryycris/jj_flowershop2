@@ -67,14 +67,36 @@ class CatalogProduct extends Model
             return asset('images/logo.png'); // Fallback image
         }
 
-        // If image is already a full URL (Cloudinary), return it
+        // If image is already a full URL (Cloudinary), return it directly
         if (filter_var($this->image, FILTER_VALIDATE_URL)) {
             return $this->image;
         }
 
-        // Use Storage to get the correct URL (works for both local and Cloudinary)
+        // If it's a path (not a full URL), check if Cloudinary is configured
+        $driver = config('filesystems.disks.public.driver');
+        $cloudName = env('CLOUDINARY_CLOUD_NAME');
+        
+        // If using Cloudinary and we have a path, construct Cloudinary URL
+        if ($driver === 'cloudinary' && $cloudName && strpos($this->image, 'http') !== 0) {
+            // Construct Cloudinary URL from path
+            // Path format: catalog_products/8z56vsEINMLSYwRkt6nK...9Aso6MFwphyga.png
+            // Cloudinary URL format: https://res.cloudinary.com/{cloud_name}/image/upload/{path}
+            $cloudinaryUrl = "https://res.cloudinary.com/{$cloudName}/image/upload/{$this->image}";
+            \Log::info('Constructed Cloudinary URL from path', [
+                'path' => $this->image,
+                'url' => $cloudinaryUrl
+            ]);
+            return $cloudinaryUrl;
+        }
+
+        // For local storage, use Storage facade or asset
         try {
-            return \Storage::disk('public')->url($this->image);
+            $url = \Storage::disk('public')->url($this->image);
+            // If Storage returns a local path that doesn't look like Cloudinary, use asset
+            if (strpos($url, 'cloudinary.com') === false && strpos($url, 'res.cloudinary.com') === false) {
+                return asset('storage/' . $this->image);
+            }
+            return $url;
         } catch (\Exception $e) {
             // Fallback to asset if Storage fails
             return asset('storage/' . $this->image);
