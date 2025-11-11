@@ -116,11 +116,21 @@ class CatalogProduct extends Model
             return $this->image2;
         }
 
-        try {
-            return \Storage::disk('public')->url($this->image2);
-        } catch (\Exception $e) {
-            return asset('storage/' . $this->image2);
+        // If it's a path (not a full URL), check if Cloudinary is configured
+        $cloudName = env('CLOUDINARY_CLOUD_NAME');
+        $apiKey = env('CLOUDINARY_API_KEY');
+        $apiSecret = env('CLOUDINARY_API_SECRET');
+        
+        // If Cloudinary is configured and we have a path, construct Cloudinary URL
+        // DON'T use Storage facade to avoid configuration errors
+        if ($cloudName && $apiKey && $apiSecret && strpos($this->image2, 'http') !== 0) {
+            // Construct Cloudinary URL from path
+            $cloudinaryUrl = "https://res.cloudinary.com/{$cloudName}/image/upload/{$this->image2}";
+            return $cloudinaryUrl;
         }
+
+        // Fallback to local storage path (only if Cloudinary not configured)
+        return asset('storage/' . $this->image2);
     }
 
     /**
@@ -136,10 +146,20 @@ class CatalogProduct extends Model
             return $this->image3;
         }
 
-        try {
-            return \Storage::disk('public')->url($this->image3);
-        } catch (\Exception $e) {
-            return asset('storage/' . $this->image3);
+        // If it's a path (not a full URL), check if Cloudinary is configured
+        $cloudName = env('CLOUDINARY_CLOUD_NAME');
+        $apiKey = env('CLOUDINARY_API_KEY');
+        $apiSecret = env('CLOUDINARY_API_SECRET');
+        
+        // If Cloudinary is configured and we have a path, construct Cloudinary URL
+        // DON'T use Storage facade to avoid configuration errors
+        if ($cloudName && $apiKey && $apiSecret && strpos($this->image3, 'http') !== 0) {
+            // Construct Cloudinary URL from path
+            $cloudinaryUrl = "https://res.cloudinary.com/{$cloudName}/image/upload/{$this->image3}";
+            return $cloudinaryUrl;
         }
+
+        // Fallback to local storage path (only if Cloudinary not configured)
+        return asset('storage/' . $this->image3);
     }
 }
