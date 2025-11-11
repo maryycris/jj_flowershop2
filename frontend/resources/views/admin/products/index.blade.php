@@ -1094,7 +1094,7 @@ async function viewProductChangeDetails(changeId) {
                         <div class="mb-2" style="font-size: 0.85rem;">
                             <strong>New Image:</strong>
                             <div class="mt-1 text-center">
-                                <img src="/storage/${change.changes.image}" class="img-fluid rounded" alt="New Image" style="max-height: 100px; max-width: 120px;">
+                                <img src="${change.changes.image_url || change.changes.image || '/images/logo.png'}" class="img-fluid rounded" alt="New Image" style="max-height: 100px; max-width: 120px;" onerror="this.onerror=null; this.src='/images/logo.png';">
                             </div>
                         </div>
                     `;
