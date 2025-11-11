@@ -277,6 +277,11 @@ class ProductController extends Controller
             $change = PendingProductChange::with(['product', 'requestedBy'])
                 ->findOrFail($id);
             
+            // Ensure product image_url is included in JSON response
+            if ($change->product) {
+                $change->product->setAppends(['image_url']);
+            }
+            
             return response()->json([
                 'success' => true,
                 'change' => $change
@@ -299,7 +304,14 @@ class ProductController extends Controller
             $changes = PendingProductChange::with(['product', 'requestedBy'])
                 ->pending()
                 ->orderBy('created_at', 'desc')
-                ->get();
+                ->get()
+                ->map(function($change) {
+                    // Ensure product image_url is included in JSON response
+                    if ($change->product) {
+                        $change->product->setAppends(['image_url']);
+                    }
+                    return $change;
+                });
             
             return response()->json($changes);
             
@@ -460,12 +472,13 @@ class ProductController extends Controller
             ]);
             
             try {
-                // Check if Cloudinary is configured
+                // Check if Cloudinary is configured (check env vars directly, not driver config)
                 $cloudName = env('CLOUDINARY_CLOUD_NAME');
                 $apiKey = env('CLOUDINARY_API_KEY');
                 $apiSecret = env('CLOUDINARY_API_SECRET');
                 
-                if ($driver === 'cloudinary' && $cloudName && $apiKey && $apiSecret) {
+                // Use Cloudinary if credentials are available (don't rely on driver config)
+                if ($cloudName && $apiKey && $apiSecret) {
                     // Use Cloudinary API directly to bypass Storage facade issues
                     \Log::info('Uploading directly to Cloudinary using API', [
                         'file_path' => $request->file('image')->getPathname(),
@@ -473,6 +486,15 @@ class ProductController extends Controller
                     ]);
                     
                     try {
+                        \Log::info('Creating Cloudinary instance for upload (store)', [
+                            'cloud_name' => $cloudName,
+                            'api_key_set' => !empty($apiKey),
+                            'api_secret_set' => !empty($apiSecret),
+                            'file_path' => $request->file('image')->getPathname(),
+                            'file_size' => $request->file('image')->getSize(),
+                            'file_valid' => $request->file('image')->isValid()
+                        ]);
+                        
                         $cloudinary = new \Cloudinary\Cloudinary([
                             'cloud' => [
                                 'cloud_name' => $cloudName,
@@ -483,6 +505,8 @@ class ProductController extends Controller
                                 'secure' => true,
                             ],
                         ]);
+                        
+                        \Log::info('Cloudinary instance created successfully (store), starting upload');
                         
                         // Use getPathname() instead of getRealPath() for uploaded files
                         $filePath = $request->file('image')->getPathname();
@@ -510,20 +534,23 @@ class ProductController extends Controller
                             'note' => 'This image will persist across all deployments'
                         ]);
                     } catch (\Exception $cloudinaryError) {
-                        \Log::error('Direct Cloudinary API upload failed', [
+                        \Log::error('Direct Cloudinary API upload failed (store)', [
                             'error' => $cloudinaryError->getMessage(),
                             'error_class' => get_class($cloudinaryError),
+                            'cloud_name' => $cloudName,
+                            'api_key_set' => !empty($apiKey),
+                            'api_secret_set' => !empty($apiSecret),
+                            'file_path' => $request->file('image')->getPathname(),
                             'trace' => $cloudinaryError->getTraceAsString()
                         ]);
                         throw $cloudinaryError; // Re-throw to be caught by outer catch
                     }
                 } else {
-                    // Fallback to Storage facade (for local or if Cloudinary not configured)
-                    $imagePath = $request->file('image')->store('catalog_products', 'public');
+                    // Cloudinary not configured, use local disk (NOT public disk to avoid Cloudinary config errors)
+                    $imagePath = $request->file('image')->store('catalog_products', 'local');
                     $productData['image'] = $imagePath;
-                    \Log::info('Image uploaded successfully to local storage', [
-                        'path' => $imagePath,
-                        'driver' => $driver
+                    \Log::info('Image uploaded successfully to local storage (Cloudinary not configured)', [
+                        'path' => $imagePath
                     ]);
                 }
             } catch (\Exception $e) {
@@ -705,12 +732,13 @@ class ProductController extends Controller
                     }
                 }
                 
-                // Check if Cloudinary is configured
+                // Check if Cloudinary is configured (check env vars directly, not driver config)
                 $cloudName = env('CLOUDINARY_CLOUD_NAME');
                 $apiKey = env('CLOUDINARY_API_KEY');
                 $apiSecret = env('CLOUDINARY_API_SECRET');
                 
-                if ($driver === 'cloudinary' && $cloudName && $apiKey && $apiSecret) {
+                // Use Cloudinary if credentials are available (don't rely on driver config)
+                if ($cloudName && $apiKey && $apiSecret) {
                     // Use Cloudinary API directly to bypass Storage facade issues
                     \Log::info('Uploading directly to Cloudinary using API (update)', [
                         'file_path' => $request->file('image')->getPathname(),
@@ -718,6 +746,15 @@ class ProductController extends Controller
                     ]);
                     
                     try {
+                        \Log::info('Creating Cloudinary instance for upload', [
+                            'cloud_name' => $cloudName,
+                            'api_key_set' => !empty($apiKey),
+                            'api_secret_set' => !empty($apiSecret),
+                            'file_path' => $request->file('image')->getPathname(),
+                            'file_size' => $request->file('image')->getSize(),
+                            'file_valid' => $request->file('image')->isValid()
+                        ]);
+                        
                         $cloudinary = new \Cloudinary\Cloudinary([
                             'cloud' => [
                                 'cloud_name' => $cloudName,
@@ -728,6 +765,8 @@ class ProductController extends Controller
                                 'secure' => true,
                             ],
                         ]);
+                        
+                        \Log::info('Cloudinary instance created successfully, starting upload');
                         
                         // Use getPathname() instead of getRealPath() for uploaded files
                         $filePath = $request->file('image')->getPathname();
@@ -758,17 +797,20 @@ class ProductController extends Controller
                         \Log::error('Direct Cloudinary API upload failed during update', [
                             'error' => $cloudinaryError->getMessage(),
                             'error_class' => get_class($cloudinaryError),
+                            'cloud_name' => $cloudName,
+                            'api_key_set' => !empty($apiKey),
+                            'api_secret_set' => !empty($apiSecret),
+                            'file_path' => $request->file('image')->getPathname(),
                             'trace' => $cloudinaryError->getTraceAsString()
                         ]);
                         throw $cloudinaryError; // Re-throw to be caught by outer catch
                     }
                 } else {
-                    // Fallback to Storage facade (for local or if Cloudinary not configured)
-                    $newImagePath = $request->file('image')->store('catalog_products', 'public');
+                    // Cloudinary not configured, use local disk (NOT public disk to avoid Cloudinary config errors)
+                    $newImagePath = $request->file('image')->store('catalog_products', 'local');
                     $validated['image'] = $newImagePath;
-                    \Log::info('New image uploaded successfully to local storage', [
-                        'path' => $newImagePath,
-                        'driver' => $driver
+                    \Log::info('New image uploaded successfully to local storage (Cloudinary not configured)', [
+                        'path' => $newImagePath
                     ]);
                 }
             } catch (\Exception $e) {
@@ -1000,7 +1042,8 @@ class ProductController extends Controller
             $apiKey = env('CLOUDINARY_API_KEY');
             $apiSecret = env('CLOUDINARY_API_SECRET');
             
-            if ($driver === 'cloudinary' && $cloudName && $apiKey && $apiSecret) {
+            // Use Cloudinary if credentials are available (don't rely on driver config)
+            if ($cloudName && $apiKey && $apiSecret) {
                 try {
                     $cloudinary = new \Cloudinary\Cloudinary([
                         'cloud' => [
@@ -1027,13 +1070,26 @@ class ProductController extends Controller
                     ]);
                 } catch (\Exception $e) {
                     \Log::error('Failed to upload image to Cloudinary in updateImages', [
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
                     ]);
-                    // Fallback to local storage
-                    $newImagePath = $request->file('image')->store('catalog_products', 'local');
-                    $product->image = $newImagePath;
+                    // Fallback to local storage only if Cloudinary fails
+                    try {
+                        $newImagePath = $request->file('image')->store('catalog_products', 'local');
+                        $product->image = $newImagePath;
+                        \Log::warning('Cloudinary upload failed, using local storage fallback', [
+                            'path' => $newImagePath
+                        ]);
+                    } catch (\Exception $fallbackError) {
+                        \Log::error('Both Cloudinary and local storage failed', [
+                            'cloudinary_error' => $e->getMessage(),
+                            'fallback_error' => $fallbackError->getMessage()
+                        ]);
+                        throw $e; // Re-throw Cloudinary error
+                    }
                 }
             } else {
+                // Cloudinary not configured, use local storage
                 $newImagePath = $request->file('image')->store('catalog_products', 'local');
                 $product->image = $newImagePath;
             }

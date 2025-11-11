@@ -21,8 +21,8 @@ class AdminProductApprovalController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function($product) {
-                // Append image_url accessor to the product
-                $product->image_url = $product->image_url;
+                // Ensure image_url is included in JSON response
+                $product->setAppends(['image_url']);
                 return $product;
             });
 
@@ -53,8 +53,8 @@ class AdminProductApprovalController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function($product) {
-                // Append image_url accessor to the product for Cloudinary support
-                $product->image_url = $product->image_url;
+                // Ensure image_url is included in JSON response
+                $product->setAppends(['image_url']);
                 return $product;
             });
 
@@ -101,15 +101,87 @@ class AdminProductApprovalController extends Controller
         try {
             $product = CatalogProduct::findOrFail($productId);
             
-            // Delete associated images
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
-            if ($product->image2) {
-                Storage::disk('public')->delete($product->image2);
-            }
-            if ($product->image3) {
-                Storage::disk('public')->delete($product->image3);
+            // Delete associated images from Cloudinary or local storage
+            $cloudName = env('CLOUDINARY_CLOUD_NAME');
+            $apiKey = env('CLOUDINARY_API_KEY');
+            $apiSecret = env('CLOUDINARY_API_SECRET');
+            
+            if ($cloudName && $apiKey && $apiSecret) {
+                // Use Cloudinary API directly
+                $cloudinary = new \Cloudinary\Cloudinary([
+                    'cloud' => [
+                        'cloud_name' => $cloudName,
+                        'api_key' => $apiKey,
+                        'api_secret' => $apiSecret,
+                    ],
+                    'url' => ['secure' => true],
+                ]);
+                
+                // Helper function to extract public_id from URL
+                $extractPublicId = function($url) {
+                    if (!str_contains($url, 'cloudinary.com')) {
+                        return null;
+                    }
+                    $urlParts = parse_url($url);
+                    $path = trim($urlParts['path'] ?? '', '/');
+                    $uploadPos = strpos($path, '/image/upload/');
+                    if ($uploadPos === false) {
+                        $uploadPos = strpos($path, 'image/upload/');
+                        if ($uploadPos === false) return null;
+                        $publicId = substr($path, $uploadPos + strlen('image/upload/'));
+                    } else {
+                        $publicId = substr($path, $uploadPos + strlen('/image/upload/'));
+                    }
+                    return preg_replace('/\.(png|jpg|jpeg|gif|webp)$/i', '', $publicId);
+                };
+                
+                // Delete images from Cloudinary
+                $images = [$product->image, $product->image2, $product->image3];
+                foreach ($images as $image) {
+                    if ($image) {
+                        if (str_contains($image, 'cloudinary.com')) {
+                            $publicId = $extractPublicId($image);
+                            if ($publicId) {
+                                try {
+                                    $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
+                                    \Log::info('Image deleted from Cloudinary during disapproval', ['public_id' => $publicId]);
+                                } catch (\Exception $e) {
+                                    \Log::warning('Failed to delete image from Cloudinary (non-critical)', [
+                                        'public_id' => $publicId,
+                                        'error' => $e->getMessage()
+                                    ]);
+                                }
+                            }
+                        } else {
+                            // Local storage path - try to delete using file system directly
+                            $fullPath = storage_path('app/public/' . $image);
+                            if (file_exists($fullPath)) {
+                                unlink($fullPath);
+                                \Log::info('Image deleted from local storage during disapproval', ['path' => $image]);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Cloudinary not configured, use local storage
+                if ($product->image) {
+                    $fullPath = storage_path('app/public/' . $product->image);
+                    if (file_exists($fullPath)) {
+                        unlink($fullPath);
+                    }
+                }
+                if ($product->image2) {
+                    $fullPath = storage_path('app/public/' . $product->image2);
+                    if (file_exists($fullPath)) {
+                        unlink($fullPath);
+                    }
+                }
+                if ($product->image3) {
+                    $fullPath = storage_path('app/public/' . $product->image3);
+                    if (file_exists($fullPath)) {
+                        unlink($fullPath);
+                    }
+                }
             }
 
             // Delete product compositions
@@ -123,6 +195,11 @@ class AdminProductApprovalController extends Controller
                 'message' => 'Product disapproved and deleted successfully'
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error disapproving product', [
+                'product_id' => $productId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Error disapproving product: ' . $e->getMessage()
@@ -147,8 +224,8 @@ class AdminProductApprovalController extends Controller
                 return $composition;
             });
 
-            // Append image_url accessor for Cloudinary support
-            $product->image_url = $product->image_url;
+            // Ensure image_url is included in JSON response
+            $product->setAppends(['image_url']);
             
             return response()->json([
                 'success' => true,
