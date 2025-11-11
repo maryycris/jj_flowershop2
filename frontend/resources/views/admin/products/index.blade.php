@@ -1380,23 +1380,40 @@ async function viewProductChangeDetails(changeId) {
                         method: 'DELETE',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
                         }
                     })
-                    .then(response => response.json())
+                    .then(async response => {
+                        // Check if response is ok
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            try {
+                                const errorJson = JSON.parse(errorText);
+                                throw new Error(errorJson.message || 'Failed to delete banner');
+                            } catch (e) {
+                                throw new Error(errorText || 'Failed to delete banner');
+                            }
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.success) {
+                            showAlert(data.message || 'Banner deleted successfully', 'success');
                             // Remove banner from UI
                             e.target.closest('[data-banner-id]').remove();
                             // Refresh the page to update carousel
-                            window.location.reload();
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
                         } else {
-                            showAlert('Error deleting banner', 'error');
+                            showAlert(data.message || 'Error deleting banner', 'error');
                         }
                     })
                     .catch(error => {
-                        console.error('Error:', error);
-                        showAlert('Error deleting banner', 'error');
+                        console.error('Error deleting banner:', error);
+                        showAlert('Error deleting banner: ' + error.message, 'error');
                     });
                 }
             }
@@ -2618,3 +2635,4 @@ async function viewProductChangeDetails(changeId) {
 
 </script>
 @endpush
+

@@ -236,53 +236,75 @@ class PromotedBannerController extends Controller
 
     public function destroy(string $id)
     {
-        $banner = PromotedBanner::findOrFail($id);
-        
-        // Delete the image file from Cloudinary or local storage
-        if ($banner->image) {
-            $cloudName = env('CLOUDINARY_CLOUD_NAME');
-            $apiKey = env('CLOUDINARY_API_KEY');
-            $apiSecret = env('CLOUDINARY_API_SECRET');
+        try {
+            $banner = PromotedBanner::findOrFail($id);
             
-            if ($cloudName && $apiKey && $apiSecret && str_contains($banner->image, 'cloudinary.com')) {
-                try {
-                    $cloudinary = new \Cloudinary\Cloudinary([
-                        'cloud' => [
-                            'cloud_name' => $cloudName,
-                            'api_key' => $apiKey,
-                            'api_secret' => $apiSecret,
-                        ],
-                        'url' => ['secure' => true],
-                    ]);
-                    
-                    // Extract public_id from URL
-                    $publicId = $this->extractPublicIdFromCloudinaryUrl($banner->image);
-                    if ($publicId) {
-                        $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
-                        \Log::info('Banner image deleted from Cloudinary', ['public_id' => $publicId]);
+            // Delete the image file from Cloudinary or local storage
+            if ($banner->image) {
+                $cloudName = env('CLOUDINARY_CLOUD_NAME');
+                $apiKey = env('CLOUDINARY_API_KEY');
+                $apiSecret = env('CLOUDINARY_API_SECRET');
+                
+                if ($cloudName && $apiKey && $apiSecret && str_contains($banner->image, 'cloudinary.com')) {
+                    try {
+                        $cloudinary = new \Cloudinary\Cloudinary([
+                            'cloud' => [
+                                'cloud_name' => $cloudName,
+                                'api_key' => $apiKey,
+                                'api_secret' => $apiSecret,
+                            ],
+                            'url' => ['secure' => true],
+                        ]);
+                        
+                        // Extract public_id from URL
+                        $publicId = $this->extractPublicIdFromCloudinaryUrl($banner->image);
+                        if ($publicId) {
+                            $cloudinary->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
+                            \Log::info('Banner image deleted from Cloudinary', ['public_id' => $publicId]);
+                        }
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to delete banner image from Cloudinary (non-critical)', [
+                            'path' => $banner->image,
+                            'error' => $e->getMessage()
+                        ]);
                     }
-                } catch (\Exception $e) {
-                    \Log::warning('Failed to delete banner image from Cloudinary (non-critical)', [
-                        'path' => $banner->image,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            } else {
-                // Local storage - try to delete using file system directly
-                $fullPath = storage_path('app/public/' . $banner->image);
-                if (file_exists($fullPath)) {
-                    unlink($fullPath);
-                    \Log::info('Banner image deleted from local storage', ['path' => $banner->image]);
+                } else {
+                    // Local storage - try to delete using file system directly
+                    $fullPath = storage_path('app/public/' . $banner->image);
+                    if (file_exists($fullPath)) {
+                        unlink($fullPath);
+                        \Log::info('Banner image deleted from local storage', ['path' => $banner->image]);
+                    }
                 }
             }
+            
+            $banner->delete();
+            
+            // Check if request is AJAX/JSON (multiple ways to detect)
+            if (request()->expectsJson() || request()->wantsJson() || request()->ajax() || request()->header('X-Requested-With') === 'XMLHttpRequest' || request()->header('Content-Type') === 'application/json') {
+                return response()->json([
+                    'success' => true, 
+                    'message' => 'Banner deleted successfully'
+                ]);
+            }
+            
+            return back()->with('success','Banner deleted');
+        } catch (\Exception $e) {
+            \Log::error('Error deleting banner', [
+                'banner_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Check if request is AJAX/JSON
+            if (request()->expectsJson() || request()->wantsJson() || request()->ajax() || request()->header('X-Requested-With') === 'XMLHttpRequest' || request()->header('Content-Type') === 'application/json') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error deleting banner: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return back()->withErrors(['error' => 'Error deleting banner: ' . $e->getMessage()]);
         }
-        
-        $banner->delete();
-        
-        if (request()->expectsJson()) {
-            return response()->json(['success' => true, 'message' => 'Banner deleted']);
-        }
-        
-        return back()->with('success','Banner deleted');
     }
 }
